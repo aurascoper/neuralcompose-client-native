@@ -1,0 +1,10 @@
+{
+  "name": "neuralcompose-gate4-stub",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Gate 4 reference stub: NeuralCompose HTTP fixtures + /api/eeg/stream WS (256Hz, 8-sample batches) with outage controls.",
+  "dependencies": {
+    "ws": "8.21.1"
+  }
+}

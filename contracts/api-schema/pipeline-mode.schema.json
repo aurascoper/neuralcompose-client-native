@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuralcompose.local/schemas/pipeline-mode.schema.json",
+  "title": "PipelineMode",
+  "description": "Server-reported pipeline mode. Clients render this verbatim and must never claim locality the server did not report.",
+  "type": "object",
+  "required": ["source", "sourceProfile", "classifier", "predictor", "transportDetail", "isFullyLive"],
+  "properties": {
+    "source": { "type": "string", "enum": ["oscRemote", "brainFlow", "playback", "synthetic"] },
+    "sourceProfile": { "type": "string" },
+    "classifier": { "type": "string", "enum": ["coreML", "mock"] },
+    "predictor": { "type": "string", "enum": ["mlx", "stub"] },
+    "transportDetail": { "type": "string" },
+    "isFullyLive": { "type": "boolean" },
+    "substitutionSummary": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

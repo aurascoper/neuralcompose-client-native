@@ -1,0 +1,12 @@
+{
+  "transport": "OSC (Mind Monitor)",
+  "sampleRate": 256.0,
+  "packetsReceived": 15432,
+  "packetsDropped": 3,
+  "packetLossEstimate": null,
+  "packetJitterMillis": 2.4,
+  "lastInterArrivalMillis": 3.9,
+  "lastHeartbeat": "2026-07-23T18:30:00Z",
+  "boundPort": 5000,
+  "localInterfaceName": "utun3"
+}

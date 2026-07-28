@@ -1,0 +1,6 @@
+[
+  { "channel": "TP9",  "status": "healthy",   "rms": 162.5, "samples": 77966, "timestamp": 305.2, "lastSampleWallClock": 1783738346.0 },
+  { "channel": "AF7",  "status": "healthy",   "rms": 176.6, "samples": 77966, "timestamp": 305.2, "lastSampleWallClock": 1783738346.0 },
+  { "channel": "AF8",  "status": "saturated", "rms": 971.0, "samples": 77966, "timestamp": 305.2, "lastSampleWallClock": 1783738346.0 },
+  { "channel": "TP10", "status": "healthy",   "rms": 146.4, "samples": 77966, "timestamp": 305.2, "lastSampleWallClock": 1783738346.0 }
+]

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuralcompose.local/schemas/eeg-frame.schema.json",
+  "title": "EEGFrame",
+  "description": "One WebSocket text frame on /api/eeg/stream: either a single EEGSample or a batch array of them. JSON cannot carry NaN/Infinity tokens, but decoders must additionally reject non-finite numbers arriving via overflow literals (e.g. 1e999).",
+  "oneOf": [
+    { "$ref": "eeg-sample.schema.json" },
+    {
+      "type": "array",
+      "items": { "$ref": "eeg-sample.schema.json" },
+      "minItems": 1
+    }
+  ]
+}

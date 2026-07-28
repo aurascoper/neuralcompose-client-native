@@ -1,0 +1,19 @@
+{
+  "description": "Frame decode reject/accept table, ported from the Expo client's src/api/__tests__/wireFormat.test.ts (parity oracle). `payload` is the raw WS text frame; `expectValid` is the number of samples a conforming decoder must yield.",
+  "cases": [
+    { "name": "single valid sample",            "payload": "{\"timestamp\":1.5,\"channels\":[10,20,30,40]}", "expectValid": 1 },
+    { "name": "batch drops only invalid entry", "payload": "[{\"timestamp\":1.5,\"channels\":[10,20,30,40]},{\"timestamp\":2,\"channels\":[1,2,3]},{\"timestamp\":3,\"channels\":[10,20,30,40]}]", "expectValid": 2 },
+    { "name": "channel order preserved",        "payload": "{\"timestamp\":0,\"channels\":[4,3,2,1]}", "expectValid": 1, "expectChannels": [4, 3, 2, 1] },
+    { "name": "bad JSON",                       "payload": "not json{", "expectValid": 0 },
+    { "name": "null",                           "payload": "null", "expectValid": 0 },
+    { "name": "string payload",                 "payload": "\"hello\"", "expectValid": 0 },
+    { "name": "missing channels",               "payload": "{\"timestamp\":1}", "expectValid": 0 },
+    { "name": "wrong channel count",            "payload": "{\"timestamp\":1,\"channels\":[1,2,3,4,5]}", "expectValid": 0 },
+    { "name": "non-numeric channel",            "payload": "{\"timestamp\":1,\"channels\":[1,\"x\",3,4]}", "expectValid": 0 },
+    { "name": "null channel",                   "payload": "{\"timestamp\":1,\"channels\":[1,null,3,4]}", "expectValid": 0 },
+    { "name": "missing timestamp",              "payload": "{\"channels\":[1,2,3,4]}", "expectValid": 0 },
+    { "name": "huge literal overflows to inf",  "payload": "{\"timestamp\":1,\"channels\":[1e999,2,3,4]}", "expectValid": 0 },
+    { "name": "empty batch",                    "payload": "[]", "expectValid": 0 },
+    { "name": "batch of non-objects",           "payload": "[1,2,3]", "expectValid": 0 }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "intent": "rest",
+  "confidence": 0.89,
+  "distribution": {
+    "rest": 0.89,
+    "jawClench": 0.04,
+    "singleBlink": 0.03,
+    "doubleBlink": 0.02,
+    "select": 0.02
+  },
+  "windowSequence": 15432,
+  "endTimestamp": 305.2
+}

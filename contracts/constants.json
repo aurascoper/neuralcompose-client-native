@@ -1,0 +1,16 @@
+{
+  "channelOrder": ["TP9", "AF7", "AF8", "TP10"],
+  "sampleRateHz": 256,
+  "bufferSamples": 1280,
+  "staleMs": {
+    "heartbeat": 5000,
+    "classifier": 5000,
+    "channelSample": 2000
+  },
+  "reconnect": {
+    "maxAttempts": 3,
+    "baseMs": 500,
+    "capMs": 30000
+  },
+  "wsPath": "/api/eeg/stream"
+}

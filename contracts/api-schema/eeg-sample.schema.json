@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuralcompose.local/schemas/eeg-sample.schema.json",
+  "title": "EEGSample",
+  "description": "One EEG sample. timestamp is seconds since stream start (NOT wall clock). channels are microvolt values in fixed order TP9, AF7, AF8, TP10 — receivers must reject, never reorder.",
+  "type": "object",
+  "required": ["timestamp", "channels"],
+  "properties": {
+    "timestamp": { "type": "number" },
+    "channels": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 4,
+      "maxItems": 4
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,10 @@
+/target
+node_modules/
+.DS_Store
+*.xcframework
+ios/Generated/
+ios/Frameworks/
+android/core/src/main/jniLibs/
+android/core/build/
+*.dylib
+*.a
