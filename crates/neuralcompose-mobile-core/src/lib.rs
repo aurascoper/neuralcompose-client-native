@@ -25,7 +25,7 @@ pub use presentation::{
     format_banner_en, format_label_en, present, Presentation, StreamPhase, StreamTone,
 };
 pub use reconnect::{next_reconnect, ReconnectDecision};
-pub use stream::{ChannelSnapshot, MonitorConfig, SocketEvent, StreamMonitor};
+pub use stream::{ChannelSnapshot, MonitorConfig, SocketEvent, StreamMonitor, StreamSnapshot};
 pub use types::EEGSample;
 pub use wire::decode_eeg_frame;
 

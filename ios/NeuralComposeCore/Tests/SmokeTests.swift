@@ -44,14 +44,31 @@ final class SmokeTests: XCTestCase {
         XCTAssertEqual(m.onFrame(text: "not json{", nowMs: 8000), 0)
         XCTAssertEqual(m.snapshot().lastReceivedAtMs, 100)
 
-        // Close → retry decision 1000ms → reconnect → Live again.
+        // Close → retry decision 1000ms → reconnect.
         m.onSocketEvent(event: .closed, nowMs: 9000)
         XCTAssertEqual(m.phase(nowMs: 9000), .closed)
         XCTAssertEqual(m.reconnectDecision(), .retryAfterMs(delayMs: 1000))
         m.onSocketEvent(event: .connecting, nowMs: 10000)
         m.onSocketEvent(event: .opened, nowMs: 10100)
+
+        // M5-A: the new generation has NO freshness — cached data and the
+        // previous generation's receive time never authorize Live, and the
+        // handshake did not reset the retry budget.
+        XCTAssertEqual(m.phase(nowMs: 10100), .openNoData)
+        var ss = m.streamSnapshot(nowMs: 10100)
+        XCTAssertEqual(ss.connectionGeneration, 2)
+        XCTAssertEqual(ss.receivedOnCurrentConnection, 0)
+        XCTAssertNil(ss.lastReceivedAtCurrentMs)
+        XCTAssertEqual(ss.lastReceivedAtAnyMs, 100)
+        XCTAssertEqual(ss.cachedSampleCount, 2)
+        XCTAssertEqual(ss.reconnectAttempts, 1)
+
+        // First accepted frame of the generation: Live + budget reset.
         XCTAssertEqual(m.onFrame(text: #"{"timestamp":0.3,"channels":[9,9,9,9]}"#, nowMs: 10150), 1)
         XCTAssertEqual(m.phase(nowMs: 10150), .live)
+        ss = m.streamSnapshot(nowMs: 10150)
+        XCTAssertEqual(ss.reconnectAttempts, 0)
+        XCTAssertEqual(ss.receivedOnCurrentConnection, 1)
 
         // Snapshot: 4 channels, fixed order.
         let snap = m.snapshot()
