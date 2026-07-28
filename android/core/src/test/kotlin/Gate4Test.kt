@@ -53,14 +53,31 @@ class Gate4Test {
         assertEquals(0u, m.onFrame("not json{", 8000uL))
         assertEquals(100uL, m.snapshot().lastReceivedAtMs)
 
-        // Close → retry 1000ms → reconnect → Live.
+        // Close → retry 1000ms → reconnect.
         m.onSocketEvent(SocketEvent.CLOSED, 9000uL)
         assertEquals(StreamPhase.Closed, m.phase(9000uL))
         assertEquals(ReconnectDecision.RetryAfterMs(1000uL), m.reconnectDecision())
         m.onSocketEvent(SocketEvent.CONNECTING, 10000uL)
         m.onSocketEvent(SocketEvent.OPENED, 10100uL)
+
+        // M5-A: the new generation has no freshness — cached data and the
+        // previous generation's receive time never authorize Live, and the
+        // handshake did not reset the retry budget.
+        assertEquals(StreamPhase.OpenNoData, m.phase(10100uL))
+        var ss = m.streamSnapshot(10100uL)
+        assertEquals(2uL, ss.connectionGeneration)
+        assertEquals(0uL, ss.receivedOnCurrentConnection)
+        assertEquals(null, ss.lastReceivedAtCurrentMs)
+        assertEquals(100uL, ss.lastReceivedAtAnyMs)
+        assertEquals(2u, ss.cachedSampleCount)
+        assertEquals(1u.toUByte(), ss.reconnectAttempts)
+
+        // First accepted frame of the generation: Live + budget reset.
         assertEquals(1u, m.onFrame("""{"timestamp":0.3,"channels":[9,9,9,9]}""", 10150uL))
         assertEquals(StreamPhase.Live, m.phase(10150uL))
+        ss = m.streamSnapshot(10150uL)
+        assertEquals(0u.toUByte(), ss.reconnectAttempts)
+        assertEquals(1uL, ss.receivedOnCurrentConnection)
 
         // Snapshot: 4 channels, fixed order.
         val snap = m.snapshot()

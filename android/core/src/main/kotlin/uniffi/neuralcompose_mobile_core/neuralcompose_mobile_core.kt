@@ -697,6 +697,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_snapshot(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_stream_snapshot(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_with_defaults(
@@ -740,6 +742,8 @@ internal object UniffiLib {
     external fun uniffi_neuralcompose_mobile_core_fn_method_streammonitor_reset(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_neuralcompose_mobile_core_fn_method_streammonitor_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_method_streammonitor_stream_snapshot(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_derive_ws_url(`serverUrl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -885,25 +889,28 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_format_label_en() != 32187) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame() != 9867) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame() != 45030) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_socket_event() != 31328) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_socket_event() != 52542) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_phase() != 30052) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_phase() != 47585) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_presentation() != 23850) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_reconnect_decision() != 51196) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_reconnect_decision() != 8711) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_reset() != 55966) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_reset() != 58539) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_snapshot() != 32385) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_snapshot() != 12368) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_stream_snapshot() != 1964) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new() != 40578) {
@@ -1067,6 +1074,33 @@ private class JavaLangRefCleanable(
     val cleanable: java.lang.ref.Cleaner.Cleanable
 ) : UniffiCleaner.Cleanable {
     override fun clean() = cleanable.clean()
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterUByte: FfiConverter<UByte, Byte> {
+    override fun lift(value: Byte): UByte {
+        return value.toUByte()
+    }
+
+    fun lift(value: Int): UByte {
+        return value.toUByte()
+    }
+
+    override fun read(buf: ByteBuffer): UByte {
+        return lift(buf.get())
+    }
+
+    override fun lower(value: UByte): Byte {
+        return value.toByte()
+    }
+
+    override fun allocationSize(value: UByte) = 1UL
+
+    override fun write(value: UByte, buf: ByteBuffer) {
+        buf.put(value.toByte())
+    }
 }
 
 /**
@@ -1341,40 +1375,52 @@ public interface StreamMonitorInterface {
     
     /**
      * Shell hands over one raw WS text frame. Returns the number of samples
-     * accepted. `last_received_at_ms` advances ONLY when accepted > 0 —
-     * this pins the Gate 4 no-op-flush bug: retained data and empty or
-     * invalid frames must never refresh sample age.
+     * accepted. Freshness (current AND any) advances ONLY when accepted > 0
+     * — retained data, empty frames, and invalid frames never refresh age.
+     * The first accepted frame of a generation is the real proof of
+     * recovery: it resets the retry budget (and clears a latched give-up).
      */
     fun `onFrame`(`text`: kotlin.String, `nowMs`: kotlin.ULong): kotlin.UInt
     
     /**
-     * Shell reports socket lifecycle. `Opened` resets the attempt counter;
-     * `Closed`/`Errored` count one failed attempt each and never schedule
-     * anything themselves — the shell asks `reconnect_decision()` and owns
-     * the timer.
+     * Shell reports socket lifecycle. `Opened` starts a NEW generation with
+     * no freshness and does NOT touch the retry budget (a handshake proves
+     * nothing). `Closed`/`Errored` consume one attempt each and never
+     * schedule anything — the shell asks `reconnect_decision()` and owns the
+     * timer.
      */
     fun `onSocketEvent`(`event`: SocketEvent, `nowMs`: kotlin.ULong)
     
     /**
-     * Read-only phase derivation. MUST NOT mutate receive state.
+     * Read-only phase derivation from CURRENT-generation freshness only.
+     * MUST NOT mutate any state.
      */
     fun `phase`(`nowMs`: kotlin.ULong): StreamPhase
     
     fun `presentation`(`nowMs`: kotlin.ULong): Presentation
     
     /**
-     * Pure decision from the current failed-attempt count. When it returns
-     * `GiveUp` the monitor latches `Error` (matching the Expo client, which
-     * reports `error` after exhausting its 3 attempts).
+     * Pure decision from the current unsuccessful-attempt count. When it
+     * returns `GiveUp` the monitor latches `Error` until a frame is accepted
+     * or `reset()` is called.
      */
     fun `reconnectDecision`(): ReconnectDecision
     
     /**
-     * New subscription lifecycle (mirrors the Expo hook's remount reset).
+     * New subscription lifecycle (mirrors a screen remount). Clears cached
+     * data, generations, and the retry budget.
      */
     fun `reset`()
     
+    /**
+     * Channel display data (cached across reconnects by design).
+     */
     fun `snapshot`(): ChannelSnapshot
+    
+    /**
+     * Stream metadata snapshot. Read-only; never mutates freshness.
+     */
+    fun `streamSnapshot`(`nowMs`: kotlin.ULong): StreamSnapshot
     
     companion object
 }
@@ -1492,9 +1538,10 @@ open class StreamMonitor: Disposable, AutoCloseable, StreamMonitorInterface
     
     /**
      * Shell hands over one raw WS text frame. Returns the number of samples
-     * accepted. `last_received_at_ms` advances ONLY when accepted > 0 —
-     * this pins the Gate 4 no-op-flush bug: retained data and empty or
-     * invalid frames must never refresh sample age.
+     * accepted. Freshness (current AND any) advances ONLY when accepted > 0
+     * — retained data, empty frames, and invalid frames never refresh age.
+     * The first accepted frame of a generation is the real proof of
+     * recovery: it resets the retry budget (and clears a latched give-up).
      */override fun `onFrame`(`text`: kotlin.String, `nowMs`: kotlin.ULong): kotlin.UInt {
             return FfiConverterUInt.lift(
     callWithHandle {
@@ -1512,10 +1559,11 @@ open class StreamMonitor: Disposable, AutoCloseable, StreamMonitorInterface
 
     
     /**
-     * Shell reports socket lifecycle. `Opened` resets the attempt counter;
-     * `Closed`/`Errored` count one failed attempt each and never schedule
-     * anything themselves — the shell asks `reconnect_decision()` and owns
-     * the timer.
+     * Shell reports socket lifecycle. `Opened` starts a NEW generation with
+     * no freshness and does NOT touch the retry budget (a handshake proves
+     * nothing). `Closed`/`Errored` consume one attempt each and never
+     * schedule anything — the shell asks `reconnect_decision()` and owns the
+     * timer.
      */override fun `onSocketEvent`(`event`: SocketEvent, `nowMs`: kotlin.ULong)
         = 
     callWithHandle {
@@ -1532,7 +1580,8 @@ open class StreamMonitor: Disposable, AutoCloseable, StreamMonitorInterface
 
     
     /**
-     * Read-only phase derivation. MUST NOT mutate receive state.
+     * Read-only phase derivation from CURRENT-generation freshness only.
+     * MUST NOT mutate any state.
      */override fun `phase`(`nowMs`: kotlin.ULong): StreamPhase {
             return FfiConverterTypeStreamPhase.lift(
     callWithHandle {
@@ -1563,9 +1612,9 @@ open class StreamMonitor: Disposable, AutoCloseable, StreamMonitorInterface
 
     
     /**
-     * Pure decision from the current failed-attempt count. When it returns
-     * `GiveUp` the monitor latches `Error` (matching the Expo client, which
-     * reports `error` after exhausting its 3 attempts).
+     * Pure decision from the current unsuccessful-attempt count. When it
+     * returns `GiveUp` the monitor latches `Error` until a frame is accepted
+     * or `reset()` is called.
      */override fun `reconnectDecision`(): ReconnectDecision {
             return FfiConverterTypeReconnectDecision.lift(
     callWithHandle {
@@ -1581,7 +1630,8 @@ open class StreamMonitor: Disposable, AutoCloseable, StreamMonitorInterface
 
     
     /**
-     * New subscription lifecycle (mirrors the Expo hook's remount reset).
+     * New subscription lifecycle (mirrors a screen remount). Clears cached
+     * data, generations, and the retry budget.
      */override fun `reset`()
         = 
     callWithHandle {
@@ -1594,13 +1644,33 @@ open class StreamMonitor: Disposable, AutoCloseable, StreamMonitorInterface
     
     
 
-    override fun `snapshot`(): ChannelSnapshot {
+    
+    /**
+     * Channel display data (cached across reconnects by design).
+     */override fun `snapshot`(): ChannelSnapshot {
             return FfiConverterTypeChannelSnapshot.lift(
     callWithHandle {
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_streammonitor_snapshot(
         it,
         _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Stream metadata snapshot. Read-only; never mutates freshness.
+     */override fun `streamSnapshot`(`nowMs`: kotlin.ULong): StreamSnapshot {
+            return FfiConverterTypeStreamSnapshot.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_streammonitor_stream_snapshot(
+        it,
+        
+        FfiConverterULong.lower(`nowMs`),_status)
 }
     }
     )
@@ -1656,6 +1726,11 @@ public object FfiConverterTypeStreamMonitor: FfiConverter<StreamMonitor, Long> {
 
 
 
+/**
+ * Channel display data. Cached samples survive reconnects on purpose (the
+ * UI may keep showing the last traces) — but cached data never influences
+ * `phase()`; that is what `StreamSnapshot.last_received_at_current_ms` is for.
+ */
 data class ChannelSnapshot (
     /**
      * 4 vecs in fixed TP9, AF7, AF8, TP10 order; newest `keep` samples.
@@ -1663,18 +1738,17 @@ data class ChannelSnapshot (
     var `channels`: List<List<kotlin.Double>>
     , 
     /**
-     * Index of the newest sample within the snapshot window; -1 when empty
-     * (mirrors the Expo `EEGBuffer.latest`).
+     * Index of the newest sample within the snapshot window; -1 when empty.
      */
     var `latestIndex`: kotlin.Long
     , 
     /**
-     * Total samples accepted since the last `reset()`.
+     * Total samples accepted since the last `reset()` (all generations).
      */
     var `received`: kotlin.ULong
     , 
     /**
-     * Monotonic ms of the newest ACCEPTED sample; `None` before the first.
+     * Monotonic ms of the newest accepted sample on ANY generation.
      */
     var `lastReceivedAtMs`: kotlin.ULong?
     
@@ -1878,6 +1952,80 @@ public object FfiConverterTypeResolvedClientConfig: FfiConverterRustBuffer<Resol
             FfiConverterString.write(value.`serverUrl`, buf)
             FfiConverterString.write(value.`eegWsUrl`, buf)
             FfiConverterOptionalString.write(value.`configError`, buf)
+    }
+}
+
+
+
+/**
+ * Stream metadata: everything freshness- and retry-related, per generation.
+ */
+data class StreamSnapshot (
+    /**
+     * Increments on every completed WebSocket handshake (Opened). 0 = never opened.
+     */
+    var `connectionGeneration`: kotlin.ULong
+    , 
+    var `receivedOnCurrentConnection`: kotlin.ULong
+    , 
+    var `totalReceived`: kotlin.ULong
+    , 
+    var `lastReceivedAtCurrentMs`: kotlin.ULong?
+    , 
+    var `lastReceivedAtAnyMs`: kotlin.ULong?
+    , 
+    var `cachedSampleCount`: kotlin.UInt
+    , 
+    var `reconnectAttempts`: kotlin.UByte
+    , 
+    var `phase`: StreamPhase
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeStreamSnapshot: FfiConverterRustBuffer<StreamSnapshot> {
+    override fun read(buf: ByteBuffer): StreamSnapshot {
+        return StreamSnapshot(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUByte.read(buf),
+            FfiConverterTypeStreamPhase.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: StreamSnapshot) = (
+            FfiConverterULong.allocationSize(value.`connectionGeneration`) +
+            FfiConverterULong.allocationSize(value.`receivedOnCurrentConnection`) +
+            FfiConverterULong.allocationSize(value.`totalReceived`) +
+            FfiConverterOptionalULong.allocationSize(value.`lastReceivedAtCurrentMs`) +
+            FfiConverterOptionalULong.allocationSize(value.`lastReceivedAtAnyMs`) +
+            FfiConverterUInt.allocationSize(value.`cachedSampleCount`) +
+            FfiConverterUByte.allocationSize(value.`reconnectAttempts`) +
+            FfiConverterTypeStreamPhase.allocationSize(value.`phase`)
+    )
+
+    override fun write(value: StreamSnapshot, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`connectionGeneration`, buf)
+            FfiConverterULong.write(value.`receivedOnCurrentConnection`, buf)
+            FfiConverterULong.write(value.`totalReceived`, buf)
+            FfiConverterOptionalULong.write(value.`lastReceivedAtCurrentMs`, buf)
+            FfiConverterOptionalULong.write(value.`lastReceivedAtAnyMs`, buf)
+            FfiConverterUInt.write(value.`cachedSampleCount`, buf)
+            FfiConverterUByte.write(value.`reconnectAttempts`, buf)
+            FfiConverterTypeStreamPhase.write(value.`phase`, buf)
     }
 }
 

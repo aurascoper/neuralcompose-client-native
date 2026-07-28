@@ -465,6 +465,22 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
+    typealias FfiType = UInt8
+    typealias SwiftType = UInt8
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt8 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: UInt8, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
@@ -603,40 +619,52 @@ public protocol StreamMonitorProtocol: AnyObject, Sendable {
     
     /**
      * Shell hands over one raw WS text frame. Returns the number of samples
-     * accepted. `last_received_at_ms` advances ONLY when accepted > 0 —
-     * this pins the Gate 4 no-op-flush bug: retained data and empty or
-     * invalid frames must never refresh sample age.
+     * accepted. Freshness (current AND any) advances ONLY when accepted > 0
+     * — retained data, empty frames, and invalid frames never refresh age.
+     * The first accepted frame of a generation is the real proof of
+     * recovery: it resets the retry budget (and clears a latched give-up).
      */
     func onFrame(text: String, nowMs: UInt64)  -> UInt32
     
     /**
-     * Shell reports socket lifecycle. `Opened` resets the attempt counter;
-     * `Closed`/`Errored` count one failed attempt each and never schedule
-     * anything themselves — the shell asks `reconnect_decision()` and owns
-     * the timer.
+     * Shell reports socket lifecycle. `Opened` starts a NEW generation with
+     * no freshness and does NOT touch the retry budget (a handshake proves
+     * nothing). `Closed`/`Errored` consume one attempt each and never
+     * schedule anything — the shell asks `reconnect_decision()` and owns the
+     * timer.
      */
     func onSocketEvent(event: SocketEvent, nowMs: UInt64) 
     
     /**
-     * Read-only phase derivation. MUST NOT mutate receive state.
+     * Read-only phase derivation from CURRENT-generation freshness only.
+     * MUST NOT mutate any state.
      */
     func phase(nowMs: UInt64)  -> StreamPhase
     
     func presentation(nowMs: UInt64)  -> Presentation
     
     /**
-     * Pure decision from the current failed-attempt count. When it returns
-     * `GiveUp` the monitor latches `Error` (matching the Expo client, which
-     * reports `error` after exhausting its 3 attempts).
+     * Pure decision from the current unsuccessful-attempt count. When it
+     * returns `GiveUp` the monitor latches `Error` until a frame is accepted
+     * or `reset()` is called.
      */
     func reconnectDecision()  -> ReconnectDecision
     
     /**
-     * New subscription lifecycle (mirrors the Expo hook's remount reset).
+     * New subscription lifecycle (mirrors a screen remount). Clears cached
+     * data, generations, and the retry budget.
      */
     func reset() 
     
+    /**
+     * Channel display data (cached across reconnects by design).
+     */
     func snapshot()  -> ChannelSnapshot
+    
+    /**
+     * Stream metadata snapshot. Read-only; never mutates freshness.
+     */
+    func streamSnapshot(nowMs: UInt64)  -> StreamSnapshot
     
 }
 open class StreamMonitor: StreamMonitorProtocol, @unchecked Sendable {
@@ -711,9 +739,10 @@ public static func withDefaults() -> StreamMonitor  {
     
     /**
      * Shell hands over one raw WS text frame. Returns the number of samples
-     * accepted. `last_received_at_ms` advances ONLY when accepted > 0 —
-     * this pins the Gate 4 no-op-flush bug: retained data and empty or
-     * invalid frames must never refresh sample age.
+     * accepted. Freshness (current AND any) advances ONLY when accepted > 0
+     * — retained data, empty frames, and invalid frames never refresh age.
+     * The first accepted frame of a generation is the real proof of
+     * recovery: it resets the retry budget (and clears a latched give-up).
      */
 open func onFrame(text: String, nowMs: UInt64) -> UInt32  {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
@@ -727,10 +756,11 @@ open func onFrame(text: String, nowMs: UInt64) -> UInt32  {
 }
     
     /**
-     * Shell reports socket lifecycle. `Opened` resets the attempt counter;
-     * `Closed`/`Errored` count one failed attempt each and never schedule
-     * anything themselves — the shell asks `reconnect_decision()` and owns
-     * the timer.
+     * Shell reports socket lifecycle. `Opened` starts a NEW generation with
+     * no freshness and does NOT touch the retry budget (a handshake proves
+     * nothing). `Closed`/`Errored` consume one attempt each and never
+     * schedule anything — the shell asks `reconnect_decision()` and owns the
+     * timer.
      */
 open func onSocketEvent(event: SocketEvent, nowMs: UInt64)  {try! rustCall() {
         uniffiCallStatus in
@@ -743,7 +773,8 @@ open func onSocketEvent(event: SocketEvent, nowMs: UInt64)  {try! rustCall() {
 }
     
     /**
-     * Read-only phase derivation. MUST NOT mutate receive state.
+     * Read-only phase derivation from CURRENT-generation freshness only.
+     * MUST NOT mutate any state.
      */
 open func phase(nowMs: UInt64) -> StreamPhase  {
     return try!  FfiConverterTypeStreamPhase_lift(try! rustCall() {
@@ -766,9 +797,9 @@ open func presentation(nowMs: UInt64) -> Presentation  {
 }
     
     /**
-     * Pure decision from the current failed-attempt count. When it returns
-     * `GiveUp` the monitor latches `Error` (matching the Expo client, which
-     * reports `error` after exhausting its 3 attempts).
+     * Pure decision from the current unsuccessful-attempt count. When it
+     * returns `GiveUp` the monitor latches `Error` until a frame is accepted
+     * or `reset()` is called.
      */
 open func reconnectDecision() -> ReconnectDecision  {
     return try!  FfiConverterTypeReconnectDecision_lift(try! rustCall() {
@@ -780,7 +811,8 @@ open func reconnectDecision() -> ReconnectDecision  {
 }
     
     /**
-     * New subscription lifecycle (mirrors the Expo hook's remount reset).
+     * New subscription lifecycle (mirrors a screen remount). Clears cached
+     * data, generations, and the retry budget.
      */
 open func reset()  {try! rustCall() {
         uniffiCallStatus in
@@ -790,11 +822,27 @@ open func reset()  {try! rustCall() {
 }
 }
     
+    /**
+     * Channel display data (cached across reconnects by design).
+     */
 open func snapshot() -> ChannelSnapshot  {
     return try!  FfiConverterTypeChannelSnapshot_lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_method_streammonitor_snapshot(
             self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Stream metadata snapshot. Read-only; never mutates freshness.
+     */
+open func streamSnapshot(nowMs: UInt64) -> StreamSnapshot  {
+    return try!  FfiConverterTypeStreamSnapshot_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_streammonitor_stream_snapshot(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
     )
 })
 }
@@ -847,22 +895,26 @@ public func FfiConverterTypeStreamMonitor_lower(_ value: StreamMonitor) -> UInt6
 
 
 
+/**
+ * Channel display data. Cached samples survive reconnects on purpose (the
+ * UI may keep showing the last traces) — but cached data never influences
+ * `phase()`; that is what `StreamSnapshot.last_received_at_current_ms` is for.
+ */
 public struct ChannelSnapshot: Equatable, Hashable {
     /**
      * 4 vecs in fixed TP9, AF7, AF8, TP10 order; newest `keep` samples.
      */
     public var channels: [[Double]]
     /**
-     * Index of the newest sample within the snapshot window; -1 when empty
-     * (mirrors the Expo `EEGBuffer.latest`).
+     * Index of the newest sample within the snapshot window; -1 when empty.
      */
     public var latestIndex: Int64
     /**
-     * Total samples accepted since the last `reset()`.
+     * Total samples accepted since the last `reset()` (all generations).
      */
     public var received: UInt64
     /**
-     * Monotonic ms of the newest ACCEPTED sample; `None` before the first.
+     * Monotonic ms of the newest accepted sample on ANY generation.
      */
     public var lastReceivedAtMs: UInt64?
 
@@ -873,14 +925,13 @@ public struct ChannelSnapshot: Equatable, Hashable {
          * 4 vecs in fixed TP9, AF7, AF8, TP10 order; newest `keep` samples.
          */channels: [[Double]], 
         /**
-         * Index of the newest sample within the snapshot window; -1 when empty
-         * (mirrors the Expo `EEGBuffer.latest`).
+         * Index of the newest sample within the snapshot window; -1 when empty.
          */latestIndex: Int64, 
         /**
-         * Total samples accepted since the last `reset()`.
+         * Total samples accepted since the last `reset()` (all generations).
          */received: UInt64, 
         /**
-         * Monotonic ms of the newest ACCEPTED sample; `None` before the first.
+         * Monotonic ms of the newest accepted sample on ANY generation.
          */lastReceivedAtMs: UInt64?) {
         self.channels = channels
         self.latestIndex = latestIndex
@@ -1150,6 +1201,93 @@ public func FfiConverterTypeResolvedClientConfig_lift(_ buf: RustBuffer) throws 
 #endif
 public func FfiConverterTypeResolvedClientConfig_lower(_ value: ResolvedClientConfig) -> RustBuffer {
     return FfiConverterTypeResolvedClientConfig.lower(value)
+}
+
+
+/**
+ * Stream metadata: everything freshness- and retry-related, per generation.
+ */
+public struct StreamSnapshot: Equatable, Hashable {
+    /**
+     * Increments on every completed WebSocket handshake (Opened). 0 = never opened.
+     */
+    public var connectionGeneration: UInt64
+    public var receivedOnCurrentConnection: UInt64
+    public var totalReceived: UInt64
+    public var lastReceivedAtCurrentMs: UInt64?
+    public var lastReceivedAtAnyMs: UInt64?
+    public var cachedSampleCount: UInt32
+    public var reconnectAttempts: UInt8
+    public var phase: StreamPhase
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Increments on every completed WebSocket handshake (Opened). 0 = never opened.
+         */connectionGeneration: UInt64, receivedOnCurrentConnection: UInt64, totalReceived: UInt64, lastReceivedAtCurrentMs: UInt64?, lastReceivedAtAnyMs: UInt64?, cachedSampleCount: UInt32, reconnectAttempts: UInt8, phase: StreamPhase) {
+        self.connectionGeneration = connectionGeneration
+        self.receivedOnCurrentConnection = receivedOnCurrentConnection
+        self.totalReceived = totalReceived
+        self.lastReceivedAtCurrentMs = lastReceivedAtCurrentMs
+        self.lastReceivedAtAnyMs = lastReceivedAtAnyMs
+        self.cachedSampleCount = cachedSampleCount
+        self.reconnectAttempts = reconnectAttempts
+        self.phase = phase
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension StreamSnapshot: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeStreamSnapshot: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> StreamSnapshot {
+        return
+            try StreamSnapshot(
+                connectionGeneration: FfiConverterUInt64.read(from: &buf), 
+                receivedOnCurrentConnection: FfiConverterUInt64.read(from: &buf), 
+                totalReceived: FfiConverterUInt64.read(from: &buf), 
+                lastReceivedAtCurrentMs: FfiConverterOptionUInt64.read(from: &buf), 
+                lastReceivedAtAnyMs: FfiConverterOptionUInt64.read(from: &buf), 
+                cachedSampleCount: FfiConverterUInt32.read(from: &buf), 
+                reconnectAttempts: FfiConverterUInt8.read(from: &buf), 
+                phase: FfiConverterTypeStreamPhase.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: StreamSnapshot, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.connectionGeneration, into: &buf)
+        FfiConverterUInt64.write(value.receivedOnCurrentConnection, into: &buf)
+        FfiConverterUInt64.write(value.totalReceived, into: &buf)
+        FfiConverterOptionUInt64.write(value.lastReceivedAtCurrentMs, into: &buf)
+        FfiConverterOptionUInt64.write(value.lastReceivedAtAnyMs, into: &buf)
+        FfiConverterUInt32.write(value.cachedSampleCount, into: &buf)
+        FfiConverterUInt8.write(value.reconnectAttempts, into: &buf)
+        FfiConverterTypeStreamPhase.write(value.phase, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStreamSnapshot_lift(_ buf: RustBuffer) throws -> StreamSnapshot {
+    return try FfiConverterTypeStreamSnapshot.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStreamSnapshot_lower(_ value: StreamSnapshot) -> RustBuffer {
+    return FfiConverterTypeStreamSnapshot.lower(value)
 }
 
 
@@ -1729,25 +1867,28 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_func_format_label_en() != 32187) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame() != 9867) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame() != 45030) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_socket_event() != 31328) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_socket_event() != 52542) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_phase() != 30052) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_phase() != 47585) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_presentation() != 23850) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_reconnect_decision() != 51196) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_reconnect_decision() != 8711) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_reset() != 55966) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_reset() != 58539) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_snapshot() != 32385) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_snapshot() != 12368) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_stream_snapshot() != 1964) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new() != 40578) {

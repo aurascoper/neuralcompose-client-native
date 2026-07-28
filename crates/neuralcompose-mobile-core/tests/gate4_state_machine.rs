@@ -48,8 +48,12 @@ fn operator_specified_gate4_sequence() {
     m.on_socket_event(SocketEvent::Connecting, 3300);
     assert_eq!(m.phase(3300), StreamPhase::Connecting);
 
-    // new socket receives sample → Live
+    // new socket opens → OpenNoData (M5-A: generation N's freshness is gone;
+    // cached traces never authorize Live for generation N+1)
     m.on_socket_event(SocketEvent::Opened, 3400);
+    assert_eq!(m.phase(3400), StreamPhase::OpenNoData);
+
+    // new socket receives sample → Live
     assert_eq!(m.on_frame(FRAME.to_string(), 3450), 1);
     assert_eq!(m.phase(3450), StreamPhase::Live);
 }
@@ -110,15 +114,21 @@ fn give_up_after_three_failed_attempts_with_pinned_backoff() {
     }
     assert_eq!(delays, vec![1000, 2000, 4000]);
 
-    // 4th failure → GiveUp, and the monitor latches Error (Expo parity:
-    // onStatus('error') after exhausting retries).
+    // 4th failure → GiveUp, and the monitor latches Error.
     m.on_socket_event(SocketEvent::Closed, 1000);
     assert_eq!(m.reconnect_decision(), ReconnectDecision::GiveUp);
     assert_eq!(m.phase(1001), StreamPhase::Error);
 
-    // A successful open resets everything.
+    // M5-A: a handshake alone clears nothing — Error stays latched and the
+    // budget stays exhausted until a frame is ACCEPTED.
     m.on_socket_event(SocketEvent::Opened, 2000);
-    assert_eq!(m.phase(2000), StreamPhase::OpenNoData);
+    assert_eq!(m.phase(2000), StreamPhase::Error);
+    assert_eq!(m.reconnect_decision(), ReconnectDecision::GiveUp);
+
+    // The first accepted frame is the real recovery: give-up clears, budget
+    // resets, and the backoff ladder starts from the bottom again.
+    assert_eq!(m.on_frame(FRAME.to_string(), 2050), 1);
+    assert_eq!(m.phase(2050), StreamPhase::Live);
     m.on_socket_event(SocketEvent::Closed, 2100);
     assert_eq!(
         m.reconnect_decision(),
