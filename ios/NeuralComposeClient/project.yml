@@ -1,0 +1,23 @@
+name: NeuralComposeClient
+options:
+  bundleIdPrefix: com.aurascoper
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  NeuralComposeCore:
+    path: ../NeuralComposeCore
+targets:
+  NeuralComposeClient:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    dependencies:
+      - package: NeuralComposeCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.aurascoper.neuralcomposeclient.native
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "NeuralCompose connects to your own NeuralCompose server on your local network to display EEG monitoring data."
+        CODE_SIGNING_ALLOWED: NO
+        SWIFT_VERSION: "5.9"
