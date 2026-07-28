@@ -6,5 +6,9 @@ ios/Generated/
 ios/Frameworks/
 android/core/src/main/jniLibs/
 android/core/build/
+android/core/.gradle/
+# xcodegen output — regenerate with `xcodegen generate` in ios/NeuralComposeClient
+*.xcodeproj/
 *.dylib
 *.a
+.kotlin/
