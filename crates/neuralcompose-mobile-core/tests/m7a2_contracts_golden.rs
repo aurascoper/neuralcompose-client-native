@@ -20,20 +20,20 @@ fn read(rel: &str) -> Value {
         .unwrap()
 }
 
-/// The runtime schemas `$ref` a sibling file, so resolve relative refs from
-/// the contracts directory rather than the process CWD.
+/// The runtime schemas `$ref` a sibling file. Resolve that reference through
+/// a registered in-memory resource under a synthetic base URI rather than a
+/// filesystem path — Windows canonicalization yields `\\?\D:\...`, which is
+/// not a valid URI, so a `file://` base fails there.
 fn validator_for(schema_rel: &str) -> jsonschema::Validator {
-    let dir = std::fs::canonicalize(format!(
-        "{}/../../contracts/runtime",
-        env!("CARGO_MANIFEST_DIR")
-    ))
-    .expect("contracts dir");
-    // Directory base URI (trailing slash) so sibling `$ref`s resolve against
-    // the contracts directory, not the process CWD. No url crate needed.
-    let base = format!("file://{}/", dir.display());
+    const BASE: &str = "https://contracts.neuralcompose.invalid/runtime/";
     let schema = read(schema_rel);
     jsonschema::options()
-        .with_base_uri(base)
+        .with_base_uri(BASE)
+        .with_resource(
+            format!("{BASE}runtime-target.schema.json"),
+            jsonschema::Resource::from_contents(read("runtime-target.schema.json"))
+                .expect("runtime-target resource"),
+        )
         .build(&schema)
         .unwrap_or_else(|e| panic!("{schema_rel}: {e}"))
 }
