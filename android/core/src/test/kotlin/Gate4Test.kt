@@ -86,6 +86,36 @@ class Gate4Test {
     }
 
     @Test
+    fun audioLifecycleThroughBindings() {
+        val lc = uniffi.neuralcompose_mobile_core.AudioLifecycle()
+        assertEquals(true, lc.onPermission(false, 5uL))
+        assertEquals(false, lc.onRecordStart(10uL))
+        assertEquals(0, lc.snapshot().manifests.size)
+
+        assertEquals(true, lc.onPermission(true, 20uL))
+        assertEquals(true, lc.onRecordStart(30uL))
+        assertEquals(true, lc.onRecordStop(4030uL))
+        val hash = uniffi.neuralcompose_mobile_core.sha256Hex("abc".toByteArray())
+        assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", hash)
+        assertEquals(
+            true,
+            lc.onPersisted("r1", 1000uL, 4000uL, "m4a", 999uL, hash, 4100uL),
+        )
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.RecordingPhase.Recorded,
+            lc.phase(),
+        )
+        assertEquals(true, lc.onPlayStart(5000uL))
+        assertEquals(true, lc.onPlayStop(6000uL))
+        assertEquals(1, lc.snapshot().manifests.size)
+
+        val reloaded =
+            uniffi.neuralcompose_mobile_core.AudioLifecycle.withManifests(lc.snapshot().manifests)
+        assertEquals(uniffi.neuralcompose_mobile_core.RecordingPhase.Idle, reloaded.phase())
+        assertEquals(false, reloaded.onRecordStart(1uL))
+    }
+
+    @Test
     fun configResolutionNeverSilentlyFallsBackToMock() {
         val c = resolveClientMode("false", "", "")
         assertEquals(ClientMode.LIVE, c.mode)

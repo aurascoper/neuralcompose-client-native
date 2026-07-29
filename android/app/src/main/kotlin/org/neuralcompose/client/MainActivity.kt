@@ -62,6 +62,7 @@ class MainActivity : ComponentActivity() {
                     Column(Modifier.padding(padding)) {
                         when (selected) {
                             1 -> EEGScreen()
+                            5 -> JournalScreen()
                             else -> Placeholder(TABS[selected].label)
                         }
                     }

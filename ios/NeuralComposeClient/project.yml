@@ -18,6 +18,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.aurascoper.neuralcomposeclient.native
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "NeuralCompose records optional voice notes for your local journal. Audio stays on this device and is never uploaded."
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "NeuralCompose connects to your own NeuralCompose server on your local network to display EEG monitoring data."
         CODE_SIGNING_ALLOWED: NO
         SWIFT_VERSION: "5.9"

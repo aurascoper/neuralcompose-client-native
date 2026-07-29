@@ -6,6 +6,14 @@
 
 use neuralcompose_mobile_core::EEGSample;
 
+/// `f64::sin` delegates to the platform libm; macOS and glibc can differ in
+/// the last ulp, which changes the shortest-round-trip JSON bytes. Rounding
+/// to 1e-12 absorbs that (the golden test tolerance is 1e-12) and makes the
+/// fixture byte-identical across platforms.
+fn stable(v: f64) -> f64 {
+    (v * 1e12).round() / 1e12
+}
+
 fn main() {
     let out_dir = std::env::args()
         .nth(1)
@@ -18,10 +26,10 @@ fn main() {
             EEGSample {
                 timestamp: t,
                 channels: [
-                    45.0 * (tau * 8.0 * t).sin(),
-                    32.0 * (tau * 10.0 * t + 0.5).sin(),
-                    36.0 * (tau * 12.0 * t + 1.0).sin(),
-                    42.0 * (tau * 6.0 * t + 1.5).sin(),
+                    stable(45.0 * (tau * 8.0 * t).sin()),
+                    stable(32.0 * (tau * 10.0 * t + 0.5).sin()),
+                    stable(36.0 * (tau * 12.0 * t + 1.0).sin()),
+                    stable(42.0 * (tau * 6.0 * t + 1.5).sin()),
                 ],
             }
         })

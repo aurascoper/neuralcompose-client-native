@@ -10,8 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # rust-toolchain.toml pins the toolchain; install THAT one with the
+      # components, or cargo delegates to a bare auto-installed 1.97.1
+      # without rustfmt/clippy.
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: 1.97.1
           components: rustfmt, clippy
       - name: Format
         run: cargo fmt --check

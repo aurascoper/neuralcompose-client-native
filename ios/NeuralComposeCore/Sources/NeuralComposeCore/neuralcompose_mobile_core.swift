@@ -612,6 +612,381 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
+
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
+    }
+}
+
+
+
+
+public protocol AudioLifecycleProtocol: AnyObject, Sendable {
+    
+    /**
+     * Recover from Failed back to Ready (operator acknowledges the error).
+     */
+    func onFailureAcknowledged(nowMs: UInt64)  -> Bool
+    
+    /**
+     * OS interruption (call, route change, backgrounding policy) while
+     * Recording or Playing.
+     */
+    func onInterruption(nowMs: UInt64)  -> Bool
+    
+    /**
+     * Explicit recovery from an interruption. An interrupted recording was
+     * never persisted, so recovery from recording lands on Ready; recovery
+     * from playback returns to the phase playback started from (preserving
+     * the no-authority-gain rule even across interruptions).
+     */
+    func onInterruptionEnded(nowMs: UInt64)  -> Bool
+    
+    /**
+     * Shell reports the platform permission result.
+     */
+    func onPermission(granted: Bool, nowMs: UInt64)  -> Bool
+    
+    /**
+     * Persist failure: NO manifest, explicit Failed state with the reason.
+     */
+    func onPersistFailed(reason: String, nowMs: UInt64)  -> Bool
+    
+    /**
+     * Atomic persistence: the manifest appears only here, together with the
+     * Recorded phase. `sha256_hex(bytes)` provides the content hash.
+     */
+    func onPersisted(id: String, createdAtMs: UInt64, durationMs: UInt64, format: String, byteSize: UInt64, sha256Hex: String, nowMs: UInt64)  -> Bool
+    
+    /**
+     * Playback is independent of microphone permission: legal from Idle,
+     * PermissionDenied, Ready, and Recorded whenever a persisted manifest
+     * exists (integrity of the underlying file is the shell's check).
+     */
+    func onPlayStart(nowMs: UInt64)  -> Bool
+    
+    /**
+     * The second action stops playback, returning to the phase playback
+     * started from — never granting authority playback didn't have.
+     */
+    func onPlayStop(nowMs: UInt64)  -> Bool
+    
+    /**
+     * Record is reachable ONLY from Ready or Recorded (a new take).
+     * From PermissionDenied this is a rejected no-op: no state change,
+     * no file, no entry — the shell shows the explanation.
+     */
+    func onRecordStart(nowMs: UInt64)  -> Bool
+    
+    func onRecordStop(nowMs: UInt64)  -> Bool
+    
+    func phase()  -> RecordingPhase
+    
+    /**
+     * Read-only. Never mutates lifecycle state.
+     */
+    func snapshot()  -> AudioSnapshot
+    
+}
+open class AudioLifecycle: AudioLifecycleProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_neuralcompose_mobile_core_fn_clone_audiolifecycle(self.handle, $0) }
+    }
+public convenience init() {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_constructor_audiolifecycle_new(uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_neuralcompose_mobile_core_fn_free_audiolifecycle(handle, $0) }
+    }
+
+    
+    /**
+     * Restart path: reload previously persisted manifests. Phase stays Idle
+     * (never a phantom Recording); permission must be re-reported.
+     */
+public static func withManifests(manifests: [RecordingManifest]) -> AudioLifecycle  {
+    return try!  FfiConverterTypeAudioLifecycle_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_constructor_audiolifecycle_with_manifests(
+        FfiConverterSequenceTypeRecordingManifest.lower(manifests),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+    /**
+     * Recover from Failed back to Ready (operator acknowledges the error).
+     */
+open func onFailureAcknowledged(nowMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_failure_acknowledged(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * OS interruption (call, route change, backgrounding policy) while
+     * Recording or Playing.
+     */
+open func onInterruption(nowMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_interruption(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Explicit recovery from an interruption. An interrupted recording was
+     * never persisted, so recovery from recording lands on Ready; recovery
+     * from playback returns to the phase playback started from (preserving
+     * the no-authority-gain rule even across interruptions).
+     */
+open func onInterruptionEnded(nowMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_interruption_ended(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Shell reports the platform permission result.
+     */
+open func onPermission(granted: Bool, nowMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_permission(
+            self.uniffiCloneHandle(),
+        FfiConverterBool.lower(granted),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Persist failure: NO manifest, explicit Failed state with the reason.
+     */
+open func onPersistFailed(reason: String, nowMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_persist_failed(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(reason),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Atomic persistence: the manifest appears only here, together with the
+     * Recorded phase. `sha256_hex(bytes)` provides the content hash.
+     */
+open func onPersisted(id: String, createdAtMs: UInt64, durationMs: UInt64, format: String, byteSize: UInt64, sha256Hex: String, nowMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_persisted(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterUInt64.lower(createdAtMs),
+        FfiConverterUInt64.lower(durationMs),
+        FfiConverterString.lower(format),
+        FfiConverterUInt64.lower(byteSize),
+        FfiConverterString.lower(sha256Hex),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Playback is independent of microphone permission: legal from Idle,
+     * PermissionDenied, Ready, and Recorded whenever a persisted manifest
+     * exists (integrity of the underlying file is the shell's check).
+     */
+open func onPlayStart(nowMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_play_start(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The second action stops playback, returning to the phase playback
+     * started from — never granting authority playback didn't have.
+     */
+open func onPlayStop(nowMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_play_stop(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Record is reachable ONLY from Ready or Recorded (a new take).
+     * From PermissionDenied this is a rejected no-op: no state change,
+     * no file, no entry — the shell shows the explanation.
+     */
+open func onRecordStart(nowMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_record_start(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+open func onRecordStop(nowMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_record_stop(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+open func phase() -> RecordingPhase  {
+    return try!  FfiConverterTypeRecordingPhase_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_phase(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Read-only. Never mutates lifecycle state.
+     */
+open func snapshot() -> AudioSnapshot  {
+    return try!  FfiConverterTypeAudioSnapshot_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_snapshot(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAudioLifecycle: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = AudioLifecycle
+
+    public static func lift(_ handle: UInt64) throws -> AudioLifecycle {
+        return AudioLifecycle(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: AudioLifecycle) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AudioLifecycle {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: AudioLifecycle, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAudioLifecycle_lift(_ handle: UInt64) throws -> AudioLifecycle {
+    return try FfiConverterTypeAudioLifecycle.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAudioLifecycle_lower(_ value: AudioLifecycle) -> UInt64 {
+    return FfiConverterTypeAudioLifecycle.lower(value)
+}
+
+
+
 
 
 
@@ -895,6 +1270,138 @@ public func FfiConverterTypeStreamMonitor_lower(_ value: StreamMonitor) -> UInt6
 
 
 
+public struct AudioSnapshot: Equatable, Hashable {
+    public var phase: RecordingPhase
+    public var manifests: [RecordingManifest]
+    public var transitions: [AudioTransition]
+    /**
+     * True while an unfinalized recording exists (Recording/Persisting/
+     * Interrupted-from-Recording). Shells use it to warn before discarding.
+     */
+    public var hasUnfinalizedRecording: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(phase: RecordingPhase, manifests: [RecordingManifest], transitions: [AudioTransition], 
+        /**
+         * True while an unfinalized recording exists (Recording/Persisting/
+         * Interrupted-from-Recording). Shells use it to warn before discarding.
+         */hasUnfinalizedRecording: Bool) {
+        self.phase = phase
+        self.manifests = manifests
+        self.transitions = transitions
+        self.hasUnfinalizedRecording = hasUnfinalizedRecording
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AudioSnapshot: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAudioSnapshot: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AudioSnapshot {
+        return
+            try AudioSnapshot(
+                phase: FfiConverterTypeRecordingPhase.read(from: &buf), 
+                manifests: FfiConverterSequenceTypeRecordingManifest.read(from: &buf), 
+                transitions: FfiConverterSequenceTypeAudioTransition.read(from: &buf), 
+                hasUnfinalizedRecording: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AudioSnapshot, into buf: inout [UInt8]) {
+        FfiConverterTypeRecordingPhase.write(value.phase, into: &buf)
+        FfiConverterSequenceTypeRecordingManifest.write(value.manifests, into: &buf)
+        FfiConverterSequenceTypeAudioTransition.write(value.transitions, into: &buf)
+        FfiConverterBool.write(value.hasUnfinalizedRecording, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAudioSnapshot_lift(_ buf: RustBuffer) throws -> AudioSnapshot {
+    return try FfiConverterTypeAudioSnapshot.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAudioSnapshot_lower(_ value: AudioSnapshot) -> RustBuffer {
+    return FfiConverterTypeAudioSnapshot.lower(value)
+}
+
+
+public struct AudioTransition: Equatable, Hashable {
+    public var from: RecordingPhase
+    public var to: RecordingPhase
+    public var event: String
+    public var atMs: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(from: RecordingPhase, to: RecordingPhase, event: String, atMs: UInt64) {
+        self.from = from
+        self.to = to
+        self.event = event
+        self.atMs = atMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AudioTransition: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAudioTransition: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AudioTransition {
+        return
+            try AudioTransition(
+                from: FfiConverterTypeRecordingPhase.read(from: &buf), 
+                to: FfiConverterTypeRecordingPhase.read(from: &buf), 
+                event: FfiConverterString.read(from: &buf), 
+                atMs: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AudioTransition, into buf: inout [UInt8]) {
+        FfiConverterTypeRecordingPhase.write(value.from, into: &buf)
+        FfiConverterTypeRecordingPhase.write(value.to, into: &buf)
+        FfiConverterString.write(value.event, into: &buf)
+        FfiConverterUInt64.write(value.atMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAudioTransition_lift(_ buf: RustBuffer) throws -> AudioTransition {
+    return try FfiConverterTypeAudioTransition.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAudioTransition_lower(_ value: AudioTransition) -> RustBuffer {
+    return FfiConverterTypeAudioTransition.lower(value)
+}
+
+
 /**
  * Channel display data. Cached samples survive reconnects on purpose (the
  * UI may keep showing the last traces) — but cached data never influences
@@ -1133,6 +1640,81 @@ public func FfiConverterTypePresentation_lift(_ buf: RustBuffer) throws -> Prese
 #endif
 public func FfiConverterTypePresentation_lower(_ value: Presentation) -> RustBuffer {
     return FfiConverterTypePresentation.lower(value)
+}
+
+
+/**
+ * Portable, platform-neutral recording manifest. `created_at_ms` is
+ * shell-supplied display metadata (wall clock allowed); every DECISION in
+ * this module uses only event ordering, never clocks.
+ */
+public struct RecordingManifest: Equatable, Hashable {
+    public var id: String
+    public var createdAtMs: UInt64
+    public var durationMs: UInt64
+    public var format: String
+    public var byteSize: UInt64
+    public var sha256Hex: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, createdAtMs: UInt64, durationMs: UInt64, format: String, byteSize: UInt64, sha256Hex: String) {
+        self.id = id
+        self.createdAtMs = createdAtMs
+        self.durationMs = durationMs
+        self.format = format
+        self.byteSize = byteSize
+        self.sha256Hex = sha256Hex
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RecordingManifest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRecordingManifest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RecordingManifest {
+        return
+            try RecordingManifest(
+                id: FfiConverterString.read(from: &buf), 
+                createdAtMs: FfiConverterUInt64.read(from: &buf), 
+                durationMs: FfiConverterUInt64.read(from: &buf), 
+                format: FfiConverterString.read(from: &buf), 
+                byteSize: FfiConverterUInt64.read(from: &buf), 
+                sha256Hex: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RecordingManifest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterUInt64.write(value.createdAtMs, into: &buf)
+        FfiConverterUInt64.write(value.durationMs, into: &buf)
+        FfiConverterString.write(value.format, into: &buf)
+        FfiConverterUInt64.write(value.byteSize, into: &buf)
+        FfiConverterString.write(value.sha256Hex, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRecordingManifest_lift(_ buf: RustBuffer) throws -> RecordingManifest {
+    return try FfiConverterTypeRecordingManifest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRecordingManifest_lower(_ value: RecordingManifest) -> RustBuffer {
+    return FfiConverterTypeRecordingManifest.lower(value)
 }
 
 
@@ -1422,6 +2004,127 @@ public func FfiConverterTypeReconnectDecision_lift(_ buf: RustBuffer) throws -> 
 #endif
 public func FfiConverterTypeReconnectDecision_lower(_ value: ReconnectDecision) -> RustBuffer {
     return FfiConverterTypeReconnectDecision.lower(value)
+}
+
+
+
+/**
+ * The operator-specified phase set.
+ */
+
+public enum RecordingPhase: Equatable, Hashable {
+    
+    case idle
+    case permissionDenied
+    case ready
+    case recording
+    case persisting
+    case recorded
+    case playing
+    case interrupted
+    case failed(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension RecordingPhase: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRecordingPhase: FfiConverterRustBuffer {
+    typealias SwiftType = RecordingPhase
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RecordingPhase {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .idle
+        
+        case 2: return .permissionDenied
+        
+        case 3: return .ready
+        
+        case 4: return .recording
+        
+        case 5: return .persisting
+        
+        case 6: return .recorded
+        
+        case 7: return .playing
+        
+        case 8: return .interrupted
+        
+        case 9: return .failed(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: RecordingPhase, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .idle:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .permissionDenied:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .ready:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .recording:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .persisting:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .recorded:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .playing:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .interrupted:
+            writeInt(&buf, Int32(8))
+        
+        
+        case let .failed(reason):
+            writeInt(&buf, Int32(9))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRecordingPhase_lift(_ buf: RustBuffer) throws -> RecordingPhase {
+    return try FfiConverterTypeRecordingPhase.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRecordingPhase_lower(_ value: RecordingPhase) -> RustBuffer {
+    return FfiConverterTypeRecordingPhase.lower(value)
 }
 
 
@@ -1761,6 +2464,56 @@ fileprivate struct FfiConverterSequenceDouble: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeAudioTransition: FfiConverterRustBuffer {
+    typealias SwiftType = [AudioTransition]
+
+    public static func write(_ value: [AudioTransition], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAudioTransition.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AudioTransition] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AudioTransition]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAudioTransition.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeRecordingManifest: FfiConverterRustBuffer {
+    typealias SwiftType = [RecordingManifest]
+
+    public static func write(_ value: [RecordingManifest], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeRecordingManifest.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [RecordingManifest] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [RecordingManifest]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeRecordingManifest.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer {
     typealias SwiftType = [[Double]]
 
@@ -1781,6 +2534,18 @@ fileprivate struct FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer {
         }
         return seq
     }
+}
+/**
+ * Deterministic content hash for recording bytes — the portable half of the
+ * manifest. Shells may hash natively instead; results must match this.
+ */
+public func sha256Hex(bytes: Data) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_sha256_hex(
+        FfiConverterData.lower(bytes),uniffiCallStatus
+    )
+})
 }
 /**
  * Derive the ws(s):// stream URL from the HTTP server URL when not given.
@@ -1852,6 +2617,9 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_sha256_hex() != 20754) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_neuralcompose_mobile_core_checksum_func_derive_ws_url() != 13734) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -1865,6 +2633,42 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_format_label_en() != 32187) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged() != 13465) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption() != 29975) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption_ended() != 58217) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_permission() != 56169) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_persist_failed() != 27076) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_persisted() != 23120) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_start() != 56253) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_stop() != 52382) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_record_start() != 35402) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_record_stop() != 45806) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_phase() != 6179) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot() != 28404) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame() != 45030) {
@@ -1889,6 +2693,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_stream_snapshot() != 1964) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_new() != 11454) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests() != 11328) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new() != 40578) {

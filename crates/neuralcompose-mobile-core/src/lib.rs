@@ -9,6 +9,7 @@
 //! The FFI boundary is synchronous and pure-in/pure-out; the only stateful
 //! object is [`stream::StreamMonitor`]. This crate never reads a clock.
 
+pub mod audio;
 pub mod buffer;
 pub mod config;
 pub mod presentation;
@@ -17,6 +18,9 @@ pub mod stream;
 pub mod types;
 pub mod wire;
 
+pub use audio::{
+    sha256_hex, AudioLifecycle, AudioSnapshot, AudioTransition, RecordingManifest, RecordingPhase,
+};
 pub use buffer::SampleBuffer;
 pub use config::{
     derive_ws_url, parse_use_mock, resolve_client_mode, ClientMode, ResolvedClientConfig,
