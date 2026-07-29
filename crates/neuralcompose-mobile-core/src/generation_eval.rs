@@ -209,6 +209,9 @@ pub struct EvaluationProtocol {
     pub sustained_seconds: u32,
     pub per_run_timeout_ms: u64,
     pub thresholds: PromotionThresholds,
+    /// v2: the conditions a measurement is taken under. Absent in v1, which
+    /// is why v1 could not support an honest battery or cold-load claim.
+    pub environment: RunEnvironment,
 }
 
 /// Canonical protocol identity. Any change to the corpus, rubric, sampler,
@@ -249,6 +252,141 @@ pub fn candidate_identity(candidate: EvaluationCandidate) -> String {
         })
         .expect("serialize"),
     )
+}
+
+// ---------- protocol v2: the run environment ----------
+//
+// v1 (commit 72a0367) froze the corpus, sampler, seeds and ceilings but said
+// nothing about the conditions a measurement is taken under. It carried a
+// battery ceiling with no statement of charging state, which would have let a
+// plugged-in run masquerade as a discharge-cost measurement. v1 is preserved
+// unchanged in history; this supersedes it and, because every term is hashed,
+// necessarily yields a DIFFERENT protocol identity.
+
+/// What "cold" honestly means on Android. An ordinary app cannot drop the OS
+/// page cache, so a force-stopped process is process-cold while the model may
+/// still be resident in cache — the evidence is named for what it is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum ColdDefinition {
+    /// Process and context destroyed; OS page-cache state unknown and NOT
+    /// claimed to be cold. This is what Android actually permits.
+    ProcessColdPageCacheUnknown,
+    /// Page cache demonstrably evicted (e.g. by an external, privileged step).
+    /// Only usable when that step is actually performed and recorded.
+    FilesystemCacheCold,
+}
+
+/// What "warm" reuses. Naming it prevents two candidates being measured under
+/// different amounts of retained state.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum WarmDefinition {
+    /// Same process, model file already loaded, native context recreated.
+    ContextRecreatedModelResident,
+    /// Same process and the native context is reused as-is.
+    ContextReused,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum ChargingState {
+    /// Latency, throughput, memory, temperature and throttling remain
+    /// interpretable; battery delta does NOT become a discharge-cost claim.
+    PluggedIn,
+    OnBattery,
+}
+
+/// How a cooldown ends. Elapsed time alone does not prove a device returned
+/// to its starting thermal state.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum CooldownExit {
+    /// Wait until the device reports at or below the start ceiling AND a
+    /// minimum time has passed.
+    TemperatureAtOrBelowStartCeiling,
+    /// Elapsed time only — weaker, and recorded as such.
+    ElapsedTimeOnly,
+}
+
+/// Why a run is not a usable measurement. Kept distinct from a low score:
+/// an inadmissible run is not evidence, and must never be averaged in.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum RunDisposition {
+    Admissible,
+    Interrupted {
+        reason: String,
+    },
+    ThermallyThrottled,
+    CancelledByOperator,
+    /// The continuation exposed private stepwise deliberation. Retained
+    /// locally for inspection; never scored as a poor answer.
+    InadmissibleReasoningLeakage {
+        detector: String,
+    },
+    PromptParityMismatch,
+}
+
+/// The conditions every timed run must be taken under.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct RunEnvironment {
+    pub cold_definition: ColdDefinition,
+    pub warm_definition: WarmDefinition,
+    pub charging_state: ChargingState,
+    pub cooldown_exit: CooldownExit,
+    pub cooldown_minimum_seconds: u32,
+    /// A run may not START above this temperature.
+    pub thermal_start_ceiling_celsius_tenths: u32,
+    pub screen_on: bool,
+    pub screen_brightness_percent: u32,
+    /// Airplane mode proves local execution and removes radio power noise.
+    pub airplane_mode: bool,
+    /// Process restarted between candidates so neither inherits the other's
+    /// warmed state.
+    pub restart_process_between_candidates: bool,
+    /// Pack integrity re-verified between candidates.
+    pub recheck_pack_integrity_between_candidates: bool,
+    /// Candidate order alternates rather than running all of A then all of B,
+    /// so ordering and accumulated heat do not bias one candidate.
+    pub alternating_candidate_order: bool,
+}
+
+/// Is a battery figure taken under these conditions interpretable as an
+/// energy cost? Plugged in, it is not — the number may be recorded, but it
+/// cannot support a discharge-efficiency claim.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn battery_delta_is_energy_evidence(env: RunEnvironment) -> bool {
+    env.charging_state == ChargingState::OnBattery
+}
+
+/// Does the environment support the cold claim it makes?
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn validate_run_environment(env: RunEnvironment) -> Vec<String> {
+    let mut errs = Vec::new();
+    if env.cooldown_minimum_seconds == 0 {
+        errs.push("cooldownMinimumSeconds must be > 0".into());
+    }
+    if env.thermal_start_ceiling_celsius_tenths == 0 {
+        errs.push("thermalStartCeiling must be set".into());
+    }
+    if !env.alternating_candidate_order {
+        errs.push("candidate order must alternate to control ordering bias".into());
+    }
+    if !env.restart_process_between_candidates {
+        errs.push("process must restart between candidates".into());
+    }
+    if !env.recheck_pack_integrity_between_candidates {
+        errs.push("pack integrity must be rechecked between candidates".into());
+    }
+    errs
 }
 
 // ---------- observations from the shell ----------
@@ -340,8 +478,8 @@ pub struct CandidateResult {
     pub prompts: Vec<BenchmarkPrompt>,
     pub cost: CostObservation,
     pub quality: QualityPanel,
-    /// Set when the run hit an admission or integrity problem.
-    pub disqualified_reason: Option<String>,
+    /// v2: why this run is or is not a usable measurement.
+    pub disposition: RunDisposition,
 }
 
 // ---------- admission and promotion ----------
@@ -370,8 +508,10 @@ pub fn admit_result(
     candidate: EvaluationCandidate,
     protocol_identity: String,
 ) -> Option<AdmissionFailure> {
-    if let Some(reason) = result.disqualified_reason {
-        return Some(AdmissionFailure::Disqualified { reason });
+    if result.disposition != RunDisposition::Admissible {
+        return Some(AdmissionFailure::Disqualified {
+            reason: format!("{:?}", result.disposition),
+        });
     }
     if result.protocol_identity != protocol_identity {
         return Some(AdmissionFailure::ProtocolMismatch);

@@ -33,9 +33,27 @@ fn thresholds() -> PromotionThresholds {
     }
 }
 
+fn environment() -> RunEnvironment {
+    RunEnvironment {
+        // Android gives an ordinary app no honest way to drop the page cache.
+        cold_definition: ColdDefinition::ProcessColdPageCacheUnknown,
+        warm_definition: WarmDefinition::ContextRecreatedModelResident,
+        charging_state: ChargingState::PluggedIn,
+        cooldown_exit: CooldownExit::TemperatureAtOrBelowStartCeiling,
+        cooldown_minimum_seconds: 180,
+        thermal_start_ceiling_celsius_tenths: 380,
+        screen_on: true,
+        screen_brightness_percent: 20,
+        airplane_mode: true,
+        restart_process_between_candidates: true,
+        recheck_pack_integrity_between_candidates: true,
+        alternating_candidate_order: true,
+    }
+}
+
 fn protocol() -> EvaluationProtocol {
     EvaluationProtocol {
-        protocol_version: 1,
+        protocol_version: 2,
         corpus_id: "m7b-sanitized-v1".into(),
         corpus_sha256_hex: sha(0xa1),
         prompt_count: 24,
@@ -47,6 +65,7 @@ fn protocol() -> EvaluationProtocol {
         sustained_seconds: 300,
         per_run_timeout_ms: 60_000,
         thresholds: thresholds(),
+        environment: environment(),
     }
 }
 
@@ -149,7 +168,7 @@ fn result(id: &str, score: f64, c: CostObservation) -> CandidateResult {
         prompts: vec![],
         cost: c,
         quality: panel(score),
-        disqualified_reason: None,
+        disposition: RunDisposition::Admissible,
     }
 }
 
@@ -175,6 +194,18 @@ fn the_protocol_identity_pins_every_term() {
         ("material margin", |p| {
             p.thresholds.material_quality_margin = 0.0
         }),
+        // v2 environment terms are part of the protocol: swapping a
+        // plugged-in run for an on-battery one is a different experiment.
+        ("charging state", |p| {
+            p.environment.charging_state = ChargingState::OnBattery
+        }),
+        ("cold definition", |p| {
+            p.environment.cold_definition = ColdDefinition::FilesystemCacheCold
+        }),
+        ("cooldown exit", |p| {
+            p.environment.cooldown_exit = CooldownExit::ElapsedTimeOnly
+        }),
+        ("airplane mode", |p| p.environment.airplane_mode = false),
     ];
     for (name, mutate) in mutations {
         let mut p = protocol();
@@ -456,5 +487,84 @@ fn semantic_and_rendered_prompt_identities_are_separate() {
     assert_ne!(
         semantic_prompt_hash("reflective".into(), "Summarize this.".into()),
         semantic_a
+    );
+}
+
+// v2: the conditions a measurement is taken under are part of the protocol.
+#[test]
+fn the_environment_is_part_of_the_experiment() {
+    assert!(validate_run_environment(environment()).is_empty());
+    // Each control that prevents a biased comparison is required.
+    type Mutation = fn(&mut RunEnvironment);
+    let required: Vec<(&str, Mutation)> = vec![
+        ("alternating order", |e| {
+            e.alternating_candidate_order = false
+        }),
+        ("process restart", |e| {
+            e.restart_process_between_candidates = false
+        }),
+        ("integrity recheck", |e| {
+            e.recheck_pack_integrity_between_candidates = false
+        }),
+        ("cooldown minimum", |e| e.cooldown_minimum_seconds = 0),
+        ("thermal start ceiling", |e| {
+            e.thermal_start_ceiling_celsius_tenths = 0
+        }),
+    ];
+    for (name, mutate) in required {
+        let mut e = environment();
+        mutate(&mut e);
+        assert!(
+            !validate_run_environment(e).is_empty(),
+            "{name} must be required"
+        );
+    }
+}
+
+// A plugged-in battery figure is not an energy claim.
+#[test]
+fn battery_delta_is_only_energy_evidence_on_battery() {
+    let plugged = environment();
+    assert_eq!(plugged.charging_state, ChargingState::PluggedIn);
+    assert!(
+        !battery_delta_is_energy_evidence(plugged.clone()),
+        "a plugged-in run cannot support a discharge-cost claim"
+    );
+    let unplugged = RunEnvironment {
+        charging_state: ChargingState::OnBattery,
+        ..plugged
+    };
+    assert!(battery_delta_is_energy_evidence(unplugged));
+}
+
+// An inadmissible run is not a low score.
+#[test]
+fn reasoning_leakage_is_inadmissible_not_poorly_scored() {
+    let pid = evaluation_protocol_identity(protocol());
+    let mut leaked = result("qwen3", 0.95, cost());
+    leaked.disposition = RunDisposition::InadmissibleReasoningLeakage {
+        detector: "frozen-prose-v1".into(),
+    };
+    // Despite a high quality panel, it cannot enter the comparison at all.
+    assert!(matches!(
+        admit_result(leaked.clone(), qwen3_q4(), pid.clone()),
+        Some(AdmissionFailure::Disqualified { .. })
+    ));
+    for d in [
+        RunDisposition::ThermallyThrottled,
+        RunDisposition::PromptParityMismatch,
+        RunDisposition::CancelledByOperator,
+        RunDisposition::Interrupted {
+            reason: "call".into(),
+        },
+    ] {
+        let mut r = result("qwen3", 0.99, cost());
+        r.disposition = d;
+        assert!(admit_result(r, qwen3_q4(), pid.clone()).is_some());
+    }
+    // Polarity: an admissible run passes.
+    assert_eq!(
+        admit_result(result("qwen3", 0.7, cost()), qwen3_q4(), pid),
+        None
     );
 }
