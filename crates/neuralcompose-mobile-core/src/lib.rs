@@ -11,6 +11,7 @@
 
 pub mod audio;
 pub mod buffer;
+pub mod capture;
 pub mod config;
 pub mod conformance;
 pub mod model_pack;
