@@ -12,10 +12,13 @@
 pub mod audio;
 pub mod buffer;
 pub mod config;
+pub mod conformance;
 pub mod model_pack;
 pub mod presentation;
+pub mod property_law;
 pub mod provider;
 pub mod reconnect;
+pub mod runtime_target;
 pub mod stream;
 pub mod types;
 pub mod wire;

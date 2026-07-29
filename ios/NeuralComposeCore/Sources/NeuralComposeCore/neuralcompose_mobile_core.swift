@@ -1766,6 +1766,200 @@ public func FfiConverterTypeAudioTransition_lower(_ value: AudioTransition) -> R
 
 
 /**
+ * The frozen agreement a backend must satisfy to claim a numerical contract.
+ */
+public struct BackendConformancePolicy: Equatable, Hashable {
+    public var numericalContractId: String
+    public var tokenizerIdentity: String
+    public var promptByteIdentity: String
+    public var stopTokenIdentity: String
+    public var contextCap: UInt32
+    public var deterministicTestMode: Bool
+    /**
+     * Maximum absolute logit divergence. Must be finite and >= 0.
+     */
+    public var logitsTolerance: Double
+    /**
+     * Maximum embedding divergence under the declared metric.
+     */
+    public var embeddingTolerance: Double
+    public var generatedTokenPolicy: GeneratedTokenPolicy
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(numericalContractId: String, tokenizerIdentity: String, promptByteIdentity: String, stopTokenIdentity: String, contextCap: UInt32, deterministicTestMode: Bool, 
+        /**
+         * Maximum absolute logit divergence. Must be finite and >= 0.
+         */logitsTolerance: Double, 
+        /**
+         * Maximum embedding divergence under the declared metric.
+         */embeddingTolerance: Double, generatedTokenPolicy: GeneratedTokenPolicy) {
+        self.numericalContractId = numericalContractId
+        self.tokenizerIdentity = tokenizerIdentity
+        self.promptByteIdentity = promptByteIdentity
+        self.stopTokenIdentity = stopTokenIdentity
+        self.contextCap = contextCap
+        self.deterministicTestMode = deterministicTestMode
+        self.logitsTolerance = logitsTolerance
+        self.embeddingTolerance = embeddingTolerance
+        self.generatedTokenPolicy = generatedTokenPolicy
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackendConformancePolicy: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackendConformancePolicy: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackendConformancePolicy {
+        return
+            try BackendConformancePolicy(
+                numericalContractId: FfiConverterString.read(from: &buf), 
+                tokenizerIdentity: FfiConverterString.read(from: &buf), 
+                promptByteIdentity: FfiConverterString.read(from: &buf), 
+                stopTokenIdentity: FfiConverterString.read(from: &buf), 
+                contextCap: FfiConverterUInt32.read(from: &buf), 
+                deterministicTestMode: FfiConverterBool.read(from: &buf), 
+                logitsTolerance: FfiConverterDouble.read(from: &buf), 
+                embeddingTolerance: FfiConverterDouble.read(from: &buf), 
+                generatedTokenPolicy: FfiConverterTypeGeneratedTokenPolicy.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackendConformancePolicy, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.numericalContractId, into: &buf)
+        FfiConverterString.write(value.tokenizerIdentity, into: &buf)
+        FfiConverterString.write(value.promptByteIdentity, into: &buf)
+        FfiConverterString.write(value.stopTokenIdentity, into: &buf)
+        FfiConverterUInt32.write(value.contextCap, into: &buf)
+        FfiConverterBool.write(value.deterministicTestMode, into: &buf)
+        FfiConverterDouble.write(value.logitsTolerance, into: &buf)
+        FfiConverterDouble.write(value.embeddingTolerance, into: &buf)
+        FfiConverterTypeGeneratedTokenPolicy.write(value.generatedTokenPolicy, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackendConformancePolicy_lift(_ buf: RustBuffer) throws -> BackendConformancePolicy {
+    return try FfiConverterTypeBackendConformancePolicy.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackendConformancePolicy_lower(_ value: BackendConformancePolicy) -> RustBuffer {
+    return FfiConverterTypeBackendConformancePolicy.lower(value)
+}
+
+
+/**
+ * What a backend actually did, as reported by the shell running it.
+ */
+public struct BackendObservation: Equatable, Hashable {
+    public var backendId: String
+    public var tokenizerIdentity: String
+    public var promptByteIdentity: String
+    public var stopTokenIdentity: String
+    public var contextCap: UInt32
+    public var outputShapeDeclared: Bool
+    /**
+     * `None` when the backend does not expose logits — absence is not
+     * agreement, and cannot satisfy a logits tolerance.
+     */
+    public var maxLogitDivergence: Double?
+    public var maxEmbeddingDivergence: Double?
+    public var greedyDeterminismAvailable: Bool
+    public var generatedTokensMatchReference: Bool?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(backendId: String, tokenizerIdentity: String, promptByteIdentity: String, stopTokenIdentity: String, contextCap: UInt32, outputShapeDeclared: Bool, 
+        /**
+         * `None` when the backend does not expose logits — absence is not
+         * agreement, and cannot satisfy a logits tolerance.
+         */maxLogitDivergence: Double?, maxEmbeddingDivergence: Double?, greedyDeterminismAvailable: Bool, generatedTokensMatchReference: Bool?) {
+        self.backendId = backendId
+        self.tokenizerIdentity = tokenizerIdentity
+        self.promptByteIdentity = promptByteIdentity
+        self.stopTokenIdentity = stopTokenIdentity
+        self.contextCap = contextCap
+        self.outputShapeDeclared = outputShapeDeclared
+        self.maxLogitDivergence = maxLogitDivergence
+        self.maxEmbeddingDivergence = maxEmbeddingDivergence
+        self.greedyDeterminismAvailable = greedyDeterminismAvailable
+        self.generatedTokensMatchReference = generatedTokensMatchReference
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackendObservation: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackendObservation: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackendObservation {
+        return
+            try BackendObservation(
+                backendId: FfiConverterString.read(from: &buf), 
+                tokenizerIdentity: FfiConverterString.read(from: &buf), 
+                promptByteIdentity: FfiConverterString.read(from: &buf), 
+                stopTokenIdentity: FfiConverterString.read(from: &buf), 
+                contextCap: FfiConverterUInt32.read(from: &buf), 
+                outputShapeDeclared: FfiConverterBool.read(from: &buf), 
+                maxLogitDivergence: FfiConverterOptionDouble.read(from: &buf), 
+                maxEmbeddingDivergence: FfiConverterOptionDouble.read(from: &buf), 
+                greedyDeterminismAvailable: FfiConverterBool.read(from: &buf), 
+                generatedTokensMatchReference: FfiConverterOptionBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackendObservation, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.backendId, into: &buf)
+        FfiConverterString.write(value.tokenizerIdentity, into: &buf)
+        FfiConverterString.write(value.promptByteIdentity, into: &buf)
+        FfiConverterString.write(value.stopTokenIdentity, into: &buf)
+        FfiConverterUInt32.write(value.contextCap, into: &buf)
+        FfiConverterBool.write(value.outputShapeDeclared, into: &buf)
+        FfiConverterOptionDouble.write(value.maxLogitDivergence, into: &buf)
+        FfiConverterOptionDouble.write(value.maxEmbeddingDivergence, into: &buf)
+        FfiConverterBool.write(value.greedyDeterminismAvailable, into: &buf)
+        FfiConverterOptionBool.write(value.generatedTokensMatchReference, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackendObservation_lift(_ buf: RustBuffer) throws -> BackendObservation {
+    return try FfiConverterTypeBackendObservation.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackendObservation_lower(_ value: BackendObservation) -> RustBuffer {
+    return FfiConverterTypeBackendObservation.lower(value)
+}
+
+
+/**
  * Channel display data. Cached samples survive reconnects on purpose (the
  * UI may keep showing the last traces) — but cached data never influences
  * `phase()`; that is what `StreamSnapshot.last_received_at_current_ms` is for.
@@ -1910,6 +2104,77 @@ public func FfiConverterTypeDeviceRequirements_lower(_ value: DeviceRequirements
 }
 
 
+/**
+ * What the device can actually provide right now, as reported by the shell.
+ */
+public struct DeviceRuntimeProfile: Equatable, Hashable {
+    public var os: String
+    public var architecture: String
+    /**
+     * Runtime packs the shell has verified as installed and usable.
+     */
+    public var installedBackendIds: [String]
+    public var supportedRuntimeAbis: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(os: String, architecture: String, 
+        /**
+         * Runtime packs the shell has verified as installed and usable.
+         */installedBackendIds: [String], supportedRuntimeAbis: [String]) {
+        self.os = os
+        self.architecture = architecture
+        self.installedBackendIds = installedBackendIds
+        self.supportedRuntimeAbis = supportedRuntimeAbis
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DeviceRuntimeProfile: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDeviceRuntimeProfile: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DeviceRuntimeProfile {
+        return
+            try DeviceRuntimeProfile(
+                os: FfiConverterString.read(from: &buf), 
+                architecture: FfiConverterString.read(from: &buf), 
+                installedBackendIds: FfiConverterSequenceString.read(from: &buf), 
+                supportedRuntimeAbis: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DeviceRuntimeProfile, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.os, into: &buf)
+        FfiConverterString.write(value.architecture, into: &buf)
+        FfiConverterSequenceString.write(value.installedBackendIds, into: &buf)
+        FfiConverterSequenceString.write(value.supportedRuntimeAbis, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeviceRuntimeProfile_lift(_ buf: RustBuffer) throws -> DeviceRuntimeProfile {
+    return try FfiConverterTypeDeviceRuntimeProfile.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeviceRuntimeProfile_lower(_ value: DeviceRuntimeProfile) -> RustBuffer {
+    return FfiConverterTypeDeviceRuntimeProfile.lower(value)
+}
+
+
 public struct EmbeddingContract: Equatable, Hashable {
     public var tokenizerId: String
     public var dimensions: UInt32
@@ -1976,6 +2241,68 @@ public func FfiConverterTypeEmbeddingContract_lower(_ value: EmbeddingContract) 
 }
 
 
+/**
+ * A detected span: *where* it is, plus *what* it is and under which frozen
+ * detector parameters. Shifting must move the range and nothing else.
+ */
+public struct EventSpan: Equatable, Hashable {
+    public var eventKind: String
+    public var window: SampleWindow
+    public var detectorParametersDigest: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(eventKind: String, window: SampleWindow, detectorParametersDigest: String) {
+        self.eventKind = eventKind
+        self.window = window
+        self.detectorParametersDigest = detectorParametersDigest
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EventSpan: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEventSpan: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EventSpan {
+        return
+            try EventSpan(
+                eventKind: FfiConverterString.read(from: &buf), 
+                window: FfiConverterTypeSampleWindow.read(from: &buf), 
+                detectorParametersDigest: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EventSpan, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.eventKind, into: &buf)
+        FfiConverterTypeSampleWindow.write(value.window, into: &buf)
+        FfiConverterString.write(value.detectorParametersDigest, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEventSpan_lift(_ buf: RustBuffer) throws -> EventSpan {
+    return try FfiConverterTypeEventSpan.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEventSpan_lower(_ value: EventSpan) -> RustBuffer {
+    return FfiConverterTypeEventSpan.lower(value)
+}
+
+
 public struct GenerationContract: Equatable, Hashable {
     public var tokenizerId: String
     public var contextCap: UInt32
@@ -2035,6 +2362,65 @@ public func FfiConverterTypeGenerationContract_lift(_ buf: RustBuffer) throws ->
 #endif
 public func FfiConverterTypeGenerationContract_lower(_ value: GenerationContract) -> RustBuffer {
     return FfiConverterTypeGenerationContract.lower(value)
+}
+
+
+/**
+ * One indexed record: *what* was embedded and *by which embedding space*.
+ * Two records with the same pair are the same entry; two with different
+ * embedding identities are never the same entry, however similar the text.
+ */
+public struct IndexEntryKey: Equatable, Hashable {
+    public var contentSha256Hex: String
+    public var embeddingSpaceIdentity: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(contentSha256Hex: String, embeddingSpaceIdentity: String) {
+        self.contentSha256Hex = contentSha256Hex
+        self.embeddingSpaceIdentity = embeddingSpaceIdentity
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension IndexEntryKey: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeIndexEntryKey: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> IndexEntryKey {
+        return
+            try IndexEntryKey(
+                contentSha256Hex: FfiConverterString.read(from: &buf), 
+                embeddingSpaceIdentity: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: IndexEntryKey, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.contentSha256Hex, into: &buf)
+        FfiConverterString.write(value.embeddingSpaceIdentity, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeIndexEntryKey_lift(_ buf: RustBuffer) throws -> IndexEntryKey {
+    return try FfiConverterTypeIndexEntryKey.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeIndexEntryKey_lower(_ value: IndexEntryKey) -> RustBuffer {
+    return FfiConverterTypeIndexEntryKey.lower(value)
 }
 
 
@@ -2444,6 +2830,99 @@ public func FfiConverterTypeModelPackSnapshot_lift(_ buf: RustBuffer) throws -> 
 #endif
 public func FfiConverterTypeModelPackSnapshot_lower(_ value: ModelPackSnapshot) -> RustBuffer {
     return FfiConverterTypeModelPackSnapshot.lower(value)
+}
+
+
+/**
+ * One logical model, published once per backend artifact variant. Distinct
+ * variants of the same `logical_model_id` are the *same model* to the user
+ * and *different artifacts* to the runtime.
+ */
+public struct ModelVariant: Equatable, Hashable {
+    public var schemaVersion: UInt32
+    public var logicalModelId: String
+    public var variantId: String
+    public var modelPackId: String
+    public var runtimeTarget: RuntimeTarget
+    public var quantization: String?
+    public var artifactFormat: String
+    /**
+     * Identity of the numerical contract this variant satisfies. Two
+     * variants sharing it claim results interchangeable within tolerance;
+     * differing ids make no such claim.
+     */
+    public var numericalContractId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(schemaVersion: UInt32, logicalModelId: String, variantId: String, modelPackId: String, runtimeTarget: RuntimeTarget, quantization: String?, artifactFormat: String, 
+        /**
+         * Identity of the numerical contract this variant satisfies. Two
+         * variants sharing it claim results interchangeable within tolerance;
+         * differing ids make no such claim.
+         */numericalContractId: String) {
+        self.schemaVersion = schemaVersion
+        self.logicalModelId = logicalModelId
+        self.variantId = variantId
+        self.modelPackId = modelPackId
+        self.runtimeTarget = runtimeTarget
+        self.quantization = quantization
+        self.artifactFormat = artifactFormat
+        self.numericalContractId = numericalContractId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ModelVariant: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeModelVariant: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ModelVariant {
+        return
+            try ModelVariant(
+                schemaVersion: FfiConverterUInt32.read(from: &buf), 
+                logicalModelId: FfiConverterString.read(from: &buf), 
+                variantId: FfiConverterString.read(from: &buf), 
+                modelPackId: FfiConverterString.read(from: &buf), 
+                runtimeTarget: FfiConverterTypeRuntimeTarget.read(from: &buf), 
+                quantization: FfiConverterOptionString.read(from: &buf), 
+                artifactFormat: FfiConverterString.read(from: &buf), 
+                numericalContractId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ModelVariant, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.schemaVersion, into: &buf)
+        FfiConverterString.write(value.logicalModelId, into: &buf)
+        FfiConverterString.write(value.variantId, into: &buf)
+        FfiConverterString.write(value.modelPackId, into: &buf)
+        FfiConverterTypeRuntimeTarget.write(value.runtimeTarget, into: &buf)
+        FfiConverterOptionString.write(value.quantization, into: &buf)
+        FfiConverterString.write(value.artifactFormat, into: &buf)
+        FfiConverterString.write(value.numericalContractId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelVariant_lift(_ buf: RustBuffer) throws -> ModelVariant {
+    return try FfiConverterTypeModelVariant.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelVariant_lower(_ value: ModelVariant) -> RustBuffer {
+    return FfiConverterTypeModelVariant.lower(value)
 }
 
 
@@ -2970,6 +3449,68 @@ public func FfiConverterTypeRecordingManifest_lower(_ value: RecordingManifest) 
 }
 
 
+/**
+ * Capabilities the caller *requires*. Anything true here that the backend
+ * cannot do makes the selection fail closed.
+ */
+public struct RequiredCapabilities: Equatable, Hashable {
+    public var streaming: Bool
+    public var cancellation: Bool
+    public var structuredOutput: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(streaming: Bool, cancellation: Bool, structuredOutput: Bool) {
+        self.streaming = streaming
+        self.cancellation = cancellation
+        self.structuredOutput = structuredOutput
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RequiredCapabilities: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRequiredCapabilities: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RequiredCapabilities {
+        return
+            try RequiredCapabilities(
+                streaming: FfiConverterBool.read(from: &buf), 
+                cancellation: FfiConverterBool.read(from: &buf), 
+                structuredOutput: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RequiredCapabilities, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.streaming, into: &buf)
+        FfiConverterBool.write(value.cancellation, into: &buf)
+        FfiConverterBool.write(value.structuredOutput, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRequiredCapabilities_lift(_ buf: RustBuffer) throws -> RequiredCapabilities {
+    return try FfiConverterTypeRequiredCapabilities.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRequiredCapabilities_lower(_ value: RequiredCapabilities) -> RustBuffer {
+    return FfiConverterTypeRequiredCapabilities.lower(value)
+}
+
+
 public struct ResolvedClientConfig: Equatable, Hashable {
     public var mode: ClientMode
     public var serverUrl: String
@@ -3137,6 +3678,449 @@ public func FfiConverterTypeResolvedProviderIdentity_lower(_ value: ResolvedProv
 
 
 /**
+ * Backend-level capabilities. Distinct from `ProviderCapabilities`: a
+ * provider may offer cancellation semantically while a specific backend
+ * cannot honour it, and callers that *require* a capability must fail
+ * closed rather than proceed without it.
+ */
+public struct RuntimeCapabilities: Equatable, Hashable {
+    public var generation: Bool
+    public var embeddings: Bool
+    public var streaming: Bool
+    public var cancellation: Bool
+    public var structuredOutput: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(generation: Bool, embeddings: Bool, streaming: Bool, cancellation: Bool, structuredOutput: Bool) {
+        self.generation = generation
+        self.embeddings = embeddings
+        self.streaming = streaming
+        self.cancellation = cancellation
+        self.structuredOutput = structuredOutput
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RuntimeCapabilities: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRuntimeCapabilities: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RuntimeCapabilities {
+        return
+            try RuntimeCapabilities(
+                generation: FfiConverterBool.read(from: &buf), 
+                embeddings: FfiConverterBool.read(from: &buf), 
+                streaming: FfiConverterBool.read(from: &buf), 
+                cancellation: FfiConverterBool.read(from: &buf), 
+                structuredOutput: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RuntimeCapabilities, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.generation, into: &buf)
+        FfiConverterBool.write(value.embeddings, into: &buf)
+        FfiConverterBool.write(value.streaming, into: &buf)
+        FfiConverterBool.write(value.cancellation, into: &buf)
+        FfiConverterBool.write(value.structuredOutput, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimeCapabilities_lift(_ buf: RustBuffer) throws -> RuntimeCapabilities {
+    return try FfiConverterTypeRuntimeCapabilities.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimeCapabilities_lower(_ value: RuntimeCapabilities) -> RustBuffer {
+    return FfiConverterTypeRuntimeCapabilities.lower(value)
+}
+
+
+public struct RuntimeEntrypoint: Equatable, Hashable {
+    public var entrypointId: String
+    public var libraryId: String
+    public var symbol: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(entrypointId: String, libraryId: String, symbol: String) {
+        self.entrypointId = entrypointId
+        self.libraryId = libraryId
+        self.symbol = symbol
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RuntimeEntrypoint: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRuntimeEntrypoint: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RuntimeEntrypoint {
+        return
+            try RuntimeEntrypoint(
+                entrypointId: FfiConverterString.read(from: &buf), 
+                libraryId: FfiConverterString.read(from: &buf), 
+                symbol: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RuntimeEntrypoint, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.entrypointId, into: &buf)
+        FfiConverterString.write(value.libraryId, into: &buf)
+        FfiConverterString.write(value.symbol, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimeEntrypoint_lift(_ buf: RustBuffer) throws -> RuntimeEntrypoint {
+    return try FfiConverterTypeRuntimeEntrypoint.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimeEntrypoint_lower(_ value: RuntimeEntrypoint) -> RustBuffer {
+    return FfiConverterTypeRuntimeEntrypoint.lower(value)
+}
+
+
+public struct RuntimeLibrary: Equatable, Hashable {
+    public var libraryId: String
+    /**
+     * Relative to the installed runtime-pack root — never an absolute path,
+     * so identity is invariant under relocation.
+     */
+    public var relativePath: String
+    public var byteSize: UInt64
+    public var sha256Hex: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(libraryId: String, 
+        /**
+         * Relative to the installed runtime-pack root — never an absolute path,
+         * so identity is invariant under relocation.
+         */relativePath: String, byteSize: UInt64, sha256Hex: String) {
+        self.libraryId = libraryId
+        self.relativePath = relativePath
+        self.byteSize = byteSize
+        self.sha256Hex = sha256Hex
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RuntimeLibrary: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRuntimeLibrary: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RuntimeLibrary {
+        return
+            try RuntimeLibrary(
+                libraryId: FfiConverterString.read(from: &buf), 
+                relativePath: FfiConverterString.read(from: &buf), 
+                byteSize: FfiConverterUInt64.read(from: &buf), 
+                sha256Hex: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RuntimeLibrary, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.libraryId, into: &buf)
+        FfiConverterString.write(value.relativePath, into: &buf)
+        FfiConverterUInt64.write(value.byteSize, into: &buf)
+        FfiConverterString.write(value.sha256Hex, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimeLibrary_lift(_ buf: RustBuffer) throws -> RuntimeLibrary {
+    return try FfiConverterTypeRuntimeLibrary.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimeLibrary_lower(_ value: RuntimeLibrary) -> RustBuffer {
+    return FfiConverterTypeRuntimeLibrary.lower(value)
+}
+
+
+/**
+ * A signed, independently removable bundle of native libraries for exactly
+ * one target. Never a base-application dependency.
+ */
+public struct RuntimePackManifest: Equatable, Hashable {
+    public var schemaVersion: UInt32
+    public var runtimePackId: String
+    public var version: String
+    public var target: RuntimeTarget
+    public var libraries: [RuntimeLibrary]
+    public var licenses: [String]
+    public var entrypoints: [RuntimeEntrypoint]
+    public var runtimeAbi: String
+    /**
+     * Who signed the pack. Absent means unsigned — never treated as trusted.
+     */
+    public var signingIdentity: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(schemaVersion: UInt32, runtimePackId: String, version: String, target: RuntimeTarget, libraries: [RuntimeLibrary], licenses: [String], entrypoints: [RuntimeEntrypoint], runtimeAbi: String, 
+        /**
+         * Who signed the pack. Absent means unsigned — never treated as trusted.
+         */signingIdentity: String?) {
+        self.schemaVersion = schemaVersion
+        self.runtimePackId = runtimePackId
+        self.version = version
+        self.target = target
+        self.libraries = libraries
+        self.licenses = licenses
+        self.entrypoints = entrypoints
+        self.runtimeAbi = runtimeAbi
+        self.signingIdentity = signingIdentity
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RuntimePackManifest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRuntimePackManifest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RuntimePackManifest {
+        return
+            try RuntimePackManifest(
+                schemaVersion: FfiConverterUInt32.read(from: &buf), 
+                runtimePackId: FfiConverterString.read(from: &buf), 
+                version: FfiConverterString.read(from: &buf), 
+                target: FfiConverterTypeRuntimeTarget.read(from: &buf), 
+                libraries: FfiConverterSequenceTypeRuntimeLibrary.read(from: &buf), 
+                licenses: FfiConverterSequenceString.read(from: &buf), 
+                entrypoints: FfiConverterSequenceTypeRuntimeEntrypoint.read(from: &buf), 
+                runtimeAbi: FfiConverterString.read(from: &buf), 
+                signingIdentity: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RuntimePackManifest, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.schemaVersion, into: &buf)
+        FfiConverterString.write(value.runtimePackId, into: &buf)
+        FfiConverterString.write(value.version, into: &buf)
+        FfiConverterTypeRuntimeTarget.write(value.target, into: &buf)
+        FfiConverterSequenceTypeRuntimeLibrary.write(value.libraries, into: &buf)
+        FfiConverterSequenceString.write(value.licenses, into: &buf)
+        FfiConverterSequenceTypeRuntimeEntrypoint.write(value.entrypoints, into: &buf)
+        FfiConverterString.write(value.runtimeAbi, into: &buf)
+        FfiConverterOptionString.write(value.signingIdentity, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimePackManifest_lift(_ buf: RustBuffer) throws -> RuntimePackManifest {
+    return try FfiConverterTypeRuntimePackManifest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimePackManifest_lower(_ value: RuntimePackManifest) -> RustBuffer {
+    return FfiConverterTypeRuntimePackManifest.lower(value)
+}
+
+
+public struct RuntimeTarget: Equatable, Hashable {
+    public var os: String
+    public var architecture: String
+    public var acceleratorClass: AcceleratorClass
+    /**
+     * Configured backend identity, e.g. `llama-cpp-vulkan`, `coreml`,
+     * `windows-ml-qnn`. Never a vendor enum.
+     */
+    public var backendId: String
+    public var runtimeAbi: String
+    public var modelFormats: [String]
+    public var minimumOsVersion: String?
+    public var minimumBackendVersion: String?
+    public var minimumDriverVersion: String?
+    public var capabilities: RuntimeCapabilities
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(os: String, architecture: String, acceleratorClass: AcceleratorClass, 
+        /**
+         * Configured backend identity, e.g. `llama-cpp-vulkan`, `coreml`,
+         * `windows-ml-qnn`. Never a vendor enum.
+         */backendId: String, runtimeAbi: String, modelFormats: [String], minimumOsVersion: String?, minimumBackendVersion: String?, minimumDriverVersion: String?, capabilities: RuntimeCapabilities) {
+        self.os = os
+        self.architecture = architecture
+        self.acceleratorClass = acceleratorClass
+        self.backendId = backendId
+        self.runtimeAbi = runtimeAbi
+        self.modelFormats = modelFormats
+        self.minimumOsVersion = minimumOsVersion
+        self.minimumBackendVersion = minimumBackendVersion
+        self.minimumDriverVersion = minimumDriverVersion
+        self.capabilities = capabilities
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RuntimeTarget: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRuntimeTarget: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RuntimeTarget {
+        return
+            try RuntimeTarget(
+                os: FfiConverterString.read(from: &buf), 
+                architecture: FfiConverterString.read(from: &buf), 
+                acceleratorClass: FfiConverterTypeAcceleratorClass.read(from: &buf), 
+                backendId: FfiConverterString.read(from: &buf), 
+                runtimeAbi: FfiConverterString.read(from: &buf), 
+                modelFormats: FfiConverterSequenceString.read(from: &buf), 
+                minimumOsVersion: FfiConverterOptionString.read(from: &buf), 
+                minimumBackendVersion: FfiConverterOptionString.read(from: &buf), 
+                minimumDriverVersion: FfiConverterOptionString.read(from: &buf), 
+                capabilities: FfiConverterTypeRuntimeCapabilities.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RuntimeTarget, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.os, into: &buf)
+        FfiConverterString.write(value.architecture, into: &buf)
+        FfiConverterTypeAcceleratorClass.write(value.acceleratorClass, into: &buf)
+        FfiConverterString.write(value.backendId, into: &buf)
+        FfiConverterString.write(value.runtimeAbi, into: &buf)
+        FfiConverterSequenceString.write(value.modelFormats, into: &buf)
+        FfiConverterOptionString.write(value.minimumOsVersion, into: &buf)
+        FfiConverterOptionString.write(value.minimumBackendVersion, into: &buf)
+        FfiConverterOptionString.write(value.minimumDriverVersion, into: &buf)
+        FfiConverterTypeRuntimeCapabilities.write(value.capabilities, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimeTarget_lift(_ buf: RustBuffer) throws -> RuntimeTarget {
+    return try FfiConverterTypeRuntimeTarget.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimeTarget_lower(_ value: RuntimeTarget) -> RustBuffer {
+    return FfiConverterTypeRuntimeTarget.lower(value)
+}
+
+
+/**
+ * A half-open sample range `[start, end)` within one recording.
+ */
+public struct SampleWindow: Equatable, Hashable {
+    public var startSample: UInt64
+    public var endSample: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(startSample: UInt64, endSample: UInt64) {
+        self.startSample = startSample
+        self.endSample = endSample
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SampleWindow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSampleWindow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SampleWindow {
+        return
+            try SampleWindow(
+                startSample: FfiConverterUInt64.read(from: &buf), 
+                endSample: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SampleWindow, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.startSample, into: &buf)
+        FfiConverterUInt64.write(value.endSample, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSampleWindow_lift(_ buf: RustBuffer) throws -> SampleWindow {
+    return try FfiConverterTypeSampleWindow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSampleWindow_lower(_ value: SampleWindow) -> RustBuffer {
+    return FfiConverterTypeSampleWindow.lower(value)
+}
+
+
+/**
  * Stream metadata: everything freshness- and retry-related, per generation.
  */
 public struct StreamSnapshot: Equatable, Hashable {
@@ -3223,6 +4207,99 @@ public func FfiConverterTypeStreamSnapshot_lower(_ value: StreamSnapshot) -> Rus
 }
 
 
+/**
+ * Evidence actually in hand for one (target, backend) row.
+ */
+public struct SupportEvidence: Equatable, Hashable {
+    public var contractsAndTestsPass: Bool
+    public var buildsOnNamedTarget: Bool
+    /**
+     * A deterministic fixture model actually executed — not "it compiled".
+     */
+    public var fixtureRuntimeExecuted: Bool
+    /**
+     * Exact physical hardware. `None` blocks DeviceValidated outright.
+     */
+    public var physicalDevice: String?
+    public var osVersion: String?
+    public var backendVersion: String?
+    public var signedPackagingAccepted: Bool
+    public var acceptanceDocument: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(contractsAndTestsPass: Bool, buildsOnNamedTarget: Bool, 
+        /**
+         * A deterministic fixture model actually executed — not "it compiled".
+         */fixtureRuntimeExecuted: Bool, 
+        /**
+         * Exact physical hardware. `None` blocks DeviceValidated outright.
+         */physicalDevice: String?, osVersion: String?, backendVersion: String?, signedPackagingAccepted: Bool, acceptanceDocument: String?) {
+        self.contractsAndTestsPass = contractsAndTestsPass
+        self.buildsOnNamedTarget = buildsOnNamedTarget
+        self.fixtureRuntimeExecuted = fixtureRuntimeExecuted
+        self.physicalDevice = physicalDevice
+        self.osVersion = osVersion
+        self.backendVersion = backendVersion
+        self.signedPackagingAccepted = signedPackagingAccepted
+        self.acceptanceDocument = acceptanceDocument
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SupportEvidence: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSupportEvidence: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SupportEvidence {
+        return
+            try SupportEvidence(
+                contractsAndTestsPass: FfiConverterBool.read(from: &buf), 
+                buildsOnNamedTarget: FfiConverterBool.read(from: &buf), 
+                fixtureRuntimeExecuted: FfiConverterBool.read(from: &buf), 
+                physicalDevice: FfiConverterOptionString.read(from: &buf), 
+                osVersion: FfiConverterOptionString.read(from: &buf), 
+                backendVersion: FfiConverterOptionString.read(from: &buf), 
+                signedPackagingAccepted: FfiConverterBool.read(from: &buf), 
+                acceptanceDocument: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SupportEvidence, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.contractsAndTestsPass, into: &buf)
+        FfiConverterBool.write(value.buildsOnNamedTarget, into: &buf)
+        FfiConverterBool.write(value.fixtureRuntimeExecuted, into: &buf)
+        FfiConverterOptionString.write(value.physicalDevice, into: &buf)
+        FfiConverterOptionString.write(value.osVersion, into: &buf)
+        FfiConverterOptionString.write(value.backendVersion, into: &buf)
+        FfiConverterBool.write(value.signedPackagingAccepted, into: &buf)
+        FfiConverterOptionString.write(value.acceptanceDocument, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSupportEvidence_lift(_ buf: RustBuffer) throws -> SupportEvidence {
+    return try FfiConverterTypeSupportEvidence.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSupportEvidence_lower(_ value: SupportEvidence) -> RustBuffer {
+    return FfiConverterTypeSupportEvidence.lower(value)
+}
+
+
 public struct VerifiedArtifact: Equatable, Hashable {
     public var artifactId: String
     public var relativePath: String
@@ -3283,6 +4360,83 @@ public func FfiConverterTypeVerifiedArtifact_lift(_ buf: RustBuffer) throws -> V
 public func FfiConverterTypeVerifiedArtifact_lower(_ value: VerifiedArtifact) -> RustBuffer {
     return FfiConverterTypeVerifiedArtifact.lower(value)
 }
+
+
+/**
+ * What kind of hardware executes the work. A *class*, not a vendor —
+ * vendors live in `backend_id`.
+ */
+
+public enum AcceleratorClass: Equatable, Hashable {
+    
+    case cpu
+    case gpu
+    case npu
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AcceleratorClass: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAcceleratorClass: FfiConverterRustBuffer {
+    typealias SwiftType = AcceleratorClass
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AcceleratorClass {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .cpu
+        
+        case 2: return .gpu
+        
+        case 3: return .npu
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AcceleratorClass, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .cpu:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .gpu:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .npu:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAcceleratorClass_lift(_ buf: RustBuffer) throws -> AcceleratorClass {
+    return try FfiConverterTypeAcceleratorClass.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAcceleratorClass_lower(_ value: AcceleratorClass) -> RustBuffer {
+    return FfiConverterTypeAcceleratorClass.lower(value)
+}
+
 
 
 /**
@@ -3489,6 +4643,261 @@ public func FfiConverterTypeAvailabilityProbe_lower(_ value: AvailabilityProbe) 
 
 
 
+/**
+ * What the caller asked for. An explicit backend requirement is a hard
+ * constraint: a user who chose CUDA is never silently given CPU.
+ */
+
+public enum BackendRequirement: Equatable, Hashable {
+    
+    /**
+     * Any variant the device can actually run is acceptable.
+     */
+    case anySupported
+    /**
+     * Only this backend. Absent or unusable → Unavailable, never a swap.
+     */
+    case explicit(backendId: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension BackendRequirement: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackendRequirement: FfiConverterRustBuffer {
+    typealias SwiftType = BackendRequirement
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackendRequirement {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .anySupported
+        
+        case 2: return .explicit(backendId: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: BackendRequirement, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .anySupported:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .explicit(backendId):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(backendId, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackendRequirement_lift(_ buf: RustBuffer) throws -> BackendRequirement {
+    return try FfiConverterTypeBackendRequirement.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackendRequirement_lower(_ value: BackendRequirement) -> RustBuffer {
+    return FfiConverterTypeBackendRequirement.lower(value)
+}
+
+
+
+/**
+ * Outcome of a labelled reorder. An enum rather than `Result` so the shape
+ * crosses the FFI boundary unchanged (same convention as `RestoreResult`).
+ */
+
+public enum ChannelOrderResult: Equatable, Hashable {
+    
+    case ordered(values: [Double]
+    )
+    case rejected(error: ChannelPermutationError
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ChannelOrderResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeChannelOrderResult: FfiConverterRustBuffer {
+    typealias SwiftType = ChannelOrderResult
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ChannelOrderResult {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .ordered(values: try FfiConverterSequenceDouble.read(from: &buf)
+        )
+        
+        case 2: return .rejected(error: try FfiConverterTypeChannelPermutationError.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ChannelOrderResult, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .ordered(values):
+            writeInt(&buf, Int32(1))
+            FfiConverterSequenceDouble.write(values, into: &buf)
+            
+        
+        case let .rejected(error):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypeChannelPermutationError.write(error, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeChannelOrderResult_lift(_ buf: RustBuffer) throws -> ChannelOrderResult {
+    return try FfiConverterTypeChannelOrderResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeChannelOrderResult_lower(_ value: ChannelOrderResult) -> RustBuffer {
+    return FfiConverterTypeChannelOrderResult.lower(value)
+}
+
+
+
+
+public enum ChannelPermutationError: Equatable, Hashable {
+    
+    /**
+     * Values arrived without a matching label set — the caller is asking us
+     * to guess anatomy from position. Refused.
+     */
+    case labelsMissing
+    case lengthMismatch
+    case duplicateLabel(label: String
+    )
+    case unknownLabel(label: String
+    )
+    /**
+     * The supplied labels are not a permutation of the canonical montage.
+     */
+    case notAPermutation
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ChannelPermutationError: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeChannelPermutationError: FfiConverterRustBuffer {
+    typealias SwiftType = ChannelPermutationError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ChannelPermutationError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .labelsMissing
+        
+        case 2: return .lengthMismatch
+        
+        case 3: return .duplicateLabel(label: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .unknownLabel(label: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .notAPermutation
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ChannelPermutationError, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .labelsMissing:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .lengthMismatch:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .duplicateLabel(label):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(label, into: &buf)
+            
+        
+        case let .unknownLabel(label):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(label, into: &buf)
+            
+        
+        case .notAPermutation:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeChannelPermutationError_lift(_ buf: RustBuffer) throws -> ChannelPermutationError {
+    return try FfiConverterTypeChannelPermutationError.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeChannelPermutationError_lower(_ value: ChannelPermutationError) -> RustBuffer {
+    return FfiConverterTypeChannelPermutationError.lower(value)
+}
+
+
+
 
 public enum ClientMode: Equatable, Hashable {
     
@@ -3551,6 +4960,219 @@ public func FfiConverterTypeClientMode_lift(_ buf: RustBuffer) throws -> ClientM
 #endif
 public func FfiConverterTypeClientMode_lower(_ value: ClientMode) -> RustBuffer {
     return FfiConverterTypeClientMode.lower(value)
+}
+
+
+
+
+public enum ConformanceFailure: Equatable, Hashable {
+    
+    case tokenizerIdentityMismatch
+    case promptByteMismatch
+    case stopTokenMismatch
+    case contextCapMismatch
+    case outputShapeUndeclared
+    case greedyDeterminismUnavailable
+    case generatedTokensDiverged
+    case missingMeasurement(measurement: String
+    )
+    case malformedPolicy(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ConformanceFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConformanceFailure: FfiConverterRustBuffer {
+    typealias SwiftType = ConformanceFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConformanceFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .tokenizerIdentityMismatch
+        
+        case 2: return .promptByteMismatch
+        
+        case 3: return .stopTokenMismatch
+        
+        case 4: return .contextCapMismatch
+        
+        case 5: return .outputShapeUndeclared
+        
+        case 6: return .greedyDeterminismUnavailable
+        
+        case 7: return .generatedTokensDiverged
+        
+        case 8: return .missingMeasurement(measurement: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 9: return .malformedPolicy(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ConformanceFailure, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .tokenizerIdentityMismatch:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .promptByteMismatch:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .stopTokenMismatch:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .contextCapMismatch:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .outputShapeUndeclared:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .greedyDeterminismUnavailable:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .generatedTokensDiverged:
+            writeInt(&buf, Int32(7))
+        
+        
+        case let .missingMeasurement(measurement):
+            writeInt(&buf, Int32(8))
+            FfiConverterString.write(measurement, into: &buf)
+            
+        
+        case let .malformedPolicy(reason):
+            writeInt(&buf, Int32(9))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConformanceFailure_lift(_ buf: RustBuffer) throws -> ConformanceFailure {
+    return try FfiConverterTypeConformanceFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConformanceFailure_lower(_ value: ConformanceFailure) -> RustBuffer {
+    return FfiConverterTypeConformanceFailure.lower(value)
+}
+
+
+
+
+public enum ConformanceVerdict: Equatable, Hashable {
+    
+    /**
+     * Every identity matches and every measurement is inside tolerance:
+     * this backend may carry the declared numerical-contract id.
+     */
+    case conformant
+    /**
+     * Identities match but measurements exceed tolerance. NOT a failure to
+     * hide — the backend must publish under its own contract identity.
+     */
+    case requiresSeparateNumericalContract(measurement: String, observed: Double, tolerance: Double
+    )
+    /**
+     * A semantic identity mismatch. No tolerance can excuse this.
+     */
+    case nonConformant(failure: ConformanceFailure
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ConformanceVerdict: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConformanceVerdict: FfiConverterRustBuffer {
+    typealias SwiftType = ConformanceVerdict
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConformanceVerdict {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .conformant
+        
+        case 2: return .requiresSeparateNumericalContract(measurement: try FfiConverterString.read(from: &buf), observed: try FfiConverterDouble.read(from: &buf), tolerance: try FfiConverterDouble.read(from: &buf)
+        )
+        
+        case 3: return .nonConformant(failure: try FfiConverterTypeConformanceFailure.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ConformanceVerdict, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .conformant:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .requiresSeparateNumericalContract(measurement,observed,tolerance):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(measurement, into: &buf)
+            FfiConverterDouble.write(observed, into: &buf)
+            FfiConverterDouble.write(tolerance, into: &buf)
+            
+        
+        case let .nonConformant(failure):
+            writeInt(&buf, Int32(3))
+            FfiConverterTypeConformanceFailure.write(failure, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConformanceVerdict_lift(_ buf: RustBuffer) throws -> ConformanceVerdict {
+    return try FfiConverterTypeConformanceVerdict.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConformanceVerdict_lower(_ value: ConformanceVerdict) -> RustBuffer {
+    return FfiConverterTypeConformanceVerdict.lower(value)
 }
 
 
@@ -3832,6 +5454,82 @@ public func FfiConverterTypeEmbeddingPooling_lift(_ buf: RustBuffer) throws -> E
 #endif
 public func FfiConverterTypeEmbeddingPooling_lower(_ value: EmbeddingPooling) -> RustBuffer {
     return FfiConverterTypeEmbeddingPooling.lower(value)
+}
+
+
+
+/**
+ * How sampled text is judged. Byte equality is only ever legitimate under
+ * deterministic greedy decoding on a backend that supports it.
+ */
+
+public enum GeneratedTokenPolicy: Equatable, Hashable {
+    
+    /**
+     * Greedy decode, deterministic on this backend: exact token ids required.
+     */
+    case exactUnderGreedy
+    /**
+     * Sampling permitted: evaluate as distributions, never string equality.
+     */
+    case distributionOnly
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GeneratedTokenPolicy: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGeneratedTokenPolicy: FfiConverterRustBuffer {
+    typealias SwiftType = GeneratedTokenPolicy
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GeneratedTokenPolicy {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .exactUnderGreedy
+        
+        case 2: return .distributionOnly
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GeneratedTokenPolicy, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .exactUnderGreedy:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .distributionOnly:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGeneratedTokenPolicy_lift(_ buf: RustBuffer) throws -> GeneratedTokenPolicy {
+    return try FfiConverterTypeGeneratedTokenPolicy.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGeneratedTokenPolicy_lower(_ value: GeneratedTokenPolicy) -> RustBuffer {
+    return FfiConverterTypeGeneratedTokenPolicy.lower(value)
 }
 
 
@@ -5050,6 +6748,197 @@ public func FfiConverterTypeRestoreResult_lower(_ value: RestoreResult) -> RustB
 
 
 
+public enum RuntimeSelection: Equatable, Hashable {
+    
+    case selected(variant: ModelVariant
+    )
+    case unavailable(failure: SelectionFailure
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension RuntimeSelection: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRuntimeSelection: FfiConverterRustBuffer {
+    typealias SwiftType = RuntimeSelection
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RuntimeSelection {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .selected(variant: try FfiConverterTypeModelVariant.read(from: &buf)
+        )
+        
+        case 2: return .unavailable(failure: try FfiConverterTypeSelectionFailure.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: RuntimeSelection, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .selected(variant):
+            writeInt(&buf, Int32(1))
+            FfiConverterTypeModelVariant.write(variant, into: &buf)
+            
+        
+        case let .unavailable(failure):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypeSelectionFailure.write(failure, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimeSelection_lift(_ buf: RustBuffer) throws -> RuntimeSelection {
+    return try FfiConverterTypeRuntimeSelection.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRuntimeSelection_lower(_ value: RuntimeSelection) -> RustBuffer {
+    return FfiConverterTypeRuntimeSelection.lower(value)
+}
+
+
+
+
+public enum SelectionFailure: Equatable, Hashable {
+    
+    case noVariantForOsArchitecture
+    case requestedBackendNotPublished(backendId: String
+    )
+    case requestedBackendNotInstalled(backendId: String
+    )
+    case runtimeAbiUnsupported(backendId: String
+    )
+    case requiredCapabilityUnavailable(capability: String
+    )
+    case ambiguousVariants(variantId: String
+    )
+    case invalidVariant(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension SelectionFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSelectionFailure: FfiConverterRustBuffer {
+    typealias SwiftType = SelectionFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SelectionFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .noVariantForOsArchitecture
+        
+        case 2: return .requestedBackendNotPublished(backendId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .requestedBackendNotInstalled(backendId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .runtimeAbiUnsupported(backendId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .requiredCapabilityUnavailable(capability: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 6: return .ambiguousVariants(variantId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .invalidVariant(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SelectionFailure, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .noVariantForOsArchitecture:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .requestedBackendNotPublished(backendId):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(backendId, into: &buf)
+            
+        
+        case let .requestedBackendNotInstalled(backendId):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(backendId, into: &buf)
+            
+        
+        case let .runtimeAbiUnsupported(backendId):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(backendId, into: &buf)
+            
+        
+        case let .requiredCapabilityUnavailable(capability):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(capability, into: &buf)
+            
+        
+        case let .ambiguousVariants(variantId):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(variantId, into: &buf)
+            
+        
+        case let .invalidVariant(reason):
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSelectionFailure_lift(_ buf: RustBuffer) throws -> SelectionFailure {
+    return try FfiConverterTypeSelectionFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSelectionFailure_lower(_ value: SelectionFailure) -> RustBuffer {
+    return FfiConverterTypeSelectionFailure.lower(value)
+}
+
+
+
+
 public enum SocketEvent: Equatable, Hashable {
     
     case connecting
@@ -5308,6 +7197,97 @@ public func FfiConverterTypeStreamTone_lower(_ value: StreamTone) -> RustBuffer 
 }
 
 
+
+/**
+ * Promotion ladder. Never promote by implication: each rung needs its own
+ * evidence, and compiling is not running.
+ */
+
+public enum SupportStatus: Equatable, Hashable {
+    
+    case contracted
+    case buildValidated
+    case runtimeSmokeValidated
+    case deviceValidated
+    case releaseSupported
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension SupportStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSupportStatus: FfiConverterRustBuffer {
+    typealias SwiftType = SupportStatus
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SupportStatus {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .contracted
+        
+        case 2: return .buildValidated
+        
+        case 3: return .runtimeSmokeValidated
+        
+        case 4: return .deviceValidated
+        
+        case 5: return .releaseSupported
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SupportStatus, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .contracted:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .buildValidated:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .runtimeSmokeValidated:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .deviceValidated:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .releaseSupported:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSupportStatus_lift(_ buf: RustBuffer) throws -> SupportStatus {
+    return try FfiConverterTypeSupportStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSupportStatus_lower(_ value: SupportStatus) -> RustBuffer {
+    return FfiConverterTypeSupportStatus.lower(value)
+}
+
+
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
@@ -5327,6 +7307,54 @@ fileprivate struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterUInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionDouble: FfiConverterRustBuffer {
+    typealias SwiftType = Double?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterDouble.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterDouble.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionBool: FfiConverterRustBuffer {
+    typealias SwiftType = Bool?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterBool.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterBool.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -5375,6 +7403,30 @@ fileprivate struct FfiConverterOptionTypeEmbeddingContract: FfiConverterRustBuff
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeEmbeddingContract.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeEventSpan: FfiConverterRustBuffer {
+    typealias SwiftType = EventSpan?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEventSpan.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEventSpan.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -5527,6 +7579,30 @@ fileprivate struct FfiConverterOptionTypeRestoreFailure: FfiConverterRustBuffer 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeSupportStatus: FfiConverterRustBuffer {
+    typealias SwiftType = SupportStatus?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeSupportStatus.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeSupportStatus.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceUInt32: FfiConverterRustBuffer {
     typealias SwiftType = [UInt32]
 
@@ -5627,6 +7703,31 @@ fileprivate struct FfiConverterSequenceTypeAudioTransition: FfiConverterRustBuff
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeIndexEntryKey: FfiConverterRustBuffer {
+    typealias SwiftType = [IndexEntryKey]
+
+    public static func write(_ value: [IndexEntryKey], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeIndexEntryKey.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [IndexEntryKey] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [IndexEntryKey]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeIndexEntryKey.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeModelAlias: FfiConverterRustBuffer {
     typealias SwiftType = [ModelAlias]
 
@@ -5694,6 +7795,31 @@ fileprivate struct FfiConverterSequenceTypeModelPackCatalogEntry: FfiConverterRu
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeModelPackCatalogEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeModelVariant: FfiConverterRustBuffer {
+    typealias SwiftType = [ModelVariant]
+
+    public static func write(_ value: [ModelVariant], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeModelVariant.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ModelVariant] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ModelVariant]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeModelVariant.read(from: &buf))
         }
         return seq
     }
@@ -5802,6 +7928,56 @@ fileprivate struct FfiConverterSequenceTypeRecordingManifest: FfiConverterRustBu
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeRuntimeEntrypoint: FfiConverterRustBuffer {
+    typealias SwiftType = [RuntimeEntrypoint]
+
+    public static func write(_ value: [RuntimeEntrypoint], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeRuntimeEntrypoint.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [RuntimeEntrypoint] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [RuntimeEntrypoint]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeRuntimeEntrypoint.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeRuntimeLibrary: FfiConverterRustBuffer {
+    typealias SwiftType = [RuntimeLibrary]
+
+    public static func write(_ value: [RuntimeLibrary], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeRuntimeLibrary.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [RuntimeLibrary] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [RuntimeLibrary]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeRuntimeLibrary.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeVerifiedArtifact: FfiConverterRustBuffer {
     typealias SwiftType = [VerifiedArtifact]
 
@@ -5889,6 +8065,68 @@ public func resolveClientMode(useMockRaw: String?, serverRaw: String?, wsRaw: St
         FfiConverterOptionString.lower(useMockRaw),
         FfiConverterOptionString.lower(serverRaw),
         FfiConverterOptionString.lower(wsRaw),uniffiCallStatus
+    )
+})
+}
+/**
+ * Judge one backend against a frozen policy. Identity mismatches fail hard;
+ * numerical divergence beyond tolerance demands a separate contract rather
+ * than a claim of equivalence.
+ */
+public func evaluateBackendConformance(policy: BackendConformancePolicy, observation: BackendObservation) -> ConformanceVerdict  {
+    return try!  FfiConverterTypeConformanceVerdict_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_evaluate_backend_conformance(
+        FfiConverterTypeBackendConformancePolicy_lower(policy),
+        FfiConverterTypeBackendObservation_lower(observation),uniffiCallStatus
+    )
+})
+}
+/**
+ * May two backends share one numerical-contract identity? Only when both
+ * are Conformant against the same policy — never by assertion.
+ */
+public func mayShareNumericalContract(policy: BackendConformancePolicy, a: BackendObservation, b: BackendObservation) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_may_share_numerical_contract(
+        FfiConverterTypeBackendConformancePolicy_lower(policy),
+        FfiConverterTypeBackendObservation_lower(a),
+        FfiConverterTypeBackendObservation_lower(b),uniffiCallStatus
+    )
+})
+}
+/**
+ * Canonical identity of a numerical contract. Any tolerance, policy, or
+ * identity change yields a different contract — silently loosening a
+ * tolerance cannot preserve the id.
+ */
+public func numericalContractIdentity(policy: BackendConformancePolicy) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_numerical_contract_identity(
+        FfiConverterTypeBackendConformancePolicy_lower(policy),uniffiCallStatus
+    )
+})
+}
+/**
+ * Canonical prompt identity: exact bytes, hashed with a domain string.
+ * Providers transmit prompts unchanged, so this must survive transport.
+ */
+public func promptByteIdentity(promptProfile: String, prompt: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_prompt_byte_identity(
+        FfiConverterString.lower(promptProfile),
+        FfiConverterString.lower(prompt),uniffiCallStatus
+    )
+})
+}
+public func validateConformancePolicy(policy: BackendConformancePolicy) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_validate_conformance_policy(
+        FfiConverterTypeBackendConformancePolicy_lower(policy),uniffiCallStatus
     )
 })
 }
@@ -5987,6 +8225,87 @@ public func formatLabelEn(p: Presentation) -> String  {
 })
 }
 /**
+ * Collapse repeated indexing of identical content into one entry, keeping
+ * first-seen order. Idempotent by construction: feeding the output back in
+ * is a fixed point.
+ */
+public func dedupeIndexEntries(keys: [IndexEntryKey]) -> [IndexEntryKey]  {
+    return try!  FfiConverterSequenceTypeIndexEntryKey.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_dedupe_index_entries(
+        FfiConverterSequenceTypeIndexEntryKey.lower(keys),uniffiCallStatus
+    )
+})
+}
+/**
+ * Canonical index-entry identity.
+ */
+public func indexEntryIdentity(key: IndexEntryKey) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_index_entry_identity(
+        FfiConverterTypeIndexEntryKey_lower(key),uniffiCallStatus
+    )
+})
+}
+/**
+ * Does `shifted` equal `original` moved by exactly `delta`, with kind and
+ * detector parameters untouched? The equivariance predicate itself.
+ */
+public func isWindowShiftEquivariant(original: EventSpan, shifted: EventSpan, delta: Int64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_is_window_shift_equivariant(
+        FfiConverterTypeEventSpan_lower(original),
+        FfiConverterTypeEventSpan_lower(shifted),
+        FfiConverterInt64.lower(delta),uniffiCallStatus
+    )
+})
+}
+/**
+ * Do these two entries belong in the same index? Only when the embedding
+ * space is identical — mixing spaces silently poisons retrieval.
+ */
+public func sharesIndex(a: IndexEntryKey, b: IndexEntryKey) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_shares_index(
+        FfiConverterTypeIndexEntryKey_lower(a),
+        FfiConverterTypeIndexEntryKey_lower(b),uniffiCallStatus
+    )
+})
+}
+/**
+ * Shift a span by `delta` samples. `None` on overflow — a silently wrapped
+ * index would be a fabricated location.
+ */
+public func shiftEventSpan(span: EventSpan, delta: Int64) -> EventSpan?  {
+    return try!  FfiConverterOptionTypeEventSpan.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_shift_event_span(
+        FfiConverterTypeEventSpan_lower(span),
+        FfiConverterInt64.lower(delta),uniffiCallStatus
+    )
+})
+}
+/**
+ * Reorder `values`, labelled by `from_labels`, into the canonical
+ * TP9/AF7/AF8/TP10 order. Equivariance in the honest direction: permute the
+ * labels with the values and the output permutes correspondingly.
+ *
+ * Values without labels are rejected (`LabelsMissing`) — this function is
+ * deliberately unable to reorder anonymous channels.
+ */
+public func toCanonicalChannelOrder(values: [Double], fromLabels: [String]) -> ChannelOrderResult  {
+    return try!  FfiConverterTypeChannelOrderResult_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_to_canonical_channel_order(
+        FfiConverterSequenceDouble.lower(values),
+        FfiConverterSequenceString.lower(fromLabels),uniffiCallStatus
+    )
+})
+}
+/**
  * Substitution disclosure: provider mismatch is always substitution; model
  * mismatch is substitution unless a VALID, provider-scoped alias proves
  * equivalence. An invalid alias set authorizes nothing (fail closed).
@@ -6066,6 +8385,108 @@ public func validateModelAliases(aliases: [ModelAlias]) -> [String]  {
     )
 })
 }
+/**
+ * The highest rung this evidence legitimately reaches. Each rung requires
+ * every rung below it — a device claim cannot skip a runtime claim.
+ */
+public func attainedSupportStatus(evidence: SupportEvidence) -> SupportStatus?  {
+    return try!  FfiConverterOptionTypeSupportStatus.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_attained_support_status(
+        FfiConverterTypeSupportEvidence_lower(evidence),uniffiCallStatus
+    )
+})
+}
+/**
+ * Canonical variant identity. Changing the target, quantization, format, or
+ * numerical contract changes it; reordering declared lists does not.
+ */
+public func modelVariantIdentity(variant: ModelVariant) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_model_variant_identity(
+        FfiConverterTypeModelVariant_lower(variant),uniffiCallStatus
+    )
+})
+}
+/**
+ * Canonical runtime-pack digest: libraries and entrypoints sorted, paths
+ * relative, so neither declaration order nor install root can change it.
+ */
+public func runtimePackManifestDigest(manifest: RuntimePackManifest) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_runtime_pack_manifest_digest(
+        FfiConverterTypeRuntimePackManifest_lower(manifest),uniffiCallStatus
+    )
+})
+}
+/**
+ * Canonical target identity. Declaration order never matters; every
+ * declared field does.
+ */
+public func runtimeTargetIdentity(target: RuntimeTarget) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_runtime_target_identity(
+        FfiConverterTypeRuntimeTarget_lower(target),uniffiCallStatus
+    )
+})
+}
+/**
+ * Resolve one logical model to one runnable variant, or explain why not.
+ * Never substitutes a backend the caller explicitly required, and never
+ * invents support the device did not report.
+ */
+public func selectRuntimeVariant(logicalModelId: String, variants: [ModelVariant], device: DeviceRuntimeProfile, requirement: BackendRequirement, required: RequiredCapabilities) -> RuntimeSelection  {
+    return try!  FfiConverterTypeRuntimeSelection_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_select_runtime_variant(
+        FfiConverterString.lower(logicalModelId),
+        FfiConverterSequenceTypeModelVariant.lower(variants),
+        FfiConverterTypeDeviceRuntimeProfile_lower(device),
+        FfiConverterTypeBackendRequirement_lower(requirement),
+        FfiConverterTypeRequiredCapabilities_lower(required),uniffiCallStatus
+    )
+})
+}
+/**
+ * Is a claimed status supported by this evidence? Claiming above the
+ * attained rung is always false.
+ */
+public func supportsClaim(evidence: SupportEvidence, claimed: SupportStatus) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_supports_claim(
+        FfiConverterTypeSupportEvidence_lower(evidence),
+        FfiConverterTypeSupportStatus_lower(claimed),uniffiCallStatus
+    )
+})
+}
+public func validateModelVariant(variant: ModelVariant) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_validate_model_variant(
+        FfiConverterTypeModelVariant_lower(variant),uniffiCallStatus
+    )
+})
+}
+public func validateRuntimePackManifest(manifest: RuntimePackManifest) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_validate_runtime_pack_manifest(
+        FfiConverterTypeRuntimePackManifest_lower(manifest),uniffiCallStatus
+    )
+})
+}
+public func validateRuntimeTarget(target: RuntimeTarget) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_validate_runtime_target(
+        FfiConverterTypeRuntimeTarget_lower(target),uniffiCallStatus
+    )
+})
+}
 
 private enum InitializationResult {
     case ok
@@ -6094,6 +8515,21 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_func_resolve_client_mode() != 9781) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_evaluate_backend_conformance() != 31762) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_may_share_numerical_contract() != 2412) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_numerical_contract_identity() != 9889) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_prompt_byte_identity() != 17750) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_conformance_policy() != 35341) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest() != 27683) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -6115,6 +8551,24 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_func_format_label_en() != 32187) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_dedupe_index_entries() != 8216) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_index_entry_identity() != 30445) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_is_window_shift_equivariant() != 52188) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_shares_index() != 45535) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_shift_event_span() != 63300) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_to_canonical_channel_order() != 42727) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_neuralcompose_mobile_core_checksum_func_is_substitution() != 3602) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -6128,6 +8582,33 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_validate_model_aliases() != 30637) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_attained_support_status() != 56753) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_model_variant_identity() != 6384) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_runtime_pack_manifest_digest() != 4256) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_runtime_target_identity() != 36137) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_select_runtime_variant() != 11278) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_supports_claim() != 41786) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_model_variant() != 34755) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_runtime_pack_manifest() != 41061) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_runtime_target() != 63252) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged() != 13465) {

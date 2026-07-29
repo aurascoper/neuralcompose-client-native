@@ -681,6 +681,16 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_resolve_client_mode(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_evaluate_backend_conformance(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_may_share_numerical_contract(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_numerical_contract_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_prompt_byte_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_conformance_policy(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_embedding_space_identity(
@@ -695,6 +705,18 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_format_label_en(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_dedupe_index_entries(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_index_entry_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_is_window_shift_equivariant(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_shares_index(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_shift_event_span(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_to_canonical_channel_order(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_is_substitution(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_is_valid_transport_locality(
@@ -704,6 +726,24 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_neuralcompose_mobile_core_checksum_func_resolve_provider_identity(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_model_aliases(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_attained_support_status(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_model_variant_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_runtime_pack_manifest_digest(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_runtime_target_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_select_runtime_variant(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_supports_claim(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_model_variant(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_runtime_pack_manifest(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_runtime_target(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged(
     ): Int
@@ -899,6 +939,16 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_neuralcompose_mobile_core_fn_func_resolve_client_mode(`useMockRaw`: RustBuffer.ByValue,`serverRaw`: RustBuffer.ByValue,`wsRaw`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_evaluate_backend_conformance(`policy`: RustBuffer.ByValue,`observation`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_may_share_numerical_contract(`policy`: RustBuffer.ByValue,`a`: RustBuffer.ByValue,`b`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_func_numerical_contract_identity(`policy`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_prompt_byte_identity(`promptProfile`: RustBuffer.ByValue,`prompt`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_validate_conformance_policy(`policy`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_catalog_entry_digest(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_embedding_space_identity(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -913,6 +963,18 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_format_label_en(`p`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_dedupe_index_entries(`keys`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_index_entry_identity(`key`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_is_window_shift_equivariant(`original`: RustBuffer.ByValue,`shifted`: RustBuffer.ByValue,`delta`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_func_shares_index(`a`: RustBuffer.ByValue,`b`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_func_shift_event_span(`span`: RustBuffer.ByValue,`delta`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_to_canonical_channel_order(`values`: RustBuffer.ByValue,`fromLabels`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_is_substitution(`identity`: RustBuffer.ByValue,`aliases`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_neuralcompose_mobile_core_fn_func_is_valid_transport_locality(`transport`: RustBuffer.ByValue,`locality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -922,6 +984,24 @@ internal object UniffiLib {
     external fun uniffi_neuralcompose_mobile_core_fn_func_resolve_provider_identity(`requestedProviderId`: RustBuffer.ByValue,`requestedModelId`: RustBuffer.ByValue,`resolvedModelId`: RustBuffer.ByValue,`modelDigest`: RustBuffer.ByValue,`descriptors`: RustBuffer.ByValue,`availability`: RustBuffer.ByValue,`promptProfile`: RustBuffer.ByValue,`promptHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_validate_model_aliases(`aliases`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_attained_support_status(`evidence`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_model_variant_identity(`variant`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_runtime_pack_manifest_digest(`manifest`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_runtime_target_identity(`target`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_select_runtime_variant(`logicalModelId`: RustBuffer.ByValue,`variants`: RustBuffer.ByValue,`device`: RustBuffer.ByValue,`requirement`: RustBuffer.ByValue,`required`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_supports_claim(`evidence`: RustBuffer.ByValue,`claimed`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_func_validate_model_variant(`variant`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_validate_runtime_pack_manifest(`manifest`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_validate_runtime_target(`target`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun ffi_neuralcompose_mobile_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1054,6 +1134,21 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_resolve_client_mode() != 9781) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_evaluate_backend_conformance() != 31762) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_may_share_numerical_contract() != 2412) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_numerical_contract_identity() != 9889) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_prompt_byte_identity() != 17750) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_conformance_policy() != 35341) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest() != 27683) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1075,6 +1170,24 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_format_label_en() != 32187) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_dedupe_index_entries() != 8216) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_index_entry_identity() != 30445) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_is_window_shift_equivariant() != 52188) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_shares_index() != 45535) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_shift_event_span() != 63300) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_to_canonical_channel_order() != 42727) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_is_substitution() != 3602) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1088,6 +1201,33 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_model_aliases() != 30637) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_attained_support_status() != 56753) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_model_variant_identity() != 6384) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_runtime_pack_manifest_digest() != 4256) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_runtime_target_identity() != 36137) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_select_runtime_variant() != 11278) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_supports_claim() != 41786) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_model_variant() != 34755) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_runtime_pack_manifest() != 41061) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_runtime_target() != 63252) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged() != 13465) {
@@ -3227,6 +3367,173 @@ public object FfiConverterTypeAudioTransition: FfiConverterRustBuffer<AudioTrans
 
 
 /**
+ * The frozen agreement a backend must satisfy to claim a numerical contract.
+ */
+data class BackendConformancePolicy (
+    var `numericalContractId`: kotlin.String
+    , 
+    var `tokenizerIdentity`: kotlin.String
+    , 
+    var `promptByteIdentity`: kotlin.String
+    , 
+    var `stopTokenIdentity`: kotlin.String
+    , 
+    var `contextCap`: kotlin.UInt
+    , 
+    var `deterministicTestMode`: kotlin.Boolean
+    , 
+    /**
+     * Maximum absolute logit divergence. Must be finite and >= 0.
+     */
+    var `logitsTolerance`: kotlin.Double
+    , 
+    /**
+     * Maximum embedding divergence under the declared metric.
+     */
+    var `embeddingTolerance`: kotlin.Double
+    , 
+    var `generatedTokenPolicy`: GeneratedTokenPolicy
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBackendConformancePolicy: FfiConverterRustBuffer<BackendConformancePolicy> {
+    override fun read(buf: ByteBuffer): BackendConformancePolicy {
+        return BackendConformancePolicy(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterTypeGeneratedTokenPolicy.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: BackendConformancePolicy) = (
+            FfiConverterString.allocationSize(value.`numericalContractId`) +
+            FfiConverterString.allocationSize(value.`tokenizerIdentity`) +
+            FfiConverterString.allocationSize(value.`promptByteIdentity`) +
+            FfiConverterString.allocationSize(value.`stopTokenIdentity`) +
+            FfiConverterUInt.allocationSize(value.`contextCap`) +
+            FfiConverterBoolean.allocationSize(value.`deterministicTestMode`) +
+            FfiConverterDouble.allocationSize(value.`logitsTolerance`) +
+            FfiConverterDouble.allocationSize(value.`embeddingTolerance`) +
+            FfiConverterTypeGeneratedTokenPolicy.allocationSize(value.`generatedTokenPolicy`)
+    )
+
+    override fun write(value: BackendConformancePolicy, buf: ByteBuffer) {
+            FfiConverterString.write(value.`numericalContractId`, buf)
+            FfiConverterString.write(value.`tokenizerIdentity`, buf)
+            FfiConverterString.write(value.`promptByteIdentity`, buf)
+            FfiConverterString.write(value.`stopTokenIdentity`, buf)
+            FfiConverterUInt.write(value.`contextCap`, buf)
+            FfiConverterBoolean.write(value.`deterministicTestMode`, buf)
+            FfiConverterDouble.write(value.`logitsTolerance`, buf)
+            FfiConverterDouble.write(value.`embeddingTolerance`, buf)
+            FfiConverterTypeGeneratedTokenPolicy.write(value.`generatedTokenPolicy`, buf)
+    }
+}
+
+
+
+/**
+ * What a backend actually did, as reported by the shell running it.
+ */
+data class BackendObservation (
+    var `backendId`: kotlin.String
+    , 
+    var `tokenizerIdentity`: kotlin.String
+    , 
+    var `promptByteIdentity`: kotlin.String
+    , 
+    var `stopTokenIdentity`: kotlin.String
+    , 
+    var `contextCap`: kotlin.UInt
+    , 
+    var `outputShapeDeclared`: kotlin.Boolean
+    , 
+    /**
+     * `None` when the backend does not expose logits — absence is not
+     * agreement, and cannot satisfy a logits tolerance.
+     */
+    var `maxLogitDivergence`: kotlin.Double?
+    , 
+    var `maxEmbeddingDivergence`: kotlin.Double?
+    , 
+    var `greedyDeterminismAvailable`: kotlin.Boolean
+    , 
+    var `generatedTokensMatchReference`: kotlin.Boolean?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBackendObservation: FfiConverterRustBuffer<BackendObservation> {
+    override fun read(buf: ByteBuffer): BackendObservation {
+        return BackendObservation(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: BackendObservation) = (
+            FfiConverterString.allocationSize(value.`backendId`) +
+            FfiConverterString.allocationSize(value.`tokenizerIdentity`) +
+            FfiConverterString.allocationSize(value.`promptByteIdentity`) +
+            FfiConverterString.allocationSize(value.`stopTokenIdentity`) +
+            FfiConverterUInt.allocationSize(value.`contextCap`) +
+            FfiConverterBoolean.allocationSize(value.`outputShapeDeclared`) +
+            FfiConverterOptionalDouble.allocationSize(value.`maxLogitDivergence`) +
+            FfiConverterOptionalDouble.allocationSize(value.`maxEmbeddingDivergence`) +
+            FfiConverterBoolean.allocationSize(value.`greedyDeterminismAvailable`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`generatedTokensMatchReference`)
+    )
+
+    override fun write(value: BackendObservation, buf: ByteBuffer) {
+            FfiConverterString.write(value.`backendId`, buf)
+            FfiConverterString.write(value.`tokenizerIdentity`, buf)
+            FfiConverterString.write(value.`promptByteIdentity`, buf)
+            FfiConverterString.write(value.`stopTokenIdentity`, buf)
+            FfiConverterUInt.write(value.`contextCap`, buf)
+            FfiConverterBoolean.write(value.`outputShapeDeclared`, buf)
+            FfiConverterOptionalDouble.write(value.`maxLogitDivergence`, buf)
+            FfiConverterOptionalDouble.write(value.`maxEmbeddingDivergence`, buf)
+            FfiConverterBoolean.write(value.`greedyDeterminismAvailable`, buf)
+            FfiConverterOptionalBoolean.write(value.`generatedTokensMatchReference`, buf)
+    }
+}
+
+
+
+/**
  * Channel display data. Cached samples survive reconnects on purpose (the
  * UI may keep showing the last traces) — but cached data never influences
  * `phase()`; that is what `StreamSnapshot.last_received_at_current_ms` is for.
@@ -3329,6 +3636,60 @@ public object FfiConverterTypeDeviceRequirements: FfiConverterRustBuffer<DeviceR
 
 
 
+/**
+ * What the device can actually provide right now, as reported by the shell.
+ */
+data class DeviceRuntimeProfile (
+    var `os`: kotlin.String
+    , 
+    var `architecture`: kotlin.String
+    , 
+    /**
+     * Runtime packs the shell has verified as installed and usable.
+     */
+    var `installedBackendIds`: List<kotlin.String>
+    , 
+    var `supportedRuntimeAbis`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDeviceRuntimeProfile: FfiConverterRustBuffer<DeviceRuntimeProfile> {
+    override fun read(buf: ByteBuffer): DeviceRuntimeProfile {
+        return DeviceRuntimeProfile(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DeviceRuntimeProfile) = (
+            FfiConverterString.allocationSize(value.`os`) +
+            FfiConverterString.allocationSize(value.`architecture`) +
+            FfiConverterSequenceString.allocationSize(value.`installedBackendIds`) +
+            FfiConverterSequenceString.allocationSize(value.`supportedRuntimeAbis`)
+    )
+
+    override fun write(value: DeviceRuntimeProfile, buf: ByteBuffer) {
+            FfiConverterString.write(value.`os`, buf)
+            FfiConverterString.write(value.`architecture`, buf)
+            FfiConverterSequenceString.write(value.`installedBackendIds`, buf)
+            FfiConverterSequenceString.write(value.`supportedRuntimeAbis`, buf)
+    }
+}
+
+
+
 data class EmbeddingContract (
     var `tokenizerId`: kotlin.String
     , 
@@ -3382,6 +3743,53 @@ public object FfiConverterTypeEmbeddingContract: FfiConverterRustBuffer<Embeddin
 
 
 
+/**
+ * A detected span: *where* it is, plus *what* it is and under which frozen
+ * detector parameters. Shifting must move the range and nothing else.
+ */
+data class EventSpan (
+    var `eventKind`: kotlin.String
+    , 
+    var `window`: SampleWindow
+    , 
+    var `detectorParametersDigest`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEventSpan: FfiConverterRustBuffer<EventSpan> {
+    override fun read(buf: ByteBuffer): EventSpan {
+        return EventSpan(
+            FfiConverterString.read(buf),
+            FfiConverterTypeSampleWindow.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EventSpan) = (
+            FfiConverterString.allocationSize(value.`eventKind`) +
+            FfiConverterTypeSampleWindow.allocationSize(value.`window`) +
+            FfiConverterString.allocationSize(value.`detectorParametersDigest`)
+    )
+
+    override fun write(value: EventSpan, buf: ByteBuffer) {
+            FfiConverterString.write(value.`eventKind`, buf)
+            FfiConverterTypeSampleWindow.write(value.`window`, buf)
+            FfiConverterString.write(value.`detectorParametersDigest`, buf)
+    }
+}
+
+
+
 data class GenerationContract (
     var `tokenizerId`: kotlin.String
     , 
@@ -3425,6 +3833,49 @@ public object FfiConverterTypeGenerationContract: FfiConverterRustBuffer<Generat
             FfiConverterUInt.write(value.`contextCap`, buf)
             FfiConverterString.write(value.`promptTemplateId`, buf)
             FfiConverterSequenceString.write(value.`compatiblePromptProfiles`, buf)
+    }
+}
+
+
+
+/**
+ * One indexed record: *what* was embedded and *by which embedding space*.
+ * Two records with the same pair are the same entry; two with different
+ * embedding identities are never the same entry, however similar the text.
+ */
+data class IndexEntryKey (
+    var `contentSha256Hex`: kotlin.String
+    , 
+    var `embeddingSpaceIdentity`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeIndexEntryKey: FfiConverterRustBuffer<IndexEntryKey> {
+    override fun read(buf: ByteBuffer): IndexEntryKey {
+        return IndexEntryKey(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: IndexEntryKey) = (
+            FfiConverterString.allocationSize(value.`contentSha256Hex`) +
+            FfiConverterString.allocationSize(value.`embeddingSpaceIdentity`)
+    )
+
+    override fun write(value: IndexEntryKey, buf: ByteBuffer) {
+            FfiConverterString.write(value.`contentSha256Hex`, buf)
+            FfiConverterString.write(value.`embeddingSpaceIdentity`, buf)
     }
 }
 
@@ -3772,6 +4223,84 @@ public object FfiConverterTypeModelPackSnapshot: FfiConverterRustBuffer<ModelPac
             FfiConverterOptionalTypeActiveIntegrityFailure.write(value.`activeIntegrityFailure`, buf)
             FfiConverterOptionalTypeOperationFailure.write(value.`operationFailure`, buf)
             FfiConverterOptionalTypeRestoreFailure.write(value.`restoreFailure`, buf)
+    }
+}
+
+
+
+/**
+ * One logical model, published once per backend artifact variant. Distinct
+ * variants of the same `logical_model_id` are the *same model* to the user
+ * and *different artifacts* to the runtime.
+ */
+data class ModelVariant (
+    var `schemaVersion`: kotlin.UInt
+    , 
+    var `logicalModelId`: kotlin.String
+    , 
+    var `variantId`: kotlin.String
+    , 
+    var `modelPackId`: kotlin.String
+    , 
+    var `runtimeTarget`: RuntimeTarget
+    , 
+    var `quantization`: kotlin.String?
+    , 
+    var `artifactFormat`: kotlin.String
+    , 
+    /**
+     * Identity of the numerical contract this variant satisfies. Two
+     * variants sharing it claim results interchangeable within tolerance;
+     * differing ids make no such claim.
+     */
+    var `numericalContractId`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelVariant: FfiConverterRustBuffer<ModelVariant> {
+    override fun read(buf: ByteBuffer): ModelVariant {
+        return ModelVariant(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeRuntimeTarget.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ModelVariant) = (
+            FfiConverterUInt.allocationSize(value.`schemaVersion`) +
+            FfiConverterString.allocationSize(value.`logicalModelId`) +
+            FfiConverterString.allocationSize(value.`variantId`) +
+            FfiConverterString.allocationSize(value.`modelPackId`) +
+            FfiConverterTypeRuntimeTarget.allocationSize(value.`runtimeTarget`) +
+            FfiConverterOptionalString.allocationSize(value.`quantization`) +
+            FfiConverterString.allocationSize(value.`artifactFormat`) +
+            FfiConverterString.allocationSize(value.`numericalContractId`)
+    )
+
+    override fun write(value: ModelVariant, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`schemaVersion`, buf)
+            FfiConverterString.write(value.`logicalModelId`, buf)
+            FfiConverterString.write(value.`variantId`, buf)
+            FfiConverterString.write(value.`modelPackId`, buf)
+            FfiConverterTypeRuntimeTarget.write(value.`runtimeTarget`, buf)
+            FfiConverterOptionalString.write(value.`quantization`, buf)
+            FfiConverterString.write(value.`artifactFormat`, buf)
+            FfiConverterString.write(value.`numericalContractId`, buf)
     }
 }
 
@@ -4180,6 +4709,53 @@ public object FfiConverterTypeRecordingManifest: FfiConverterRustBuffer<Recordin
 
 
 
+/**
+ * Capabilities the caller *requires*. Anything true here that the backend
+ * cannot do makes the selection fail closed.
+ */
+data class RequiredCapabilities (
+    var `streaming`: kotlin.Boolean
+    , 
+    var `cancellation`: kotlin.Boolean
+    , 
+    var `structuredOutput`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRequiredCapabilities: FfiConverterRustBuffer<RequiredCapabilities> {
+    override fun read(buf: ByteBuffer): RequiredCapabilities {
+        return RequiredCapabilities(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RequiredCapabilities) = (
+            FfiConverterBoolean.allocationSize(value.`streaming`) +
+            FfiConverterBoolean.allocationSize(value.`cancellation`) +
+            FfiConverterBoolean.allocationSize(value.`structuredOutput`)
+    )
+
+    override fun write(value: RequiredCapabilities, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`streaming`, buf)
+            FfiConverterBoolean.write(value.`cancellation`, buf)
+            FfiConverterBoolean.write(value.`structuredOutput`, buf)
+    }
+}
+
+
+
 data class ResolvedClientConfig (
     var `mode`: ClientMode
     , 
@@ -4319,6 +4895,363 @@ public object FfiConverterTypeResolvedProviderIdentity: FfiConverterRustBuffer<R
 
 
 /**
+ * Backend-level capabilities. Distinct from `ProviderCapabilities`: a
+ * provider may offer cancellation semantically while a specific backend
+ * cannot honour it, and callers that *require* a capability must fail
+ * closed rather than proceed without it.
+ */
+data class RuntimeCapabilities (
+    var `generation`: kotlin.Boolean
+    , 
+    var `embeddings`: kotlin.Boolean
+    , 
+    var `streaming`: kotlin.Boolean
+    , 
+    var `cancellation`: kotlin.Boolean
+    , 
+    var `structuredOutput`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRuntimeCapabilities: FfiConverterRustBuffer<RuntimeCapabilities> {
+    override fun read(buf: ByteBuffer): RuntimeCapabilities {
+        return RuntimeCapabilities(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RuntimeCapabilities) = (
+            FfiConverterBoolean.allocationSize(value.`generation`) +
+            FfiConverterBoolean.allocationSize(value.`embeddings`) +
+            FfiConverterBoolean.allocationSize(value.`streaming`) +
+            FfiConverterBoolean.allocationSize(value.`cancellation`) +
+            FfiConverterBoolean.allocationSize(value.`structuredOutput`)
+    )
+
+    override fun write(value: RuntimeCapabilities, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`generation`, buf)
+            FfiConverterBoolean.write(value.`embeddings`, buf)
+            FfiConverterBoolean.write(value.`streaming`, buf)
+            FfiConverterBoolean.write(value.`cancellation`, buf)
+            FfiConverterBoolean.write(value.`structuredOutput`, buf)
+    }
+}
+
+
+
+data class RuntimeEntrypoint (
+    var `entrypointId`: kotlin.String
+    , 
+    var `libraryId`: kotlin.String
+    , 
+    var `symbol`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRuntimeEntrypoint: FfiConverterRustBuffer<RuntimeEntrypoint> {
+    override fun read(buf: ByteBuffer): RuntimeEntrypoint {
+        return RuntimeEntrypoint(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RuntimeEntrypoint) = (
+            FfiConverterString.allocationSize(value.`entrypointId`) +
+            FfiConverterString.allocationSize(value.`libraryId`) +
+            FfiConverterString.allocationSize(value.`symbol`)
+    )
+
+    override fun write(value: RuntimeEntrypoint, buf: ByteBuffer) {
+            FfiConverterString.write(value.`entrypointId`, buf)
+            FfiConverterString.write(value.`libraryId`, buf)
+            FfiConverterString.write(value.`symbol`, buf)
+    }
+}
+
+
+
+data class RuntimeLibrary (
+    var `libraryId`: kotlin.String
+    , 
+    /**
+     * Relative to the installed runtime-pack root — never an absolute path,
+     * so identity is invariant under relocation.
+     */
+    var `relativePath`: kotlin.String
+    , 
+    var `byteSize`: kotlin.ULong
+    , 
+    var `sha256Hex`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRuntimeLibrary: FfiConverterRustBuffer<RuntimeLibrary> {
+    override fun read(buf: ByteBuffer): RuntimeLibrary {
+        return RuntimeLibrary(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RuntimeLibrary) = (
+            FfiConverterString.allocationSize(value.`libraryId`) +
+            FfiConverterString.allocationSize(value.`relativePath`) +
+            FfiConverterULong.allocationSize(value.`byteSize`) +
+            FfiConverterString.allocationSize(value.`sha256Hex`)
+    )
+
+    override fun write(value: RuntimeLibrary, buf: ByteBuffer) {
+            FfiConverterString.write(value.`libraryId`, buf)
+            FfiConverterString.write(value.`relativePath`, buf)
+            FfiConverterULong.write(value.`byteSize`, buf)
+            FfiConverterString.write(value.`sha256Hex`, buf)
+    }
+}
+
+
+
+/**
+ * A signed, independently removable bundle of native libraries for exactly
+ * one target. Never a base-application dependency.
+ */
+data class RuntimePackManifest (
+    var `schemaVersion`: kotlin.UInt
+    , 
+    var `runtimePackId`: kotlin.String
+    , 
+    var `version`: kotlin.String
+    , 
+    var `target`: RuntimeTarget
+    , 
+    var `libraries`: List<RuntimeLibrary>
+    , 
+    var `licenses`: List<kotlin.String>
+    , 
+    var `entrypoints`: List<RuntimeEntrypoint>
+    , 
+    var `runtimeAbi`: kotlin.String
+    , 
+    /**
+     * Who signed the pack. Absent means unsigned — never treated as trusted.
+     */
+    var `signingIdentity`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRuntimePackManifest: FfiConverterRustBuffer<RuntimePackManifest> {
+    override fun read(buf: ByteBuffer): RuntimePackManifest {
+        return RuntimePackManifest(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeRuntimeTarget.read(buf),
+            FfiConverterSequenceTypeRuntimeLibrary.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceTypeRuntimeEntrypoint.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RuntimePackManifest) = (
+            FfiConverterUInt.allocationSize(value.`schemaVersion`) +
+            FfiConverterString.allocationSize(value.`runtimePackId`) +
+            FfiConverterString.allocationSize(value.`version`) +
+            FfiConverterTypeRuntimeTarget.allocationSize(value.`target`) +
+            FfiConverterSequenceTypeRuntimeLibrary.allocationSize(value.`libraries`) +
+            FfiConverterSequenceString.allocationSize(value.`licenses`) +
+            FfiConverterSequenceTypeRuntimeEntrypoint.allocationSize(value.`entrypoints`) +
+            FfiConverterString.allocationSize(value.`runtimeAbi`) +
+            FfiConverterOptionalString.allocationSize(value.`signingIdentity`)
+    )
+
+    override fun write(value: RuntimePackManifest, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`schemaVersion`, buf)
+            FfiConverterString.write(value.`runtimePackId`, buf)
+            FfiConverterString.write(value.`version`, buf)
+            FfiConverterTypeRuntimeTarget.write(value.`target`, buf)
+            FfiConverterSequenceTypeRuntimeLibrary.write(value.`libraries`, buf)
+            FfiConverterSequenceString.write(value.`licenses`, buf)
+            FfiConverterSequenceTypeRuntimeEntrypoint.write(value.`entrypoints`, buf)
+            FfiConverterString.write(value.`runtimeAbi`, buf)
+            FfiConverterOptionalString.write(value.`signingIdentity`, buf)
+    }
+}
+
+
+
+data class RuntimeTarget (
+    var `os`: kotlin.String
+    , 
+    var `architecture`: kotlin.String
+    , 
+    var `acceleratorClass`: AcceleratorClass
+    , 
+    /**
+     * Configured backend identity, e.g. `llama-cpp-vulkan`, `coreml`,
+     * `windows-ml-qnn`. Never a vendor enum.
+     */
+    var `backendId`: kotlin.String
+    , 
+    var `runtimeAbi`: kotlin.String
+    , 
+    var `modelFormats`: List<kotlin.String>
+    , 
+    var `minimumOsVersion`: kotlin.String?
+    , 
+    var `minimumBackendVersion`: kotlin.String?
+    , 
+    var `minimumDriverVersion`: kotlin.String?
+    , 
+    var `capabilities`: RuntimeCapabilities
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRuntimeTarget: FfiConverterRustBuffer<RuntimeTarget> {
+    override fun read(buf: ByteBuffer): RuntimeTarget {
+        return RuntimeTarget(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeAcceleratorClass.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeRuntimeCapabilities.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RuntimeTarget) = (
+            FfiConverterString.allocationSize(value.`os`) +
+            FfiConverterString.allocationSize(value.`architecture`) +
+            FfiConverterTypeAcceleratorClass.allocationSize(value.`acceleratorClass`) +
+            FfiConverterString.allocationSize(value.`backendId`) +
+            FfiConverterString.allocationSize(value.`runtimeAbi`) +
+            FfiConverterSequenceString.allocationSize(value.`modelFormats`) +
+            FfiConverterOptionalString.allocationSize(value.`minimumOsVersion`) +
+            FfiConverterOptionalString.allocationSize(value.`minimumBackendVersion`) +
+            FfiConverterOptionalString.allocationSize(value.`minimumDriverVersion`) +
+            FfiConverterTypeRuntimeCapabilities.allocationSize(value.`capabilities`)
+    )
+
+    override fun write(value: RuntimeTarget, buf: ByteBuffer) {
+            FfiConverterString.write(value.`os`, buf)
+            FfiConverterString.write(value.`architecture`, buf)
+            FfiConverterTypeAcceleratorClass.write(value.`acceleratorClass`, buf)
+            FfiConverterString.write(value.`backendId`, buf)
+            FfiConverterString.write(value.`runtimeAbi`, buf)
+            FfiConverterSequenceString.write(value.`modelFormats`, buf)
+            FfiConverterOptionalString.write(value.`minimumOsVersion`, buf)
+            FfiConverterOptionalString.write(value.`minimumBackendVersion`, buf)
+            FfiConverterOptionalString.write(value.`minimumDriverVersion`, buf)
+            FfiConverterTypeRuntimeCapabilities.write(value.`capabilities`, buf)
+    }
+}
+
+
+
+/**
+ * A half-open sample range `[start, end)` within one recording.
+ */
+data class SampleWindow (
+    var `startSample`: kotlin.ULong
+    , 
+    var `endSample`: kotlin.ULong
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSampleWindow: FfiConverterRustBuffer<SampleWindow> {
+    override fun read(buf: ByteBuffer): SampleWindow {
+        return SampleWindow(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SampleWindow) = (
+            FfiConverterULong.allocationSize(value.`startSample`) +
+            FfiConverterULong.allocationSize(value.`endSample`)
+    )
+
+    override fun write(value: SampleWindow, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`startSample`, buf)
+            FfiConverterULong.write(value.`endSample`, buf)
+    }
+}
+
+
+
+/**
  * Stream metadata: everything freshness- and retry-related, per generation.
  */
 data class StreamSnapshot (
@@ -4392,6 +5325,83 @@ public object FfiConverterTypeStreamSnapshot: FfiConverterRustBuffer<StreamSnaps
 
 
 
+/**
+ * Evidence actually in hand for one (target, backend) row.
+ */
+data class SupportEvidence (
+    var `contractsAndTestsPass`: kotlin.Boolean
+    , 
+    var `buildsOnNamedTarget`: kotlin.Boolean
+    , 
+    /**
+     * A deterministic fixture model actually executed — not "it compiled".
+     */
+    var `fixtureRuntimeExecuted`: kotlin.Boolean
+    , 
+    /**
+     * Exact physical hardware. `None` blocks DeviceValidated outright.
+     */
+    var `physicalDevice`: kotlin.String?
+    , 
+    var `osVersion`: kotlin.String?
+    , 
+    var `backendVersion`: kotlin.String?
+    , 
+    var `signedPackagingAccepted`: kotlin.Boolean
+    , 
+    var `acceptanceDocument`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSupportEvidence: FfiConverterRustBuffer<SupportEvidence> {
+    override fun read(buf: ByteBuffer): SupportEvidence {
+        return SupportEvidence(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SupportEvidence) = (
+            FfiConverterBoolean.allocationSize(value.`contractsAndTestsPass`) +
+            FfiConverterBoolean.allocationSize(value.`buildsOnNamedTarget`) +
+            FfiConverterBoolean.allocationSize(value.`fixtureRuntimeExecuted`) +
+            FfiConverterOptionalString.allocationSize(value.`physicalDevice`) +
+            FfiConverterOptionalString.allocationSize(value.`osVersion`) +
+            FfiConverterOptionalString.allocationSize(value.`backendVersion`) +
+            FfiConverterBoolean.allocationSize(value.`signedPackagingAccepted`) +
+            FfiConverterOptionalString.allocationSize(value.`acceptanceDocument`)
+    )
+
+    override fun write(value: SupportEvidence, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`contractsAndTestsPass`, buf)
+            FfiConverterBoolean.write(value.`buildsOnNamedTarget`, buf)
+            FfiConverterBoolean.write(value.`fixtureRuntimeExecuted`, buf)
+            FfiConverterOptionalString.write(value.`physicalDevice`, buf)
+            FfiConverterOptionalString.write(value.`osVersion`, buf)
+            FfiConverterOptionalString.write(value.`backendVersion`, buf)
+            FfiConverterBoolean.write(value.`signedPackagingAccepted`, buf)
+            FfiConverterOptionalString.write(value.`acceptanceDocument`, buf)
+    }
+}
+
+
+
 data class VerifiedArtifact (
     var `artifactId`: kotlin.String
     , 
@@ -4437,6 +5447,45 @@ public object FfiConverterTypeVerifiedArtifact: FfiConverterRustBuffer<VerifiedA
             FfiConverterString.write(value.`sha256Hex`, buf)
     }
 }
+
+
+
+/**
+ * What kind of hardware executes the work. A *class*, not a vendor —
+ * vendors live in `backend_id`.
+ */
+
+enum class AcceleratorClass {
+    
+    CPU,
+    GPU,
+    NPU;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAcceleratorClass: FfiConverterRustBuffer<AcceleratorClass> {
+    override fun read(buf: ByteBuffer) = try {
+        AcceleratorClass.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: AcceleratorClass) = 4UL
+
+    override fun write(value: AcceleratorClass, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
 
 
 
@@ -4729,6 +5778,308 @@ public object FfiConverterTypeAvailabilityProbe : FfiConverterRustBuffer<Availab
 
 
 
+/**
+ * What the caller asked for. An explicit backend requirement is a hard
+ * constraint: a user who chose CUDA is never silently given CPU.
+ */
+sealed class BackendRequirement {
+    
+    /**
+     * Any variant the device can actually run is acceptable.
+     */
+    object AnySupported : BackendRequirement()
+    
+    
+    /**
+     * Only this backend. Absent or unusable → Unavailable, never a swap.
+     */
+    data class Explicit(
+        val `backendId`: kotlin.String) : BackendRequirement()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBackendRequirement : FfiConverterRustBuffer<BackendRequirement>{
+    override fun read(buf: ByteBuffer): BackendRequirement {
+        return when(buf.getInt()) {
+            1 -> BackendRequirement.AnySupported
+            2 -> BackendRequirement.Explicit(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: BackendRequirement): ULong = when(value) {
+        is BackendRequirement.AnySupported -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is BackendRequirement.Explicit -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`backendId`)
+            )
+        }
+    }
+
+    override fun write(value: BackendRequirement, buf: ByteBuffer) {
+        when(value) {
+            is BackendRequirement.AnySupported -> {
+                buf.putInt(1)
+                Unit
+            }
+            is BackendRequirement.Explicit -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`backendId`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * Outcome of a labelled reorder. An enum rather than `Result` so the shape
+ * crosses the FFI boundary unchanged (same convention as `RestoreResult`).
+ */
+sealed class ChannelOrderResult {
+    
+    data class Ordered(
+        val `values`: List<kotlin.Double>) : ChannelOrderResult()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Rejected(
+        val `error`: uniffi.neuralcompose_mobile_core.ChannelPermutationError) : ChannelOrderResult()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeChannelOrderResult : FfiConverterRustBuffer<ChannelOrderResult>{
+    override fun read(buf: ByteBuffer): ChannelOrderResult {
+        return when(buf.getInt()) {
+            1 -> ChannelOrderResult.Ordered(
+                FfiConverterSequenceDouble.read(buf),
+                )
+            2 -> ChannelOrderResult.Rejected(
+                FfiConverterTypeChannelPermutationError.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ChannelOrderResult): ULong = when(value) {
+        is ChannelOrderResult.Ordered -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterSequenceDouble.allocationSize(value.`values`)
+            )
+        }
+        is ChannelOrderResult.Rejected -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeChannelPermutationError.allocationSize(value.`error`)
+            )
+        }
+    }
+
+    override fun write(value: ChannelOrderResult, buf: ByteBuffer) {
+        when(value) {
+            is ChannelOrderResult.Ordered -> {
+                buf.putInt(1)
+                FfiConverterSequenceDouble.write(value.`values`, buf)
+                Unit
+            }
+            is ChannelOrderResult.Rejected -> {
+                buf.putInt(2)
+                FfiConverterTypeChannelPermutationError.write(value.`error`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+sealed class ChannelPermutationError {
+    
+    /**
+     * Values arrived without a matching label set — the caller is asking us
+     * to guess anatomy from position. Refused.
+     */
+    object LabelsMissing : ChannelPermutationError()
+    
+    
+    object LengthMismatch : ChannelPermutationError()
+    
+    
+    data class DuplicateLabel(
+        val `label`: kotlin.String) : ChannelPermutationError()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class UnknownLabel(
+        val `label`: kotlin.String) : ChannelPermutationError()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The supplied labels are not a permutation of the canonical montage.
+     */
+    object NotAPermutation : ChannelPermutationError()
+    
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeChannelPermutationError : FfiConverterRustBuffer<ChannelPermutationError>{
+    override fun read(buf: ByteBuffer): ChannelPermutationError {
+        return when(buf.getInt()) {
+            1 -> ChannelPermutationError.LabelsMissing
+            2 -> ChannelPermutationError.LengthMismatch
+            3 -> ChannelPermutationError.DuplicateLabel(
+                FfiConverterString.read(buf),
+                )
+            4 -> ChannelPermutationError.UnknownLabel(
+                FfiConverterString.read(buf),
+                )
+            5 -> ChannelPermutationError.NotAPermutation
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ChannelPermutationError): ULong = when(value) {
+        is ChannelPermutationError.LabelsMissing -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ChannelPermutationError.LengthMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ChannelPermutationError.DuplicateLabel -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`label`)
+            )
+        }
+        is ChannelPermutationError.UnknownLabel -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`label`)
+            )
+        }
+        is ChannelPermutationError.NotAPermutation -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: ChannelPermutationError, buf: ByteBuffer) {
+        when(value) {
+            is ChannelPermutationError.LabelsMissing -> {
+                buf.putInt(1)
+                Unit
+            }
+            is ChannelPermutationError.LengthMismatch -> {
+                buf.putInt(2)
+                Unit
+            }
+            is ChannelPermutationError.DuplicateLabel -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`label`, buf)
+                Unit
+            }
+            is ChannelPermutationError.UnknownLabel -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`label`, buf)
+                Unit
+            }
+            is ChannelPermutationError.NotAPermutation -> {
+                buf.putInt(5)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
 
 enum class ClientMode {
     
@@ -4756,6 +6107,303 @@ public object FfiConverterTypeClientMode: FfiConverterRustBuffer<ClientMode> {
 
     override fun write(value: ClientMode, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class ConformanceFailure {
+    
+    object TokenizerIdentityMismatch : ConformanceFailure()
+    
+    
+    object PromptByteMismatch : ConformanceFailure()
+    
+    
+    object StopTokenMismatch : ConformanceFailure()
+    
+    
+    object ContextCapMismatch : ConformanceFailure()
+    
+    
+    object OutputShapeUndeclared : ConformanceFailure()
+    
+    
+    object GreedyDeterminismUnavailable : ConformanceFailure()
+    
+    
+    object GeneratedTokensDiverged : ConformanceFailure()
+    
+    
+    data class MissingMeasurement(
+        val `measurement`: kotlin.String) : ConformanceFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class MalformedPolicy(
+        val `reason`: kotlin.String) : ConformanceFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConformanceFailure : FfiConverterRustBuffer<ConformanceFailure>{
+    override fun read(buf: ByteBuffer): ConformanceFailure {
+        return when(buf.getInt()) {
+            1 -> ConformanceFailure.TokenizerIdentityMismatch
+            2 -> ConformanceFailure.PromptByteMismatch
+            3 -> ConformanceFailure.StopTokenMismatch
+            4 -> ConformanceFailure.ContextCapMismatch
+            5 -> ConformanceFailure.OutputShapeUndeclared
+            6 -> ConformanceFailure.GreedyDeterminismUnavailable
+            7 -> ConformanceFailure.GeneratedTokensDiverged
+            8 -> ConformanceFailure.MissingMeasurement(
+                FfiConverterString.read(buf),
+                )
+            9 -> ConformanceFailure.MalformedPolicy(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ConformanceFailure): ULong = when(value) {
+        is ConformanceFailure.TokenizerIdentityMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ConformanceFailure.PromptByteMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ConformanceFailure.StopTokenMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ConformanceFailure.ContextCapMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ConformanceFailure.OutputShapeUndeclared -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ConformanceFailure.GreedyDeterminismUnavailable -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ConformanceFailure.GeneratedTokensDiverged -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ConformanceFailure.MissingMeasurement -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`measurement`)
+            )
+        }
+        is ConformanceFailure.MalformedPolicy -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: ConformanceFailure, buf: ByteBuffer) {
+        when(value) {
+            is ConformanceFailure.TokenizerIdentityMismatch -> {
+                buf.putInt(1)
+                Unit
+            }
+            is ConformanceFailure.PromptByteMismatch -> {
+                buf.putInt(2)
+                Unit
+            }
+            is ConformanceFailure.StopTokenMismatch -> {
+                buf.putInt(3)
+                Unit
+            }
+            is ConformanceFailure.ContextCapMismatch -> {
+                buf.putInt(4)
+                Unit
+            }
+            is ConformanceFailure.OutputShapeUndeclared -> {
+                buf.putInt(5)
+                Unit
+            }
+            is ConformanceFailure.GreedyDeterminismUnavailable -> {
+                buf.putInt(6)
+                Unit
+            }
+            is ConformanceFailure.GeneratedTokensDiverged -> {
+                buf.putInt(7)
+                Unit
+            }
+            is ConformanceFailure.MissingMeasurement -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`measurement`, buf)
+                Unit
+            }
+            is ConformanceFailure.MalformedPolicy -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+sealed class ConformanceVerdict {
+    
+    /**
+     * Every identity matches and every measurement is inside tolerance:
+     * this backend may carry the declared numerical-contract id.
+     */
+    object Conformant : ConformanceVerdict()
+    
+    
+    /**
+     * Identities match but measurements exceed tolerance. NOT a failure to
+     * hide — the backend must publish under its own contract identity.
+     */
+    data class RequiresSeparateNumericalContract(
+        val `measurement`: kotlin.String, 
+        val `observed`: kotlin.Double, 
+        val `tolerance`: kotlin.Double) : ConformanceVerdict()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A semantic identity mismatch. No tolerance can excuse this.
+     */
+    data class NonConformant(
+        val `failure`: uniffi.neuralcompose_mobile_core.ConformanceFailure) : ConformanceVerdict()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConformanceVerdict : FfiConverterRustBuffer<ConformanceVerdict>{
+    override fun read(buf: ByteBuffer): ConformanceVerdict {
+        return when(buf.getInt()) {
+            1 -> ConformanceVerdict.Conformant
+            2 -> ConformanceVerdict.RequiresSeparateNumericalContract(
+                FfiConverterString.read(buf),
+                FfiConverterDouble.read(buf),
+                FfiConverterDouble.read(buf),
+                )
+            3 -> ConformanceVerdict.NonConformant(
+                FfiConverterTypeConformanceFailure.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ConformanceVerdict): ULong = when(value) {
+        is ConformanceVerdict.Conformant -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ConformanceVerdict.RequiresSeparateNumericalContract -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`measurement`)
+                + FfiConverterDouble.allocationSize(value.`observed`)
+                + FfiConverterDouble.allocationSize(value.`tolerance`)
+            )
+        }
+        is ConformanceVerdict.NonConformant -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeConformanceFailure.allocationSize(value.`failure`)
+            )
+        }
+    }
+
+    override fun write(value: ConformanceVerdict, buf: ByteBuffer) {
+        when(value) {
+            is ConformanceVerdict.Conformant -> {
+                buf.putInt(1)
+                Unit
+            }
+            is ConformanceVerdict.RequiresSeparateNumericalContract -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`measurement`, buf)
+                FfiConverterDouble.write(value.`observed`, buf)
+                FfiConverterDouble.write(value.`tolerance`, buf)
+                Unit
+            }
+            is ConformanceVerdict.NonConformant -> {
+                buf.putInt(3)
+                FfiConverterTypeConformanceFailure.write(value.`failure`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 }
 
@@ -4896,6 +6544,50 @@ public object FfiConverterTypeEmbeddingPooling: FfiConverterRustBuffer<Embedding
     override fun allocationSize(value: EmbeddingPooling) = 4UL
 
     override fun write(value: EmbeddingPooling, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * How sampled text is judged. Byte equality is only ever legitimate under
+ * deterministic greedy decoding on a backend that supports it.
+ */
+
+enum class GeneratedTokenPolicy {
+    
+    /**
+     * Greedy decode, deterministic on this backend: exact token ids required.
+     */
+    EXACT_UNDER_GREEDY,
+    /**
+     * Sampling permitted: evaluate as distributions, never string equality.
+     */
+    DISTRIBUTION_ONLY;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGeneratedTokenPolicy: FfiConverterRustBuffer<GeneratedTokenPolicy> {
+    override fun read(buf: ByteBuffer) = try {
+        GeneratedTokenPolicy.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: GeneratedTokenPolicy) = 4UL
+
+    override fun write(value: GeneratedTokenPolicy, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -6259,6 +7951,282 @@ public object FfiConverterTypeRestoreResult : FfiConverterRustBuffer<RestoreResu
 
 
 
+sealed class RuntimeSelection {
+    
+    data class Selected(
+        val `variant`: uniffi.neuralcompose_mobile_core.ModelVariant) : RuntimeSelection()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Unavailable(
+        val `failure`: uniffi.neuralcompose_mobile_core.SelectionFailure) : RuntimeSelection()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRuntimeSelection : FfiConverterRustBuffer<RuntimeSelection>{
+    override fun read(buf: ByteBuffer): RuntimeSelection {
+        return when(buf.getInt()) {
+            1 -> RuntimeSelection.Selected(
+                FfiConverterTypeModelVariant.read(buf),
+                )
+            2 -> RuntimeSelection.Unavailable(
+                FfiConverterTypeSelectionFailure.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: RuntimeSelection): ULong = when(value) {
+        is RuntimeSelection.Selected -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeModelVariant.allocationSize(value.`variant`)
+            )
+        }
+        is RuntimeSelection.Unavailable -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeSelectionFailure.allocationSize(value.`failure`)
+            )
+        }
+    }
+
+    override fun write(value: RuntimeSelection, buf: ByteBuffer) {
+        when(value) {
+            is RuntimeSelection.Selected -> {
+                buf.putInt(1)
+                FfiConverterTypeModelVariant.write(value.`variant`, buf)
+                Unit
+            }
+            is RuntimeSelection.Unavailable -> {
+                buf.putInt(2)
+                FfiConverterTypeSelectionFailure.write(value.`failure`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+sealed class SelectionFailure {
+    
+    object NoVariantForOsArchitecture : SelectionFailure()
+    
+    
+    data class RequestedBackendNotPublished(
+        val `backendId`: kotlin.String) : SelectionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class RequestedBackendNotInstalled(
+        val `backendId`: kotlin.String) : SelectionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class RuntimeAbiUnsupported(
+        val `backendId`: kotlin.String) : SelectionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class RequiredCapabilityUnavailable(
+        val `capability`: kotlin.String) : SelectionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class AmbiguousVariants(
+        val `variantId`: kotlin.String) : SelectionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class InvalidVariant(
+        val `reason`: kotlin.String) : SelectionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSelectionFailure : FfiConverterRustBuffer<SelectionFailure>{
+    override fun read(buf: ByteBuffer): SelectionFailure {
+        return when(buf.getInt()) {
+            1 -> SelectionFailure.NoVariantForOsArchitecture
+            2 -> SelectionFailure.RequestedBackendNotPublished(
+                FfiConverterString.read(buf),
+                )
+            3 -> SelectionFailure.RequestedBackendNotInstalled(
+                FfiConverterString.read(buf),
+                )
+            4 -> SelectionFailure.RuntimeAbiUnsupported(
+                FfiConverterString.read(buf),
+                )
+            5 -> SelectionFailure.RequiredCapabilityUnavailable(
+                FfiConverterString.read(buf),
+                )
+            6 -> SelectionFailure.AmbiguousVariants(
+                FfiConverterString.read(buf),
+                )
+            7 -> SelectionFailure.InvalidVariant(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: SelectionFailure): ULong = when(value) {
+        is SelectionFailure.NoVariantForOsArchitecture -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is SelectionFailure.RequestedBackendNotPublished -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`backendId`)
+            )
+        }
+        is SelectionFailure.RequestedBackendNotInstalled -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`backendId`)
+            )
+        }
+        is SelectionFailure.RuntimeAbiUnsupported -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`backendId`)
+            )
+        }
+        is SelectionFailure.RequiredCapabilityUnavailable -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`capability`)
+            )
+        }
+        is SelectionFailure.AmbiguousVariants -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`variantId`)
+            )
+        }
+        is SelectionFailure.InvalidVariant -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: SelectionFailure, buf: ByteBuffer) {
+        when(value) {
+            is SelectionFailure.NoVariantForOsArchitecture -> {
+                buf.putInt(1)
+                Unit
+            }
+            is SelectionFailure.RequestedBackendNotPublished -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`backendId`, buf)
+                Unit
+            }
+            is SelectionFailure.RequestedBackendNotInstalled -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`backendId`, buf)
+                Unit
+            }
+            is SelectionFailure.RuntimeAbiUnsupported -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`backendId`, buf)
+                Unit
+            }
+            is SelectionFailure.RequiredCapabilityUnavailable -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`capability`, buf)
+                Unit
+            }
+            is SelectionFailure.AmbiguousVariants -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`variantId`, buf)
+                Unit
+            }
+            is SelectionFailure.InvalidVariant -> {
+                buf.putInt(7)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
 
 enum class SocketEvent {
     
@@ -6463,6 +8431,47 @@ public object FfiConverterTypeStreamTone: FfiConverterRustBuffer<StreamTone> {
 
 
 
+/**
+ * Promotion ladder. Never promote by implication: each rung needs its own
+ * evidence, and compiling is not running.
+ */
+
+enum class SupportStatus {
+    
+    CONTRACTED,
+    BUILD_VALIDATED,
+    RUNTIME_SMOKE_VALIDATED,
+    DEVICE_VALIDATED,
+    RELEASE_SUPPORTED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSupportStatus: FfiConverterRustBuffer<SupportStatus> {
+    override fun read(buf: ByteBuffer) = try {
+        SupportStatus.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: SupportStatus) = 4UL
+
+    override fun write(value: SupportStatus, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
 
 /**
  * @suppress
@@ -6489,6 +8498,70 @@ public object FfiConverterOptionalULong: FfiConverterRustBuffer<kotlin.ULong?> {
         } else {
             buf.put(1)
             FfiConverterULong.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalDouble: FfiConverterRustBuffer<kotlin.Double?> {
+    override fun read(buf: ByteBuffer): kotlin.Double? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterDouble.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Double?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterDouble.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Double?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterDouble.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalBoolean: FfiConverterRustBuffer<kotlin.Boolean?> {
+    override fun read(buf: ByteBuffer): kotlin.Boolean? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterBoolean.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Boolean?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterBoolean.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Boolean?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterBoolean.write(value, buf)
         }
     }
 }
@@ -6553,6 +8626,38 @@ public object FfiConverterOptionalTypeEmbeddingContract: FfiConverterRustBuffer<
         } else {
             buf.put(1)
             FfiConverterTypeEmbeddingContract.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeEventSpan: FfiConverterRustBuffer<EventSpan?> {
+    override fun read(buf: ByteBuffer): EventSpan? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeEventSpan.read(buf)
+    }
+
+    override fun allocationSize(value: EventSpan?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeEventSpan.allocationSize(value)
+        }
+    }
+
+    override fun write(value: EventSpan?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeEventSpan.write(value, buf)
         }
     }
 }
@@ -6755,6 +8860,38 @@ public object FfiConverterOptionalTypeRestoreFailure: FfiConverterRustBuffer<Res
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeSupportStatus: FfiConverterRustBuffer<SupportStatus?> {
+    override fun read(buf: ByteBuffer): SupportStatus? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeSupportStatus.read(buf)
+    }
+
+    override fun allocationSize(value: SupportStatus?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeSupportStatus.allocationSize(value)
+        }
+    }
+
+    override fun write(value: SupportStatus?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeSupportStatus.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>> {
     override fun read(buf: ByteBuffer): List<kotlin.UInt> {
         val len = buf.getInt()
@@ -6867,6 +9004,34 @@ public object FfiConverterSequenceTypeAudioTransition: FfiConverterRustBuffer<Li
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeIndexEntryKey: FfiConverterRustBuffer<List<IndexEntryKey>> {
+    override fun read(buf: ByteBuffer): List<IndexEntryKey> {
+        val len = buf.getInt()
+        return List<IndexEntryKey>(len) {
+            FfiConverterTypeIndexEntryKey.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<IndexEntryKey>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeIndexEntryKey.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<IndexEntryKey>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeIndexEntryKey.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeModelAlias: FfiConverterRustBuffer<List<ModelAlias>> {
     override fun read(buf: ByteBuffer): List<ModelAlias> {
         val len = buf.getInt()
@@ -6941,6 +9106,34 @@ public object FfiConverterSequenceTypeModelPackCatalogEntry: FfiConverterRustBuf
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeModelPackCatalogEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeModelVariant: FfiConverterRustBuffer<List<ModelVariant>> {
+    override fun read(buf: ByteBuffer): List<ModelVariant> {
+        val len = buf.getInt()
+        return List<ModelVariant>(len) {
+            FfiConverterTypeModelVariant.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ModelVariant>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeModelVariant.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ModelVariant>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeModelVariant.write(it, buf)
         }
     }
 }
@@ -7063,6 +9256,62 @@ public object FfiConverterSequenceTypeRecordingManifest: FfiConverterRustBuffer<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeRuntimeEntrypoint: FfiConverterRustBuffer<List<RuntimeEntrypoint>> {
+    override fun read(buf: ByteBuffer): List<RuntimeEntrypoint> {
+        val len = buf.getInt()
+        return List<RuntimeEntrypoint>(len) {
+            FfiConverterTypeRuntimeEntrypoint.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<RuntimeEntrypoint>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeRuntimeEntrypoint.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<RuntimeEntrypoint>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeRuntimeEntrypoint.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeRuntimeLibrary: FfiConverterRustBuffer<List<RuntimeLibrary>> {
+    override fun read(buf: ByteBuffer): List<RuntimeLibrary> {
+        val len = buf.getInt()
+        return List<RuntimeLibrary>(len) {
+            FfiConverterTypeRuntimeLibrary.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<RuntimeLibrary>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeRuntimeLibrary.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<RuntimeLibrary>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeRuntimeLibrary.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeVerifiedArtifact: FfiConverterRustBuffer<List<VerifiedArtifact>> {
     override fun read(buf: ByteBuffer): List<VerifiedArtifact> {
         val len = buf.getInt()
@@ -7163,6 +9412,83 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
         FfiConverterOptionalString.lower(`useMockRaw`),
         FfiConverterOptionalString.lower(`serverRaw`),
         FfiConverterOptionalString.lower(`wsRaw`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Judge one backend against a frozen policy. Identity mismatches fail hard;
+         * numerical divergence beyond tolerance demands a separate contract rather
+         * than a claim of equivalence.
+         */ fun `evaluateBackendConformance`(`policy`: BackendConformancePolicy, `observation`: BackendObservation): ConformanceVerdict {
+            return FfiConverterTypeConformanceVerdict.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_evaluate_backend_conformance(
+    
+        
+        FfiConverterTypeBackendConformancePolicy.lower(`policy`),
+        FfiConverterTypeBackendObservation.lower(`observation`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * May two backends share one numerical-contract identity? Only when both
+         * are Conformant against the same policy — never by assertion.
+         */ fun `mayShareNumericalContract`(`policy`: BackendConformancePolicy, `a`: BackendObservation, `b`: BackendObservation): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_may_share_numerical_contract(
+    
+        
+        FfiConverterTypeBackendConformancePolicy.lower(`policy`),
+        FfiConverterTypeBackendObservation.lower(`a`),
+        FfiConverterTypeBackendObservation.lower(`b`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Canonical identity of a numerical contract. Any tolerance, policy, or
+         * identity change yields a different contract — silently loosening a
+         * tolerance cannot preserve the id.
+         */ fun `numericalContractIdentity`(`policy`: BackendConformancePolicy): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_numerical_contract_identity(
+    
+        
+        FfiConverterTypeBackendConformancePolicy.lower(`policy`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Canonical prompt identity: exact bytes, hashed with a domain string.
+         * Providers transmit prompts unchanged, so this must survive transport.
+         */ fun `promptByteIdentity`(`promptProfile`: kotlin.String, `prompt`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_prompt_byte_identity(
+    
+        
+        FfiConverterString.lower(`promptProfile`),
+        FfiConverterString.lower(`prompt`),_status)
+}
+    )
+    }
+    
+ fun `validateConformancePolicy`(`policy`: BackendConformancePolicy): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_conformance_policy(
+    
+        
+        FfiConverterTypeBackendConformancePolicy.lower(`policy`),_status)
 }
     )
     }
@@ -7284,6 +9610,105 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
 
         /**
+         * Collapse repeated indexing of identical content into one entry, keeping
+         * first-seen order. Idempotent by construction: feeding the output back in
+         * is a fixed point.
+         */ fun `dedupeIndexEntries`(`keys`: List<IndexEntryKey>): List<IndexEntryKey> {
+            return FfiConverterSequenceTypeIndexEntryKey.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_dedupe_index_entries(
+    
+        
+        FfiConverterSequenceTypeIndexEntryKey.lower(`keys`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Canonical index-entry identity.
+         */ fun `indexEntryIdentity`(`key`: IndexEntryKey): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_index_entry_identity(
+    
+        
+        FfiConverterTypeIndexEntryKey.lower(`key`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Does `shifted` equal `original` moved by exactly `delta`, with kind and
+         * detector parameters untouched? The equivariance predicate itself.
+         */ fun `isWindowShiftEquivariant`(`original`: EventSpan, `shifted`: EventSpan, `delta`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_is_window_shift_equivariant(
+    
+        
+        FfiConverterTypeEventSpan.lower(`original`),
+        FfiConverterTypeEventSpan.lower(`shifted`),
+        FfiConverterLong.lower(`delta`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Do these two entries belong in the same index? Only when the embedding
+         * space is identical — mixing spaces silently poisons retrieval.
+         */ fun `sharesIndex`(`a`: IndexEntryKey, `b`: IndexEntryKey): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_shares_index(
+    
+        
+        FfiConverterTypeIndexEntryKey.lower(`a`),
+        FfiConverterTypeIndexEntryKey.lower(`b`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Shift a span by `delta` samples. `None` on overflow — a silently wrapped
+         * index would be a fabricated location.
+         */ fun `shiftEventSpan`(`span`: EventSpan, `delta`: kotlin.Long): EventSpan? {
+            return FfiConverterOptionalTypeEventSpan.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_shift_event_span(
+    
+        
+        FfiConverterTypeEventSpan.lower(`span`),
+        FfiConverterLong.lower(`delta`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Reorder `values`, labelled by `from_labels`, into the canonical
+         * TP9/AF7/AF8/TP10 order. Equivariance in the honest direction: permute the
+         * labels with the values and the output permutes correspondingly.
+         *
+         * Values without labels are rejected (`LabelsMissing`) — this function is
+         * deliberately unable to reorder anonymous channels.
+         */ fun `toCanonicalChannelOrder`(`values`: List<kotlin.Double>, `fromLabels`: List<kotlin.String>): ChannelOrderResult {
+            return FfiConverterTypeChannelOrderResult.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_to_canonical_channel_order(
+    
+        
+        FfiConverterSequenceDouble.lower(`values`),
+        FfiConverterSequenceString.lower(`fromLabels`),_status)
+}
+    )
+    }
+    
+
+        /**
          * Substitution disclosure: provider mismatch is always substitution; model
          * mismatch is substitution unless a VALID, provider-scoped alias proves
          * equivalence. An invalid alias set authorizes nothing (fail closed).
@@ -7373,6 +9798,135 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
         
         FfiConverterSequenceTypeModelAlias.lower(`aliases`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The highest rung this evidence legitimately reaches. Each rung requires
+         * every rung below it — a device claim cannot skip a runtime claim.
+         */ fun `attainedSupportStatus`(`evidence`: SupportEvidence): SupportStatus? {
+            return FfiConverterOptionalTypeSupportStatus.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_attained_support_status(
+    
+        
+        FfiConverterTypeSupportEvidence.lower(`evidence`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Canonical variant identity. Changing the target, quantization, format, or
+         * numerical contract changes it; reordering declared lists does not.
+         */ fun `modelVariantIdentity`(`variant`: ModelVariant): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_model_variant_identity(
+    
+        
+        FfiConverterTypeModelVariant.lower(`variant`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Canonical runtime-pack digest: libraries and entrypoints sorted, paths
+         * relative, so neither declaration order nor install root can change it.
+         */ fun `runtimePackManifestDigest`(`manifest`: RuntimePackManifest): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_runtime_pack_manifest_digest(
+    
+        
+        FfiConverterTypeRuntimePackManifest.lower(`manifest`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Canonical target identity. Declaration order never matters; every
+         * declared field does.
+         */ fun `runtimeTargetIdentity`(`target`: RuntimeTarget): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_runtime_target_identity(
+    
+        
+        FfiConverterTypeRuntimeTarget.lower(`target`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Resolve one logical model to one runnable variant, or explain why not.
+         * Never substitutes a backend the caller explicitly required, and never
+         * invents support the device did not report.
+         */ fun `selectRuntimeVariant`(`logicalModelId`: kotlin.String, `variants`: List<ModelVariant>, `device`: DeviceRuntimeProfile, `requirement`: BackendRequirement, `required`: RequiredCapabilities): RuntimeSelection {
+            return FfiConverterTypeRuntimeSelection.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_select_runtime_variant(
+    
+        
+        FfiConverterString.lower(`logicalModelId`),
+        FfiConverterSequenceTypeModelVariant.lower(`variants`),
+        FfiConverterTypeDeviceRuntimeProfile.lower(`device`),
+        FfiConverterTypeBackendRequirement.lower(`requirement`),
+        FfiConverterTypeRequiredCapabilities.lower(`required`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Is a claimed status supported by this evidence? Claiming above the
+         * attained rung is always false.
+         */ fun `supportsClaim`(`evidence`: SupportEvidence, `claimed`: SupportStatus): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_supports_claim(
+    
+        
+        FfiConverterTypeSupportEvidence.lower(`evidence`),
+        FfiConverterTypeSupportStatus.lower(`claimed`),_status)
+}
+    )
+    }
+    
+ fun `validateModelVariant`(`variant`: ModelVariant): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_model_variant(
+    
+        
+        FfiConverterTypeModelVariant.lower(`variant`),_status)
+}
+    )
+    }
+    
+ fun `validateRuntimePackManifest`(`manifest`: RuntimePackManifest): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_runtime_pack_manifest(
+    
+        
+        FfiConverterTypeRuntimePackManifest.lower(`manifest`),_status)
+}
+    )
+    }
+    
+ fun `validateRuntimeTarget`(`target`: RuntimeTarget): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_runtime_target(
+    
+        
+        FfiConverterTypeRuntimeTarget.lower(`target`),_status)
 }
     )
     }
