@@ -962,7 +962,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption() != 29975) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption_ended() != 26899) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption_ended() != 58217) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_permission() != 56169) {
@@ -974,10 +974,10 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_persisted() != 23120) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_start() != 57673) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_start() != 56253) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_stop() != 31692) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_stop() != 52382) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_record_start() != 35402) {
@@ -1514,8 +1514,9 @@ public interface AudioLifecycleInterface {
     
     /**
      * Explicit recovery from an interruption. An interrupted recording was
-     * never persisted, so recovery lands on Ready (or Recorded when the
-     * interruption happened during playback and entries exist).
+     * never persisted, so recovery from recording lands on Ready; recovery
+     * from playback returns to the phase playback started from (preserving
+     * the no-authority-gain rule even across interruptions).
      */
     fun `onInterruptionEnded`(`nowMs`: kotlin.ULong): kotlin.Boolean
     
@@ -1536,12 +1537,15 @@ public interface AudioLifecycleInterface {
     fun `onPersisted`(`id`: kotlin.String, `createdAtMs`: kotlin.ULong, `durationMs`: kotlin.ULong, `format`: kotlin.String, `byteSize`: kotlin.ULong, `sha256Hex`: kotlin.String, `nowMs`: kotlin.ULong): kotlin.Boolean
     
     /**
-     * Playback starts from Recorded only.
+     * Playback is independent of microphone permission: legal from Idle,
+     * PermissionDenied, Ready, and Recorded whenever a persisted manifest
+     * exists (integrity of the underlying file is the shell's check).
      */
     fun `onPlayStart`(`nowMs`: kotlin.ULong): kotlin.Boolean
     
     /**
-     * The second action stops playback.
+     * The second action stops playback, returning to the phase playback
+     * started from — never granting authority playback didn't have.
      */
     fun `onPlayStop`(`nowMs`: kotlin.ULong): kotlin.Boolean
     
@@ -1711,8 +1715,9 @@ open class AudioLifecycle: Disposable, AutoCloseable, AudioLifecycleInterface
     
     /**
      * Explicit recovery from an interruption. An interrupted recording was
-     * never persisted, so recovery lands on Ready (or Recorded when the
-     * interruption happened during playback and entries exist).
+     * never persisted, so recovery from recording lands on Ready; recovery
+     * from playback returns to the phase playback started from (preserving
+     * the no-authority-gain rule even across interruptions).
      */override fun `onInterruptionEnded`(`nowMs`: kotlin.ULong): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithHandle {
@@ -1789,7 +1794,9 @@ open class AudioLifecycle: Disposable, AutoCloseable, AudioLifecycleInterface
 
     
     /**
-     * Playback starts from Recorded only.
+     * Playback is independent of microphone permission: legal from Idle,
+     * PermissionDenied, Ready, and Recorded whenever a persisted manifest
+     * exists (integrity of the underlying file is the shell's check).
      */override fun `onPlayStart`(`nowMs`: kotlin.ULong): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithHandle {
@@ -1806,7 +1813,8 @@ open class AudioLifecycle: Disposable, AutoCloseable, AudioLifecycleInterface
 
     
     /**
-     * The second action stops playback.
+     * The second action stops playback, returning to the phase playback
+     * started from — never granting authority playback didn't have.
      */override fun `onPlayStop`(`nowMs`: kotlin.ULong): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithHandle {

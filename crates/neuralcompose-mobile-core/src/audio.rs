@@ -70,6 +70,11 @@ struct Inner {
     manifests: Vec<RecordingManifest>,
     transitions: Vec<AudioTransition>,
     interrupted_from_recording: bool,
+    /// Where playback returns on stop. Playback is a read-only activity: it
+    /// must never change what the user is otherwise allowed to do — stopping
+    /// playback started from PermissionDenied lands back on PermissionDenied,
+    /// never on a phase that grants recording authority.
+    playback_return_phase: Option<RecordingPhase>,
 }
 
 #[cfg_attr(feature = "uniffi", derive(uniffi::Object))]
@@ -93,6 +98,7 @@ impl AudioLifecycle {
                 manifests: Vec::new(),
                 transitions: Vec::new(),
                 interrupted_from_recording: false,
+                playback_return_phase: None,
             }),
         }
     }
@@ -193,23 +199,39 @@ impl AudioLifecycle {
         true
     }
 
-    /// Playback starts from Recorded only.
+    /// Playback is independent of microphone permission: legal from Idle,
+    /// PermissionDenied, Ready, and Recorded whenever a persisted manifest
+    /// exists (integrity of the underlying file is the shell's check).
     pub fn on_play_start(&self, now_ms: u64) -> bool {
         let mut g = self.inner.lock().unwrap();
-        if g.phase != RecordingPhase::Recorded {
+        if g.manifests.is_empty() {
             return false;
         }
-        transition(&mut g, RecordingPhase::Playing, "play_start", now_ms);
-        true
+        match g.phase {
+            RecordingPhase::Idle
+            | RecordingPhase::PermissionDenied
+            | RecordingPhase::Ready
+            | RecordingPhase::Recorded => {
+                g.playback_return_phase = Some(g.phase.clone());
+                transition(&mut g, RecordingPhase::Playing, "play_start", now_ms);
+                true
+            }
+            _ => false,
+        }
     }
 
-    /// The second action stops playback.
+    /// The second action stops playback, returning to the phase playback
+    /// started from — never granting authority playback didn't have.
     pub fn on_play_stop(&self, now_ms: u64) -> bool {
         let mut g = self.inner.lock().unwrap();
         if g.phase != RecordingPhase::Playing {
             return false;
         }
-        transition(&mut g, RecordingPhase::Recorded, "play_stop", now_ms);
+        let back = g
+            .playback_return_phase
+            .take()
+            .unwrap_or(RecordingPhase::Recorded);
+        transition(&mut g, back, "play_stop", now_ms);
         true
     }
 
@@ -233,17 +255,21 @@ impl AudioLifecycle {
     }
 
     /// Explicit recovery from an interruption. An interrupted recording was
-    /// never persisted, so recovery lands on Ready (or Recorded when the
-    /// interruption happened during playback and entries exist).
+    /// never persisted, so recovery from recording lands on Ready; recovery
+    /// from playback returns to the phase playback started from (preserving
+    /// the no-authority-gain rule even across interruptions).
     pub fn on_interruption_ended(&self, now_ms: u64) -> bool {
         let mut g = self.inner.lock().unwrap();
         if g.phase != RecordingPhase::Interrupted {
             return false;
         }
-        let to = if !g.interrupted_from_recording && !g.manifests.is_empty() {
-            RecordingPhase::Recorded
-        } else {
+        let to = if g.interrupted_from_recording {
+            g.playback_return_phase = None;
             RecordingPhase::Ready
+        } else {
+            g.playback_return_phase
+                .take()
+                .unwrap_or(RecordingPhase::Ready)
         };
         g.interrupted_from_recording = false;
         transition(&mut g, to, "interruption_ended", now_ms);

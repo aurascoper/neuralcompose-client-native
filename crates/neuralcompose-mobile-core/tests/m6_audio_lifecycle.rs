@@ -235,3 +235,86 @@ fn sha256_hex_is_deterministic_and_matches_known_vector() {
     );
     assert_eq!(sha256_hex(Vec::new()), sha256_hex(Vec::new()));
 }
+
+// ---- M6 review finding 2: playback independent of microphone permission ----
+
+#[test]
+fn playback_is_legal_without_permission_and_returns_to_origin() {
+    // PermissionDenied → Playing → PermissionDenied; record stays rejected.
+    let lc = AudioLifecycle::with_manifests(vec![RecordingManifest {
+        id: "old-1".into(),
+        created_at_ms: 1,
+        duration_ms: 1000,
+        format: "m4a".into(),
+        byte_size: 10,
+        sha256_hex: sha256_hex(b"x".to_vec()),
+    }]);
+    assert!(lc.on_permission(false, 5));
+    assert!(
+        lc.on_play_start(10),
+        "playback must not require the microphone"
+    );
+    assert_eq!(lc.phase(), RecordingPhase::Playing);
+    assert!(!lc.on_record_start(11), "playing never grants recording");
+    assert!(lc.on_play_stop(20));
+    assert_eq!(lc.phase(), RecordingPhase::PermissionDenied);
+    assert!(!lc.on_record_start(30), "origin authority preserved");
+}
+
+#[test]
+fn playback_returns_to_each_origin() {
+    let manifest = RecordingManifest {
+        id: "m".into(),
+        created_at_ms: 1,
+        duration_ms: 1,
+        format: "m4a".into(),
+        byte_size: 1,
+        sha256_hex: sha256_hex(b"y".to_vec()),
+    };
+    // Idle → Playing → Idle
+    let idle = AudioLifecycle::with_manifests(vec![manifest.clone()]);
+    assert!(idle.on_play_start(1));
+    assert!(idle.on_play_stop(2));
+    assert_eq!(idle.phase(), RecordingPhase::Idle);
+    // Ready → Playing → Ready
+    let ready = AudioLifecycle::with_manifests(vec![manifest.clone()]);
+    assert!(ready.on_permission(true, 1));
+    assert!(ready.on_play_start(2));
+    assert!(ready.on_play_stop(3));
+    assert_eq!(ready.phase(), RecordingPhase::Ready);
+    // Recorded → Playing → Recorded (via a real recording)
+    let rec = granted();
+    record_one(&rec, 100);
+    assert!(rec.on_play_start(5000));
+    assert!(rec.on_play_stop(6000));
+    assert_eq!(rec.phase(), RecordingPhase::Recorded);
+}
+
+#[test]
+fn playback_requires_a_manifest_regardless_of_phase() {
+    let lc = granted(); // Ready, zero manifests
+    assert!(!lc.on_play_start(1));
+    let idle = AudioLifecycle::new();
+    assert!(!idle.on_play_start(1));
+}
+
+#[test]
+fn interruption_during_playback_returns_to_playback_origin() {
+    let lc = AudioLifecycle::with_manifests(vec![RecordingManifest {
+        id: "m".into(),
+        created_at_ms: 1,
+        duration_ms: 1,
+        format: "m4a".into(),
+        byte_size: 1,
+        sha256_hex: sha256_hex(b"z".to_vec()),
+    }]);
+    assert!(lc.on_permission(false, 1));
+    assert!(lc.on_play_start(2));
+    assert!(lc.on_interruption(3));
+    assert!(lc.on_interruption_ended(4));
+    assert_eq!(
+        lc.phase(),
+        RecordingPhase::PermissionDenied,
+        "interruption recovery must not grant authority either"
+    );
+}

@@ -10,6 +10,11 @@ import NeuralComposeCore
 @MainActor
 final class JournalModel: NSObject, ObservableObject {
     @Published var snapshot: AudioSnapshot
+    /// Non-nil when the canonical manifest file was malformed (quarantined —
+    /// never silently presented as an empty journal).
+    @Published var manifestError: String?
+    /// Manifest IDs whose audio bytes are missing or fail size/hash checks.
+    @Published var invalidIds: Set<String> = []
 
     private let lifecycle: AudioLifecycle
     private var recorder: AVAudioRecorder?
@@ -35,9 +40,12 @@ final class JournalModel: NSObject, ObservableObject {
     }
 
     override init() {
-        lifecycle = AudioLifecycle.withManifests(manifests: Self.loadManifests())
+        let (loaded, loadError) = Self.loadManifestsVisible()
+        lifecycle = AudioLifecycle.withManifests(manifests: loaded)
         snapshot = lifecycle.snapshot()
         super.init()
+        manifestError = loadError
+        invalidIds = Self.verifyIntegrity(loaded)
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleInterruption),
             name: AVAudioSession.interruptionNotification, object: nil)
@@ -93,26 +101,52 @@ final class JournalModel: NSObject, ObservableObject {
         refresh()
     }
 
+    /// Atomic publish transaction (review finding 1): stop+close → bytes →
+    /// size+sha → CANDIDATE list → durable atomic JSON replace → only then
+    /// tell Rust persistence succeeded. Failure before the replace leaves
+    /// the previous canonical file intact, reports persist_failed (no
+    /// manifest), and removes the orphan audio bytes.
     private func stopRecording() {
         guard lifecycle.onRecordStop(nowMs: Self.nowMs()) else { return }
         refresh()
         let durationMs = Self.nowMs() - recordStartedAt
         recorder?.stop()
         recorder = nil
-        if let url = activeURL, let bytes = try? Data(contentsOf: url) {
-            _ = lifecycle.onPersisted(
+        let url = activeURL
+        activeURL = nil
+        do {
+            guard let url, let bytes = try? Data(contentsOf: url) else {
+                _ = lifecycle.onPersistFailed(
+                    reason: "recording file missing", nowMs: Self.nowMs())
+                refresh()
+                return
+            }
+            let candidate = RecordingManifest(
                 id: url.deletingPathExtension().lastPathComponent,
                 createdAtMs: recordStartedWall,
                 durationMs: durationMs,
                 format: "m4a",
                 byteSize: UInt64(bytes.count),
-                sha256Hex: sha256Hex(bytes: bytes),
-                nowMs: Self.nowMs())
-            Self.saveManifests(lifecycle.snapshot().manifests)
-        } else {
-            _ = lifecycle.onPersistFailed(reason: "recording file missing", nowMs: Self.nowMs())
+                sha256Hex: sha256Hex(bytes: bytes))
+            var candidateList = lifecycle.snapshot().manifests
+            candidateList.append(candidate)
+            try Self.saveManifestsAtomically(candidateList)  // throws on failure
+            guard
+                lifecycle.onPersisted(
+                    id: candidate.id, createdAtMs: candidate.createdAtMs,
+                    durationMs: candidate.durationMs, format: candidate.format,
+                    byteSize: candidate.byteSize, sha256Hex: candidate.sha256Hex,
+                    nowMs: Self.nowMs())
+            else {
+                throw NSError(
+                    domain: "Journal", code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "core rejected persisted event"])
+            }
+        } catch {
+            _ = lifecycle.onPersistFailed(
+                reason: error.localizedDescription, nowMs: Self.nowMs())
+            if let url { try? FileManager.default.removeItem(at: url) }
         }
-        activeURL = nil
         refresh()
     }
 
@@ -122,6 +156,7 @@ final class JournalModel: NSObject, ObservableObject {
             player?.stop()
             player = nil
         } else if let manifest = snapshot.manifests.last,
+            !invalidIds.contains(manifest.id),  // integrity gate (finding 3)
             lifecycle.onPlayStart(nowMs: Self.nowMs())
         {
             let url = Self.recordingsDir.appendingPathComponent("\(manifest.id).m4a")
@@ -177,25 +212,63 @@ final class JournalModel: NSObject, ObservableObject {
         var sha256Hex: String
     }
 
-    private static func loadManifests() -> [RecordingManifest] {
+    /// Malformed canonical JSON is QUARANTINED and reported (finding 3).
+    private static func loadManifestsVisible() -> ([RecordingManifest], String?) {
+        guard FileManager.default.fileExists(atPath: manifestURL.path) else {
+            return ([], nil)
+        }
         guard let data = try? Data(contentsOf: manifestURL),
             let stored = try? JSONDecoder().decode([StoredManifest].self, from: data)
-        else { return [] }
-        return stored.map {
+        else {
+            let quarantine = manifestURL.deletingLastPathComponent()
+                .appendingPathComponent(
+                    "recording-manifests.corrupt-\(UInt64(Date().timeIntervalSince1970)).json")
+            try? FileManager.default.moveItem(at: manifestURL, to: quarantine)
+            return (
+                [],
+                "Manifest file was corrupted; preserved as \(quarantine.lastPathComponent). Recordings on disk were NOT deleted."
+            )
+        }
+        let manifests = stored.map {
             RecordingManifest(
                 id: $0.id, createdAtMs: $0.createdAtMs, durationMs: $0.durationMs,
                 format: $0.format, byteSize: $0.byteSize, sha256Hex: $0.sha256Hex)
         }
+        return (manifests, nil)
     }
 
-    private static func saveManifests(_ manifests: [RecordingManifest]) {
+    /// Missing bytes, size mismatch, or hash mismatch → entry not playable.
+    private static func verifyIntegrity(_ manifests: [RecordingManifest]) -> Set<String> {
+        var bad = Set<String>()
+        for m in manifests {
+            let url = recordingsDir.appendingPathComponent("\(m.id).m4a")
+            guard let bytes = try? Data(contentsOf: url) else {
+                bad.insert(m.id)
+                continue
+            }
+            if UInt64(bytes.count) != m.byteSize || sha256Hex(bytes: bytes) != m.sha256Hex {
+                bad.insert(m.id)
+            }
+        }
+        return bad
+    }
+
+    /// Same-directory .partial + atomic replace; throws on any failure so the
+    /// caller reports persist_failed and the previous canonical file survives.
+    private static func saveManifestsAtomically(_ manifests: [RecordingManifest]) throws {
         let stored = manifests.map {
             StoredManifest(
                 id: $0.id, createdAtMs: $0.createdAtMs, durationMs: $0.durationMs,
                 format: $0.format, byteSize: $0.byteSize, sha256Hex: $0.sha256Hex)
         }
-        if let data = try? JSONEncoder().encode(stored) {
-            try? data.write(to: manifestURL)
+        let data = try JSONEncoder().encode(stored)
+        let partial = manifestURL.deletingLastPathComponent()
+            .appendingPathComponent(manifestURL.lastPathComponent + ".partial")
+        try data.write(to: partial, options: .atomic)
+        if FileManager.default.fileExists(atPath: manifestURL.path) {
+            _ = try FileManager.default.replaceItemAt(manifestURL, withItemAt: partial)
+        } else {
+            try FileManager.default.moveItem(at: partial, to: manifestURL)
         }
     }
 }

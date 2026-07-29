@@ -1,5 +1,6 @@
-// M6 Journal slice: rendered PURELY from the core's AudioSnapshot. The shell
-// contributes only platform I/O (permission launcher, recorder, player).
+// M6 Journal slice: rendered PURELY from the core's AudioSnapshot plus the
+// shell's integrity results. Corruption is visible, never an empty journal;
+// playback needs no microphone permission (origin-preserving).
 
 package org.neuralcompose.client
 
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,7 +54,8 @@ private fun phaseLabel(p: RecordingPhase): String = when (p) {
 @Composable
 fun JournalScreen(model: JournalViewModel = viewModel()) {
     val context = LocalContext.current
-    val snap by model.state.collectAsState()
+    val ui by model.state.collectAsState()
+    val snap = ui.snapshot
     val phase = snap.phase
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -87,10 +88,22 @@ fun JournalScreen(model: JournalViewModel = viewModel()) {
             )
         }
 
+        ui.manifestError?.let { err ->
+            Text(
+                err,
+                color = Color(0xFFD0342C),
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Color(0xFFD0342C), RoundedCornerShape(8.dp))
+                    .padding(8.dp),
+            )
+        }
+
         when (phase) {
             is RecordingPhase.PermissionDenied -> Text(
                 "Microphone access denied — voice entries are unavailable. " +
-                    "Entries below remain local to this device.",
+                    "Existing entries can still be played; everything stays local.",
                 color = Color(0xFFD0342C),
             )
             is RecordingPhase.Failed -> Button(onClick = { model.acknowledgeFailure() }) {
@@ -112,9 +125,14 @@ fun JournalScreen(model: JournalViewModel = viewModel()) {
                 Text(if (recording) "■ Stop" else "● Record")
             }
             val playing = phase is RecordingPhase.Playing
+            val latest = snap.manifests.lastOrNull()
+            val playableOrigin = phase is RecordingPhase.Idle ||
+                phase is RecordingPhase.PermissionDenied ||
+                phase is RecordingPhase.Ready || phase is RecordingPhase.Recorded
             Button(
                 onClick = { if (playing) model.stopPlayback() else model.playLatest() },
-                enabled = playing || (phase is RecordingPhase.Recorded && snap.manifests.isNotEmpty()),
+                enabled = playing ||
+                    (playableOrigin && latest != null && latest.id !in ui.invalidIds),
             ) {
                 Text(if (playing) "■ Stop" else "▶ Play latest")
             }
@@ -128,10 +146,14 @@ fun JournalScreen(model: JournalViewModel = viewModel()) {
 
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(snap.manifests.reversed()) { m ->
+                val bad = m.id in ui.invalidIds
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .background(Color(0x14808080), RoundedCornerShape(8.dp))
+                        .background(
+                            if (bad) Color(0x22D0342C) else Color(0x14808080),
+                            RoundedCornerShape(8.dp),
+                        )
                         .padding(10.dp),
                 ) {
                     Text(
@@ -145,6 +167,14 @@ fun JournalScreen(model: JournalViewModel = viewModel()) {
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (bad) {
+                        Text(
+                            "INTEGRITY ERROR — audio missing or does not match manifest; not playable",
+                            color = Color(0xFFD0342C),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
         }

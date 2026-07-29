@@ -648,8 +648,9 @@ public protocol AudioLifecycleProtocol: AnyObject, Sendable {
     
     /**
      * Explicit recovery from an interruption. An interrupted recording was
-     * never persisted, so recovery lands on Ready (or Recorded when the
-     * interruption happened during playback and entries exist).
+     * never persisted, so recovery from recording lands on Ready; recovery
+     * from playback returns to the phase playback started from (preserving
+     * the no-authority-gain rule even across interruptions).
      */
     func onInterruptionEnded(nowMs: UInt64)  -> Bool
     
@@ -670,12 +671,15 @@ public protocol AudioLifecycleProtocol: AnyObject, Sendable {
     func onPersisted(id: String, createdAtMs: UInt64, durationMs: UInt64, format: String, byteSize: UInt64, sha256Hex: String, nowMs: UInt64)  -> Bool
     
     /**
-     * Playback starts from Recorded only.
+     * Playback is independent of microphone permission: legal from Idle,
+     * PermissionDenied, Ready, and Recorded whenever a persisted manifest
+     * exists (integrity of the underlying file is the shell's check).
      */
     func onPlayStart(nowMs: UInt64)  -> Bool
     
     /**
-     * The second action stops playback.
+     * The second action stops playback, returning to the phase playback
+     * started from — never granting authority playback didn't have.
      */
     func onPlayStop(nowMs: UInt64)  -> Bool
     
@@ -799,8 +803,9 @@ open func onInterruption(nowMs: UInt64) -> Bool  {
     
     /**
      * Explicit recovery from an interruption. An interrupted recording was
-     * never persisted, so recovery lands on Ready (or Recorded when the
-     * interruption happened during playback and entries exist).
+     * never persisted, so recovery from recording lands on Ready; recovery
+     * from playback returns to the phase playback started from (preserving
+     * the no-authority-gain rule even across interruptions).
      */
 open func onInterruptionEnded(nowMs: UInt64) -> Bool  {
     return try!  FfiConverterBool.lift(try! rustCall() {
@@ -861,7 +866,9 @@ open func onPersisted(id: String, createdAtMs: UInt64, durationMs: UInt64, forma
 }
     
     /**
-     * Playback starts from Recorded only.
+     * Playback is independent of microphone permission: legal from Idle,
+     * PermissionDenied, Ready, and Recorded whenever a persisted manifest
+     * exists (integrity of the underlying file is the shell's check).
      */
 open func onPlayStart(nowMs: UInt64) -> Bool  {
     return try!  FfiConverterBool.lift(try! rustCall() {
@@ -874,7 +881,8 @@ open func onPlayStart(nowMs: UInt64) -> Bool  {
 }
     
     /**
-     * The second action stops playback.
+     * The second action stops playback, returning to the phase playback
+     * started from — never granting authority playback didn't have.
      */
 open func onPlayStop(nowMs: UInt64) -> Bool  {
     return try!  FfiConverterBool.lift(try! rustCall() {
@@ -2633,7 +2641,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption() != 29975) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption_ended() != 26899) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption_ended() != 58217) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_permission() != 56169) {
@@ -2645,10 +2653,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_persisted() != 23120) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_start() != 57673) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_start() != 56253) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_stop() != 31692) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_stop() != 52382) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_record_start() != 35402) {

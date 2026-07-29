@@ -37,6 +37,18 @@ struct JournalScreen: View {
         }
     }
 
+    /// Playback is permission-independent: legal from Idle/PermissionDenied/
+    /// Ready/Recorded when the latest entry exists and passes integrity.
+    private var playEnabled: Bool {
+        guard let latest = model.snapshot.manifests.last,
+            !model.invalidIds.contains(latest.id)
+        else { return false }
+        switch model.snapshot.phase {
+        case .idle, .permissionDenied, .ready, .recorded: return true
+        default: return false
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -49,9 +61,18 @@ struct JournalScreen: View {
                         .background(Capsule().strokeBorder(.secondary))
                 }
 
+                if let err = model.manifestError {
+                    Text(err)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
+                        .background(RoundedRectangle(cornerRadius: 8).strokeBorder(.red))
+                }
+
                 if case .permissionDenied = model.snapshot.phase {
                     Text(
-                        "Microphone access denied — voice entries are unavailable. Entries below remain local to this device."
+                        "Microphone access denied — voice entries are unavailable. Existing entries can still be played; everything stays local."
                     )
                     .foregroundStyle(.red)
                 }
@@ -69,13 +90,7 @@ struct JournalScreen: View {
                         .disabled(!recordEnabled)
                     Button(isPlaying ? "■ Stop" : "▶ Play latest") { model.togglePlay() }
                         .buttonStyle(.borderedProminent)
-                        .disabled(
-                            !isPlaying
-                                && !(model.snapshot.manifests.isEmpty == false
-                                    && {
-                                        if case .recorded = model.snapshot.phase { return true }
-                                        return false
-                                    }()))
+                        .disabled(!isPlaying && !playEnabled)
                 }
 
                 Text(
@@ -84,6 +99,7 @@ struct JournalScreen: View {
                 .font(.caption).foregroundStyle(.secondary)
 
                 ForEach(model.snapshot.manifests.reversed(), id: \.id) { m in
+                    let bad = model.invalidIds.contains(m.id)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(
                             "\(Double(m.durationMs) / 1000.0, specifier: "%.1f")s · \(m.byteSize) B · \(m.format)"
@@ -91,10 +107,19 @@ struct JournalScreen: View {
                         .font(.subheadline.weight(.semibold))
                         Text("sha256 \(String(m.sha256Hex.prefix(16)))…")
                             .font(.caption2).monospaced().foregroundStyle(.secondary)
+                        if bad {
+                            Text(
+                                "INTEGRITY ERROR — audio missing or does not match manifest; not playable"
+                            )
+                            .font(.caption2.bold())
+                            .foregroundStyle(.red)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.3)))
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(bad ? Color.red.opacity(0.12) : Color.gray.opacity(0.12)))
                 }
             }
             .padding()
