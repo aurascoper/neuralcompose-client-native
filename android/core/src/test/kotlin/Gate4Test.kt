@@ -115,6 +115,60 @@ class Gate4Test {
         assertEquals(false, reloaded.onRecordStart(1uL))
     }
 
+
+    private fun makeEntry() = uniffi.neuralcompose_mobile_core.ModelPackCatalogEntry(
+        schemaVersion = 1u, packId = "p", packVersion = "1.0.0",
+        kind = uniffi.neuralcompose_mobile_core.ModelPackKind.GENERATION,
+        modelFamily = "qwen", modelRevision = "r", quantization = null,
+        artifactFormat = "gguf", licenseId = "Apache-2.0", sourceRepository = "x",
+        runtimeAbi = "abi", minimumCoreVersion = "0.1.0",
+        artifacts = listOf(
+            uniffi.neuralcompose_mobile_core.ModelArtifact(
+                "w", uniffi.neuralcompose_mobile_core.ModelArtifactKind.WEIGHTS,
+                "m.gguf", 10uL, "aa".repeat(32),
+            ),
+            uniffi.neuralcompose_mobile_core.ModelArtifact(
+                "t", uniffi.neuralcompose_mobile_core.ModelArtifactKind.TOKENIZER,
+                "t.json", 5uL, "bb".repeat(32),
+            ),
+        ),
+        requirements = uniffi.neuralcompose_mobile_core.DeviceRequirements(1024u, "phone"),
+        generation = uniffi.neuralcompose_mobile_core.GenerationContract(
+            "t", 2048u, "chatml", listOf("focused"),
+        ),
+        embedding = null,
+    )
+
+    @Test
+    fun m7aContractsThroughBindings() {
+        val entry = makeEntry()
+        assertEquals(0, uniffi.neuralcompose_mobile_core.validateCatalogEntry(entry).size)
+        val inst = uniffi.neuralcompose_mobile_core.ModelPackInstaller(
+            entry, listOf("abi"), 1u, null,
+        )
+        assertEquals(true, inst.onQueued())
+        assertEquals(true, inst.onDownloadComplete())
+        assertEquals(false, inst.onPublished(1uL)) // bypass negative path
+        val observed = listOf(
+            uniffi.neuralcompose_mobile_core.ObservedArtifact("m.gguf", 10uL, "aa".repeat(32)),
+            uniffi.neuralcompose_mobile_core.ObservedArtifact("t.json", 5uL, "bb".repeat(32)),
+        )
+        assertEquals(true, inst.verify(observed))
+        assertEquals(true, inst.onPublished(2uL))
+        assertEquals(64, inst.activeInstallation()!!.verifiedInventoryDigest.length)
+        val rej = uniffi.neuralcompose_mobile_core.ModelPackInstaller(
+            entry, listOf("abi"), 1u,
+            uniffi.neuralcompose_mobile_core.RestoreResult.Rejected(
+                uniffi.neuralcompose_mobile_core.RestoreFailure.TrustedCatalogEntryMissing,
+            ),
+        )
+        assertEquals(false, rej.snapshot().hasUsableActiveInstallation)
+        val id = uniffi.neuralcompose_mobile_core.resolveProviderIdentity(
+            "nope", "m", "m", null, listOf(), listOf(), null, null,
+        )
+        assertEquals(null, id.transport)
+    }
+
     @Test
     fun configResolutionNeverSilentlyFallsBackToMock() {
         val c = resolveClientMode("false", "", "")

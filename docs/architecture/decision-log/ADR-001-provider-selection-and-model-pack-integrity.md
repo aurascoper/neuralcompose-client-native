@@ -78,3 +78,16 @@ implement the deterministic halves; `contracts/model-packs/` freezes the
 JSON schemas and fixtures; the fifteen M7-A regressions pin the rules above,
 with both-polarity assertions so the load-bearing comparisons cannot be
 neutered without a test failing.
+
+## Catalog trust root (review amendment)
+
+SHA-256 values are meaningful only under a trusted catalog. v1 catalogs are
+**app-bundled** and trusted via the platform code signature. Remote catalogs
+are deferred and REQUIRE detached signing with pinned keys plus monotonic
+rollback protection before any use. The bundled trust root retains entries
+for all SUPPORTED INSTALLED versions (not merely the newest offered), so a
+previously installed pack always restores against its own trusted entry —
+never against an update target. Installed-record restoration is exact:
+pack_id + pack_version + catalog_entry_digest, full inventory equality, ABI
+and verification-policy acceptance, and inventory-digest recomputation;
+rejected restores are preserved/quarantined with a visible RestoreFailure.

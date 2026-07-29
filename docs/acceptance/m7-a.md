@@ -34,3 +34,25 @@ Non-claims: model bytes downloaded: no · model executed: no · network
 request made: no · Apple model API linked: no · Ollama/OpenAI/Anthropic SDK
 linked: no · provider credential stored: no · default model selected: no ·
 Qwen2.5 vs Qwen3 decided: no · embedding model selected: no.
+
+## Review-response addendum (2026-07-28)
+
+All five primary blockers + additional corrections resolved:
+receipt-gated publication (canonical VerificationMaterial, domain-tagged,
+cleared per attempt, consumed on publish; bypass/stale/duplicate-path
+regressions incl. |/quote/Unicode paths); trusted-catalog restoration with
+catalog_entry_digest + verified_inventory_digest on InstalledModelPack and
+visible RestoreFailure (never silent); active/operation split with
+ModelPackSnapshot.has_usable_active_installation driving provider
+availability (failed v1.0 update keeps v0.9 usable; Failed→acknowledge→Idle
+with OperationKind recorded); env!-pinned core version via semver (public
+wrapper + testable seam; six version cases pinned); ≥1 weights + tokenizer
+and tokenizer_id reference integrity; complete canonical embedding identity
+(all shards, domain, injection-resistant); provider transport Option (no
+fabrication), AvailabilityProbe (all five readiness states producible),
+fail-closed duplicates/disagreement/NotRequired+Missing, provider-scoped
+validated aliases; schema if/then kind pairing + schemaVersion const 1 with
+dual-direction schemaInvalid assertions in the golden test.
+Evidence: Rust 86 tests both feature sets; clippy/fmt/drift clean; Swift
+sim 4/4 and Kotlin JVM 4/4 incl. publish-before-verify rejection, invalid-
+restore surfacing, and unknown-provider transport nil/null.

@@ -681,7 +681,11 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_resolve_client_mode(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_embedding_space_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_restore_installed_record(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_catalog_entry(
     ): Int
@@ -694,6 +698,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_neuralcompose_mobile_core_checksum_func_presents_as_possible_egress(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_resolve_provider_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_model_aliases(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged(
     ): Int
@@ -719,7 +725,9 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot(
     ): Int
-    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_installed(
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_acknowledge_operation_failure(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_active_installation(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_complete(
     ): Int
@@ -738,6 +746,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_started(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_phase(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_snapshot(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_verify(
     ): Int
@@ -821,9 +831,11 @@ internal object UniffiLib {
     ): Long
     external fun uniffi_neuralcompose_mobile_core_fn_free_modelpackinstaller(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
-    external fun uniffi_neuralcompose_mobile_core_fn_constructor_modelpackinstaller_new(`entry`: RustBuffer.ByValue,`supportedAbis`: RustBuffer.ByValue,`verificationPolicyVersion`: Int,`previouslyInstalled`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_neuralcompose_mobile_core_fn_constructor_modelpackinstaller_new(`entry`: RustBuffer.ByValue,`supportedAbis`: RustBuffer.ByValue,`verificationPolicyVersion`: Int,`restored`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
-    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_installed(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_acknowledge_operation_failure(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_active_installation(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_download_complete(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
@@ -842,6 +854,8 @@ internal object UniffiLib {
     external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_removal_started(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_phase(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_verify(`ptr`: Long,`observed`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
@@ -877,7 +891,11 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_neuralcompose_mobile_core_fn_func_resolve_client_mode(`useMockRaw`: RustBuffer.ByValue,`serverRaw`: RustBuffer.ByValue,`wsRaw`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_catalog_entry_digest(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_embedding_space_identity(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_restore_installed_record(`record`: RustBuffer.ByValue,`trustedCatalog`: RustBuffer.ByValue,`supportedAbis`: RustBuffer.ByValue,`acceptedPolicyVersions`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_validate_catalog_entry(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -890,6 +908,8 @@ internal object UniffiLib {
     external fun uniffi_neuralcompose_mobile_core_fn_func_presents_as_possible_egress(`locality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_neuralcompose_mobile_core_fn_func_resolve_provider_identity(`requestedProviderId`: RustBuffer.ByValue,`requestedModelId`: RustBuffer.ByValue,`resolvedModelId`: RustBuffer.ByValue,`modelDigest`: RustBuffer.ByValue,`descriptors`: RustBuffer.ByValue,`availability`: RustBuffer.ByValue,`promptProfile`: RustBuffer.ByValue,`promptHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_validate_model_aliases(`aliases`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun ffi_neuralcompose_mobile_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1022,10 +1042,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_resolve_client_mode() != 9781) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_embedding_space_identity() != 28052) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest() != 27683) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_catalog_entry() != 52987) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_embedding_space_identity() != 38517) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_restore_installed_record() != 25900) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_catalog_entry() != 52641) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_format_banner_en() != 12060) {
@@ -1034,13 +1060,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_format_label_en() != 32187) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_is_substitution() != 51969) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_is_substitution() != 3602) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_presents_as_possible_egress() != 5092) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_resolve_provider_identity() != 8646) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_resolve_provider_identity() != 64458) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_model_aliases() != 30637) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged() != 13465) {
@@ -1079,7 +1108,10 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot() != 28404) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_installed() != 16066) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_acknowledge_operation_failure() != 33736) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_active_installation() != 46074) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_complete() != 27043) {
@@ -1091,10 +1123,10 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_progress() != 53339) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_published() != 60221) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_published() != 59859) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_queued() != 51716) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_queued() != 10779) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_confirmed() != 57952) {
@@ -1106,10 +1138,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_started() != 28837) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_phase() != 8318) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_phase() != 62150) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_verify() != 59593) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_snapshot() != 16702) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_verify() != 60916) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame() != 45030) {
@@ -1142,7 +1177,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests() != 11328) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_modelpackinstaller_new() != 26902) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_modelpackinstaller_new() != 3692) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new() != 40578) {
@@ -2162,13 +2197,11 @@ public object FfiConverterTypeAudioLifecycle: FfiConverter<AudioLifecycle, Long>
 //
 
 
-/**
- * Deterministic installation state machine. Shell reports events; Ready is
- * entered only through full verification + explicit atomic publication.
- */
 public interface ModelPackInstallerInterface {
     
-    fun `installed`(): InstalledModelPack?
+    fun `acknowledgeOperationFailure`(): kotlin.Boolean
+    
+    fun `activeInstallation`(): InstalledModelPack?
     
     fun `onDownloadComplete`(): kotlin.Boolean
     
@@ -2177,12 +2210,15 @@ public interface ModelPackInstallerInterface {
     fun `onDownloadProgress`(`receivedBytes`: kotlin.ULong, `totalBytes`: kotlin.ULong): kotlin.Boolean
     
     /**
-     * Shell atomically promoted the verified directory. Only now Ready.
+     * Requires the inventory-bound receipt; consumes it. The published
+     * installation becomes the active one (replacing any prior version).
      */
     fun `onPublished`(`installedAtMs`: kotlin.ULong): kotlin.Boolean
     
     /**
-     * Explicit user consent recorded by the shell starts the transaction.
+     * Legal only from Idle (derived Ready/NotInstalled — updates start
+     * from Ready). A Failed operation must be acknowledged first: a failed
+     * removal and a failed update have different filesystem implications.
      */
     fun `onQueued`(): kotlin.Boolean
     
@@ -2195,22 +2231,24 @@ public interface ModelPackInstallerInterface {
     
     fun `onRemovalStarted`(): kotlin.Boolean
     
+    /**
+     * Derived presentation phase. Failed/op states describe the OPERATION;
+     * the active installation stays independently observable.
+     */
     fun `phase`(): ModelPackPhase
     
+    fun `snapshot`(): ModelPackSnapshot
+    
     /**
-     * Full verification against the catalog entry: every declared artifact
-     * present with exact size + digest; no undeclared extras; runtime ABI
-     * supported. Failure preserves any previously Ready version.
+     * Full verification. The receipt is cleared at the START of every
+     * attempt, set only on complete success, and bound to the exact
+     * verified inventory via the canonical VerificationMaterial digest.
      */
     fun `verify`(`observed`: List<ObservedArtifact>): kotlin.Boolean
     
     companion object
 }
 
-/**
- * Deterministic installation state machine. Shell reports events; Ready is
- * entered only through full verification + explicit atomic publication.
- */
 open class ModelPackInstaller: Disposable, AutoCloseable, ModelPackInstallerInterface
 {
 
@@ -2235,7 +2273,12 @@ open class ModelPackInstaller: Disposable, AutoCloseable, ModelPackInstallerInte
         this.handle = 0
         this.cleanable = null
     }
-    constructor(`entry`: ModelPackCatalogEntry, `supportedAbis`: List<kotlin.String>, `verificationPolicyVersion`: kotlin.UInt, `previouslyInstalled`: InstalledModelPack?) :
+    /**
+     * `restored` comes from `restore_installed_record` — Restored's record
+     * becomes the active installation; a Rejected failure is surfaced
+     * visibly in the snapshot (the shell preserves/quarantines the record).
+     */
+    constructor(`entry`: ModelPackCatalogEntry, `supportedAbis`: List<kotlin.String>, `verificationPolicyVersion`: kotlin.UInt, `restored`: RestoreResult?) :
         this(UniffiWithHandle, 
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_neuralcompose_mobile_core_fn_constructor_modelpackinstaller_new(
@@ -2244,7 +2287,7 @@ open class ModelPackInstaller: Disposable, AutoCloseable, ModelPackInstallerInte
         FfiConverterTypeModelPackCatalogEntry.lower(`entry`),
         FfiConverterSequenceString.lower(`supportedAbis`),
         FfiConverterUInt.lower(`verificationPolicyVersion`),
-        FfiConverterOptionalTypeInstalledModelPack.lower(`previouslyInstalled`),_status)
+        FfiConverterOptionalTypeRestoreResult.lower(`restored`),_status)
 }
     )
 
@@ -2324,11 +2367,24 @@ open class ModelPackInstaller: Disposable, AutoCloseable, ModelPackInstallerInte
         }
     }
 
-    override fun `installed`(): InstalledModelPack? {
+    override fun `acknowledgeOperationFailure`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_acknowledge_operation_failure(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `activeInstallation`(): InstalledModelPack? {
             return FfiConverterOptionalTypeInstalledModelPack.lift(
     callWithHandle {
     uniffiRustCall() { _status ->
-    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_installed(
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_active_installation(
         it,
         _status)
 }
@@ -2381,7 +2437,8 @@ open class ModelPackInstaller: Disposable, AutoCloseable, ModelPackInstallerInte
 
     
     /**
-     * Shell atomically promoted the verified directory. Only now Ready.
+     * Requires the inventory-bound receipt; consumes it. The published
+     * installation becomes the active one (replacing any prior version).
      */override fun `onPublished`(`installedAtMs`: kotlin.ULong): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithHandle {
@@ -2398,7 +2455,9 @@ open class ModelPackInstaller: Disposable, AutoCloseable, ModelPackInstallerInte
 
     
     /**
-     * Explicit user consent recorded by the shell starts the transaction.
+     * Legal only from Idle (derived Ready/NotInstalled — updates start
+     * from Ready). A Failed operation must be acknowledged first: a failed
+     * removal and a failed update have different filesystem implications.
      */override fun `onQueued`(): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithHandle {
@@ -2455,7 +2514,11 @@ open class ModelPackInstaller: Disposable, AutoCloseable, ModelPackInstallerInte
     }
     
 
-    override fun `phase`(): ModelPackPhase {
+    
+    /**
+     * Derived presentation phase. Failed/op states describe the OPERATION;
+     * the active installation stays independently observable.
+     */override fun `phase`(): ModelPackPhase {
             return FfiConverterTypeModelPackPhase.lift(
     callWithHandle {
     uniffiRustCall() { _status ->
@@ -2468,11 +2531,24 @@ open class ModelPackInstaller: Disposable, AutoCloseable, ModelPackInstallerInte
     }
     
 
+    override fun `snapshot`(): ModelPackSnapshot {
+            return FfiConverterTypeModelPackSnapshot.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_snapshot(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
     
     /**
-     * Full verification against the catalog entry: every declared artifact
-     * present with exact size + digest; no undeclared extras; runtime ABI
-     * supported. Failure preserves any previously Ready version.
+     * Full verification. The receipt is cleared at the START of every
+     * attempt, set only on complete success, and bound to the exact
+     * verified inventory via the canonical VerificationMaterial digest.
      */override fun `verify`(`observed`: List<ObservedArtifact>): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithHandle {
@@ -3292,6 +3368,10 @@ data class InstalledModelPack (
     var `runtimeAbi`: kotlin.String
     , 
     var `verificationPolicyVersion`: kotlin.UInt
+    , 
+    var `catalogEntryDigest`: kotlin.String
+    , 
+    var `verifiedInventoryDigest`: kotlin.String
     
 ){
     
@@ -3314,6 +3394,8 @@ public object FfiConverterTypeInstalledModelPack: FfiConverterRustBuffer<Install
             FfiConverterSequenceTypeVerifiedArtifact.read(buf),
             FfiConverterString.read(buf),
             FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
         )
     }
 
@@ -3323,7 +3405,9 @@ public object FfiConverterTypeInstalledModelPack: FfiConverterRustBuffer<Install
             FfiConverterULong.allocationSize(value.`installedAtMs`) +
             FfiConverterSequenceTypeVerifiedArtifact.allocationSize(value.`artifactDigests`) +
             FfiConverterString.allocationSize(value.`runtimeAbi`) +
-            FfiConverterUInt.allocationSize(value.`verificationPolicyVersion`)
+            FfiConverterUInt.allocationSize(value.`verificationPolicyVersion`) +
+            FfiConverterString.allocationSize(value.`catalogEntryDigest`) +
+            FfiConverterString.allocationSize(value.`verifiedInventoryDigest`)
     )
 
     override fun write(value: InstalledModelPack, buf: ByteBuffer) {
@@ -3333,16 +3417,20 @@ public object FfiConverterTypeInstalledModelPack: FfiConverterRustBuffer<Install
             FfiConverterSequenceTypeVerifiedArtifact.write(value.`artifactDigests`, buf)
             FfiConverterString.write(value.`runtimeAbi`, buf)
             FfiConverterUInt.write(value.`verificationPolicyVersion`, buf)
+            FfiConverterString.write(value.`catalogEntryDigest`, buf)
+            FfiConverterString.write(value.`verifiedInventoryDigest`, buf)
     }
 }
 
 
 
 /**
- * Explicitly registered model-equivalence: resolving `alias` to
- * `canonical` is NOT substitution.
+ * Explicitly registered, PROVIDER-SCOPED model equivalence (model names
+ * are not globally unique).
  */
 data class ModelAlias (
+    var `providerId`: kotlin.String
+    , 
     var `canonicalModelId`: kotlin.String
     , 
     var `aliasModelId`: kotlin.String
@@ -3364,15 +3452,18 @@ public object FfiConverterTypeModelAlias: FfiConverterRustBuffer<ModelAlias> {
         return ModelAlias(
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
         )
     }
 
     override fun allocationSize(value: ModelAlias) = (
+            FfiConverterString.allocationSize(value.`providerId`) +
             FfiConverterString.allocationSize(value.`canonicalModelId`) +
             FfiConverterString.allocationSize(value.`aliasModelId`)
     )
 
     override fun write(value: ModelAlias, buf: ByteBuffer) {
+            FfiConverterString.write(value.`providerId`, buf)
             FfiConverterString.write(value.`canonicalModelId`, buf)
             FfiConverterString.write(value.`aliasModelId`, buf)
     }
@@ -3385,9 +3476,6 @@ data class ModelArtifact (
     , 
     var `kind`: ModelArtifactKind
     , 
-    /**
-     * Validated RELATIVE path — never absolute, never traversing.
-     */
     var `relativePath`: kotlin.String
     , 
     var `byteSize`: kotlin.ULong
@@ -3544,6 +3632,66 @@ public object FfiConverterTypeModelPackCatalogEntry: FfiConverterRustBuffer<Mode
 
 
 
+/**
+ * Independent observability of the usable installation vs the operation.
+ */
+data class ModelPackSnapshot (
+    var `operationPhase`: ModelPackPhase
+    , 
+    var `activeInstallation`: InstalledModelPack?
+    , 
+    /**
+     * Provider availability for local inference derives from THIS,
+     * never from `operation_phase == Ready`.
+     */
+    var `hasUsableActiveInstallation`: kotlin.Boolean
+    , 
+    var `operationFailure`: OperationFailure?
+    , 
+    var `restoreFailure`: RestoreFailure?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelPackSnapshot: FfiConverterRustBuffer<ModelPackSnapshot> {
+    override fun read(buf: ByteBuffer): ModelPackSnapshot {
+        return ModelPackSnapshot(
+            FfiConverterTypeModelPackPhase.read(buf),
+            FfiConverterOptionalTypeInstalledModelPack.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalTypeOperationFailure.read(buf),
+            FfiConverterOptionalTypeRestoreFailure.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ModelPackSnapshot) = (
+            FfiConverterTypeModelPackPhase.allocationSize(value.`operationPhase`) +
+            FfiConverterOptionalTypeInstalledModelPack.allocationSize(value.`activeInstallation`) +
+            FfiConverterBoolean.allocationSize(value.`hasUsableActiveInstallation`) +
+            FfiConverterOptionalTypeOperationFailure.allocationSize(value.`operationFailure`) +
+            FfiConverterOptionalTypeRestoreFailure.allocationSize(value.`restoreFailure`)
+    )
+
+    override fun write(value: ModelPackSnapshot, buf: ByteBuffer) {
+            FfiConverterTypeModelPackPhase.write(value.`operationPhase`, buf)
+            FfiConverterOptionalTypeInstalledModelPack.write(value.`activeInstallation`, buf)
+            FfiConverterBoolean.write(value.`hasUsableActiveInstallation`, buf)
+            FfiConverterOptionalTypeOperationFailure.write(value.`operationFailure`, buf)
+            FfiConverterOptionalTypeRestoreFailure.write(value.`restoreFailure`, buf)
+    }
+}
+
+
+
 data class MonitorConfig (
     var `keepSamples`: kotlin.UInt
     , 
@@ -3597,9 +3745,6 @@ public object FfiConverterTypeMonitorConfig: FfiConverterRustBuffer<MonitorConfi
 
 
 
-/**
- * What the shell observed on disk after download, per artifact.
- */
 data class ObservedArtifact (
     var `relativePath`: kotlin.String
     , 
@@ -3638,6 +3783,44 @@ public object FfiConverterTypeObservedArtifact: FfiConverterRustBuffer<ObservedA
             FfiConverterString.write(value.`relativePath`, buf)
             FfiConverterULong.write(value.`byteSize`, buf)
             FfiConverterString.write(value.`sha256Hex`, buf)
+    }
+}
+
+
+
+data class OperationFailure (
+    var `operation`: OperationKind
+    , 
+    var `reason`: ModelPackFailure
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOperationFailure: FfiConverterRustBuffer<OperationFailure> {
+    override fun read(buf: ByteBuffer): OperationFailure {
+        return OperationFailure(
+            FfiConverterTypeOperationKind.read(buf),
+            FfiConverterTypeModelPackFailure.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: OperationFailure) = (
+            FfiConverterTypeOperationKind.allocationSize(value.`operation`) +
+            FfiConverterTypeModelPackFailure.allocationSize(value.`reason`)
+    )
+
+    override fun write(value: OperationFailure, buf: ByteBuffer) {
+            FfiConverterTypeOperationKind.write(value.`operation`, buf)
+            FfiConverterTypeModelPackFailure.write(value.`reason`, buf)
     }
 }
 
@@ -3705,21 +3888,12 @@ public object FfiConverterTypePresentation: FfiConverterRustBuffer<Presentation>
 
 
 
-/**
- * Facts the SHELL reports about one configured provider. `verified_ready`
- * means the provider-specific readiness contract was actually checked
- * (Configured is merely structural presence).
- */
 data class ProviderAvailability (
     var `providerId`: kotlin.String
     , 
     var `credentialState`: CredentialState
     , 
-    /**
-     * For OnDeviceModelPack: is the pack phase Ready? Others: transport
-     * probe passed.
-     */
-    var `verifiedReady`: kotlin.Boolean
+    var `probe`: AvailabilityProbe
     
 ){
     
@@ -3738,20 +3912,20 @@ public object FfiConverterTypeProviderAvailability: FfiConverterRustBuffer<Provi
         return ProviderAvailability(
             FfiConverterString.read(buf),
             FfiConverterTypeCredentialState.read(buf),
-            FfiConverterBoolean.read(buf),
+            FfiConverterTypeAvailabilityProbe.read(buf),
         )
     }
 
     override fun allocationSize(value: ProviderAvailability) = (
             FfiConverterString.allocationSize(value.`providerId`) +
             FfiConverterTypeCredentialState.allocationSize(value.`credentialState`) +
-            FfiConverterBoolean.allocationSize(value.`verifiedReady`)
+            FfiConverterTypeAvailabilityProbe.allocationSize(value.`probe`)
     )
 
     override fun write(value: ProviderAvailability, buf: ByteBuffer) {
             FfiConverterString.write(value.`providerId`, buf)
             FfiConverterTypeCredentialState.write(value.`credentialState`, buf)
-            FfiConverterBoolean.write(value.`verifiedReady`, buf)
+            FfiConverterTypeAvailabilityProbe.write(value.`probe`, buf)
     }
 }
 
@@ -3983,7 +4157,11 @@ data class ResolvedProviderIdentity (
     , 
     var `modelDigest`: kotlin.String?
     , 
-    var `transport`: ProviderTransport
+    /**
+     * None for an unknown provider — the transport is unknowable and is
+     * never fabricated (telemetry must not contain false facts).
+     */
+    var `transport`: ProviderTransport?
     , 
     var `locality`: ProviderLocality
     , 
@@ -4015,7 +4193,7 @@ public object FfiConverterTypeResolvedProviderIdentity: FfiConverterRustBuffer<R
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterOptionalString.read(buf),
-            FfiConverterTypeProviderTransport.read(buf),
+            FfiConverterOptionalTypeProviderTransport.read(buf),
             FfiConverterTypeProviderLocality.read(buf),
             FfiConverterTypeProviderReadiness.read(buf),
             FfiConverterOptionalString.read(buf),
@@ -4030,7 +4208,7 @@ public object FfiConverterTypeResolvedProviderIdentity: FfiConverterRustBuffer<R
             FfiConverterString.allocationSize(value.`resolvedProviderId`) +
             FfiConverterString.allocationSize(value.`resolvedModelId`) +
             FfiConverterOptionalString.allocationSize(value.`modelDigest`) +
-            FfiConverterTypeProviderTransport.allocationSize(value.`transport`) +
+            FfiConverterOptionalTypeProviderTransport.allocationSize(value.`transport`) +
             FfiConverterTypeProviderLocality.allocationSize(value.`locality`) +
             FfiConverterTypeProviderReadiness.allocationSize(value.`readiness`) +
             FfiConverterOptionalString.allocationSize(value.`promptProfile`) +
@@ -4044,7 +4222,7 @@ public object FfiConverterTypeResolvedProviderIdentity: FfiConverterRustBuffer<R
             FfiConverterString.write(value.`resolvedProviderId`, buf)
             FfiConverterString.write(value.`resolvedModelId`, buf)
             FfiConverterOptionalString.write(value.`modelDigest`, buf)
-            FfiConverterTypeProviderTransport.write(value.`transport`, buf)
+            FfiConverterOptionalTypeProviderTransport.write(value.`transport`, buf)
             FfiConverterTypeProviderLocality.write(value.`locality`, buf)
             FfiConverterTypeProviderReadiness.write(value.`readiness`, buf)
             FfiConverterOptionalString.write(value.`promptProfile`, buf)
@@ -4174,6 +4352,111 @@ public object FfiConverterTypeVerifiedArtifact: FfiConverterRustBuffer<VerifiedA
             FfiConverterString.write(value.`sha256Hex`, buf)
     }
 }
+
+
+
+/**
+ * The provider-specific readiness contract's observed status. A single
+ * boolean cannot distinguish not-checked, checking, and failed — this can.
+ */
+sealed class AvailabilityProbe {
+    
+    object NotChecked : AvailabilityProbe()
+    
+    
+    object Checking : AvailabilityProbe()
+    
+    
+    object Verified : AvailabilityProbe()
+    
+    
+    data class Failed(
+        val `reason`: kotlin.String) : AvailabilityProbe()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAvailabilityProbe : FfiConverterRustBuffer<AvailabilityProbe>{
+    override fun read(buf: ByteBuffer): AvailabilityProbe {
+        return when(buf.getInt()) {
+            1 -> AvailabilityProbe.NotChecked
+            2 -> AvailabilityProbe.Checking
+            3 -> AvailabilityProbe.Verified
+            4 -> AvailabilityProbe.Failed(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: AvailabilityProbe): ULong = when(value) {
+        is AvailabilityProbe.NotChecked -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AvailabilityProbe.Checking -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AvailabilityProbe.Verified -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AvailabilityProbe.Failed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: AvailabilityProbe, buf: ByteBuffer) {
+        when(value) {
+            is AvailabilityProbe.NotChecked -> {
+                buf.putInt(1)
+                Unit
+            }
+            is AvailabilityProbe.Checking -> {
+                buf.putInt(2)
+                Unit
+            }
+            is AvailabilityProbe.Verified -> {
+                buf.putInt(3)
+                Unit
+            }
+            is AvailabilityProbe.Failed -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
 
 
 
@@ -4435,6 +4718,15 @@ sealed class ModelPackFailure {
         companion object
     }
     
+    data class DuplicateObservedPath(
+        val `relativePath`: kotlin.String) : ModelPackFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
     data class SchemaInvalid(
         val `reason`: kotlin.String) : ModelPackFailure()
         
@@ -4487,11 +4779,14 @@ public object FfiConverterTypeModelPackFailure : FfiConverterRustBuffer<ModelPac
             5 -> ModelPackFailure.MissingArtifact(
                 FfiConverterString.read(buf),
                 )
-            6 -> ModelPackFailure.SchemaInvalid(
+            6 -> ModelPackFailure.DuplicateObservedPath(
                 FfiConverterString.read(buf),
                 )
-            7 -> ModelPackFailure.RuntimeAbiIncompatible
-            8 -> ModelPackFailure.RemovalFailed(
+            7 -> ModelPackFailure.SchemaInvalid(
+                FfiConverterString.read(buf),
+                )
+            8 -> ModelPackFailure.RuntimeAbiIncompatible
+            9 -> ModelPackFailure.RemovalFailed(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
@@ -4532,6 +4827,13 @@ public object FfiConverterTypeModelPackFailure : FfiConverterRustBuffer<ModelPac
             (
                 4UL
                 + FfiConverterString.allocationSize(value.`artifactId`)
+            )
+        }
+        is ModelPackFailure.DuplicateObservedPath -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`relativePath`)
             )
         }
         is ModelPackFailure.SchemaInvalid -> {
@@ -4583,17 +4885,22 @@ public object FfiConverterTypeModelPackFailure : FfiConverterRustBuffer<ModelPac
                 FfiConverterString.write(value.`artifactId`, buf)
                 Unit
             }
-            is ModelPackFailure.SchemaInvalid -> {
+            is ModelPackFailure.DuplicateObservedPath -> {
                 buf.putInt(6)
+                FfiConverterString.write(value.`relativePath`, buf)
+                Unit
+            }
+            is ModelPackFailure.SchemaInvalid -> {
+                buf.putInt(7)
                 FfiConverterString.write(value.`reason`, buf)
                 Unit
             }
             is ModelPackFailure.RuntimeAbiIncompatible -> {
-                buf.putInt(7)
+                buf.putInt(8)
                 Unit
             }
             is ModelPackFailure.RemovalFailed -> {
-                buf.putInt(8)
+                buf.putInt(9)
                 FfiConverterString.write(value.`reason`, buf)
                 Unit
             }
@@ -4796,6 +5103,41 @@ public object FfiConverterTypeModelPackPhase : FfiConverterRustBuffer<ModelPackP
 
 
 
+
+enum class OperationKind {
+    
+    INSTALL,
+    UPDATE,
+    REMOVAL;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOperationKind: FfiConverterRustBuffer<OperationKind> {
+    override fun read(buf: ByteBuffer) = try {
+        OperationKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: OperationKind) = 4UL
+
+    override fun write(value: OperationKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
 sealed class ProviderFailure {
     
     object UnknownProvider : ProviderFailure()
@@ -4808,6 +5150,19 @@ sealed class ProviderFailure {
     
     
     data class NotVerified(
+        val `reason`: kotlin.String) : ProviderFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Duplicate descriptors/availability rows, provider_id disagreement,
+     * or an inconsistent credential report — fail closed, never guess.
+     */
+    data class InconsistentConfiguration(
         val `reason`: kotlin.String) : ProviderFailure()
         
     {
@@ -4836,6 +5191,9 @@ public object FfiConverterTypeProviderFailure : FfiConverterRustBuffer<ProviderF
             2 -> ProviderFailure.MissingCredentials
             3 -> ProviderFailure.LocalPackNotReady
             4 -> ProviderFailure.NotVerified(
+                FfiConverterString.read(buf),
+                )
+            5 -> ProviderFailure.InconsistentConfiguration(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
@@ -4868,6 +5226,13 @@ public object FfiConverterTypeProviderFailure : FfiConverterRustBuffer<ProviderF
                 + FfiConverterString.allocationSize(value.`reason`)
             )
         }
+        is ProviderFailure.InconsistentConfiguration -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
     }
 
     override fun write(value: ProviderFailure, buf: ByteBuffer) {
@@ -4886,6 +5251,11 @@ public object FfiConverterTypeProviderFailure : FfiConverterRustBuffer<ProviderF
             }
             is ProviderFailure.NotVerified -> {
                 buf.putInt(4)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is ProviderFailure.InconsistentConfiguration -> {
+                buf.putInt(5)
                 FfiConverterString.write(value.`reason`, buf)
                 Unit
             }
@@ -5332,6 +5702,218 @@ public object FfiConverterTypeRecordingPhase : FfiConverterRustBuffer<RecordingP
 
 
 
+sealed class RestoreFailure {
+    
+    object TrustedCatalogEntryMissing : RestoreFailure()
+    
+    
+    object CatalogDigestMismatch : RestoreFailure()
+    
+    
+    object InstalledInventoryMismatch : RestoreFailure()
+    
+    
+    object UnsupportedRuntimeAbi : RestoreFailure()
+    
+    
+    object UnsupportedVerificationPolicy : RestoreFailure()
+    
+    
+    data class InvalidInstalledRecord(
+        val `reason`: kotlin.String) : RestoreFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRestoreFailure : FfiConverterRustBuffer<RestoreFailure>{
+    override fun read(buf: ByteBuffer): RestoreFailure {
+        return when(buf.getInt()) {
+            1 -> RestoreFailure.TrustedCatalogEntryMissing
+            2 -> RestoreFailure.CatalogDigestMismatch
+            3 -> RestoreFailure.InstalledInventoryMismatch
+            4 -> RestoreFailure.UnsupportedRuntimeAbi
+            5 -> RestoreFailure.UnsupportedVerificationPolicy
+            6 -> RestoreFailure.InvalidInstalledRecord(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: RestoreFailure): ULong = when(value) {
+        is RestoreFailure.TrustedCatalogEntryMissing -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.CatalogDigestMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.InstalledInventoryMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.UnsupportedRuntimeAbi -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.UnsupportedVerificationPolicy -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.InvalidInstalledRecord -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: RestoreFailure, buf: ByteBuffer) {
+        when(value) {
+            is RestoreFailure.TrustedCatalogEntryMissing -> {
+                buf.putInt(1)
+                Unit
+            }
+            is RestoreFailure.CatalogDigestMismatch -> {
+                buf.putInt(2)
+                Unit
+            }
+            is RestoreFailure.InstalledInventoryMismatch -> {
+                buf.putInt(3)
+                Unit
+            }
+            is RestoreFailure.UnsupportedRuntimeAbi -> {
+                buf.putInt(4)
+                Unit
+            }
+            is RestoreFailure.UnsupportedVerificationPolicy -> {
+                buf.putInt(5)
+                Unit
+            }
+            is RestoreFailure.InvalidInstalledRecord -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+sealed class RestoreResult {
+    
+    data class Restored(
+        val `record`: uniffi.neuralcompose_mobile_core.InstalledModelPack) : RestoreResult()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Rejected(
+        val `failure`: uniffi.neuralcompose_mobile_core.RestoreFailure) : RestoreResult()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRestoreResult : FfiConverterRustBuffer<RestoreResult>{
+    override fun read(buf: ByteBuffer): RestoreResult {
+        return when(buf.getInt()) {
+            1 -> RestoreResult.Restored(
+                FfiConverterTypeInstalledModelPack.read(buf),
+                )
+            2 -> RestoreResult.Rejected(
+                FfiConverterTypeRestoreFailure.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: RestoreResult): ULong = when(value) {
+        is RestoreResult.Restored -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeInstalledModelPack.allocationSize(value.`record`)
+            )
+        }
+        is RestoreResult.Rejected -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeRestoreFailure.allocationSize(value.`failure`)
+            )
+        }
+    }
+
+    override fun write(value: RestoreResult, buf: ByteBuffer) {
+        when(value) {
+            is RestoreResult.Restored -> {
+                buf.putInt(1)
+                FfiConverterTypeInstalledModelPack.write(value.`record`, buf)
+                Unit
+            }
+            is RestoreResult.Rejected -> {
+                buf.putInt(2)
+                FfiConverterTypeRestoreFailure.write(value.`failure`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
 
 enum class SocketEvent {
     
@@ -5700,6 +6282,162 @@ public object FfiConverterOptionalTypeInstalledModelPack: FfiConverterRustBuffer
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeOperationFailure: FfiConverterRustBuffer<OperationFailure?> {
+    override fun read(buf: ByteBuffer): OperationFailure? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeOperationFailure.read(buf)
+    }
+
+    override fun allocationSize(value: OperationFailure?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeOperationFailure.allocationSize(value)
+        }
+    }
+
+    override fun write(value: OperationFailure?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeOperationFailure.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeProviderTransport: FfiConverterRustBuffer<ProviderTransport?> {
+    override fun read(buf: ByteBuffer): ProviderTransport? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeProviderTransport.read(buf)
+    }
+
+    override fun allocationSize(value: ProviderTransport?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeProviderTransport.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ProviderTransport?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeProviderTransport.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeRestoreFailure: FfiConverterRustBuffer<RestoreFailure?> {
+    override fun read(buf: ByteBuffer): RestoreFailure? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeRestoreFailure.read(buf)
+    }
+
+    override fun allocationSize(value: RestoreFailure?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeRestoreFailure.allocationSize(value)
+        }
+    }
+
+    override fun write(value: RestoreFailure?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeRestoreFailure.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeRestoreResult: FfiConverterRustBuffer<RestoreResult?> {
+    override fun read(buf: ByteBuffer): RestoreResult? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeRestoreResult.read(buf)
+    }
+
+    override fun allocationSize(value: RestoreResult?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeRestoreResult.allocationSize(value)
+        }
+    }
+
+    override fun write(value: RestoreResult?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeRestoreResult.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>> {
+    override fun read(buf: ByteBuffer): List<kotlin.UInt> {
+        val len = buf.getInt()
+        return List<kotlin.UInt>(len) {
+            FfiConverterUInt.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.UInt>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterUInt.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.UInt>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterUInt.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceDouble: FfiConverterRustBuffer<List<kotlin.Double>> {
     override fun read(buf: ByteBuffer): List<kotlin.Double> {
         val len = buf.getInt()
@@ -5830,6 +6568,34 @@ public object FfiConverterSequenceTypeModelArtifact: FfiConverterRustBuffer<List
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeModelArtifact.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeModelPackCatalogEntry: FfiConverterRustBuffer<List<ModelPackCatalogEntry>> {
+    override fun read(buf: ByteBuffer): List<ModelPackCatalogEntry> {
+        val len = buf.getInt()
+        return List<ModelPackCatalogEntry>(len) {
+            FfiConverterTypeModelPackCatalogEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ModelPackCatalogEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeModelPackCatalogEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ModelPackCatalogEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeModelPackCatalogEntry.write(it, buf)
         }
     }
 }
@@ -6058,10 +6824,23 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
 
         /**
-         * Embedding-space identity: any change to revision, weight digest,
-         * tokenizer digest, dimension, pooling, normalization, or task instruction
-         * yields a different identity. Vectors from differing identities must
-         * never share an index.
+         * Digest of the full catalog entry (artifacts canonically sorted).
+         */ fun `catalogEntryDigest`(`entry`: ModelPackCatalogEntry): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_catalog_entry_digest(
+    
+        
+        FfiConverterTypeModelPackCatalogEntry.lower(`entry`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Embedding-space identity: canonical document over ALL weight and
+         * tokenizer artifacts (sorted), with a domain string. Requires the entry
+         * to pass full catalog validation first.
          */ fun `embeddingSpaceIdentity`(`entry`: ModelPackCatalogEntry): kotlin.String? {
             return FfiConverterOptionalString.lift(
     uniffiRustCall() { _status ->
@@ -6075,7 +6854,28 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
 
         /**
-         * Structural validation of a catalog entry. Empty vec = valid.
+         * Resolve a persisted installed record against the TRUSTED catalog set.
+         * The record is never compared against an update target; it must match its
+         * own trusted entry exactly. Rejection is visible — callers preserve/
+         * quarantine the record for diagnosis, never silently drop it.
+         */ fun `restoreInstalledRecord`(`record`: InstalledModelPack, `trustedCatalog`: List<ModelPackCatalogEntry>, `supportedAbis`: List<kotlin.String>, `acceptedPolicyVersions`: List<kotlin.UInt>): RestoreResult {
+            return FfiConverterTypeRestoreResult.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_restore_installed_record(
+    
+        
+        FfiConverterTypeInstalledModelPack.lower(`record`),
+        FfiConverterSequenceTypeModelPackCatalogEntry.lower(`trustedCatalog`),
+        FfiConverterSequenceString.lower(`supportedAbis`),
+        FfiConverterSequenceUInt.lower(`acceptedPolicyVersions`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Public validation pinned to the RUNNING core version — never
+         * caller-supplied.
          */ fun `validateCatalogEntry`(`entry`: ModelPackCatalogEntry): List<kotlin.String> {
             return FfiConverterSequenceString.lift(
     uniffiRustCall() { _status ->
@@ -6118,8 +6918,8 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
 
         /**
          * Substitution disclosure: provider mismatch is always substitution; model
-         * mismatch is substitution unless an explicitly registered alias proves
-         * equivalence (in either direction toward the same canonical).
+         * mismatch is substitution unless a VALID, provider-scoped alias proves
+         * equivalence. An invalid alias set authorizes nothing (fail closed).
          */ fun `isSubstitution`(`identity`: ResolvedProviderIdentity, `aliases`: List<ModelAlias>): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     uniffiRustCall() { _status ->
@@ -6149,8 +6949,7 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
 
         /**
          * Resolve a request against configuration + shell-reported availability.
-         * NEVER substitutes a provider: the resolved provider is always the
-         * requested one; unavailability is expressed, not routed around.
+         * NEVER substitutes a provider; fail closed on inconsistent configuration.
          */ fun `resolveProviderIdentity`(`requestedProviderId`: kotlin.String, `requestedModelId`: kotlin.String, `resolvedModelId`: kotlin.String, `modelDigest`: kotlin.String?, `descriptors`: List<ProviderDescriptor>, `availability`: List<ProviderAvailability>, `promptProfile`: kotlin.String?, `promptHash`: kotlin.String?): ResolvedProviderIdentity {
             return FfiConverterTypeResolvedProviderIdentity.lift(
     uniffiRustCall() { _status ->
@@ -6165,6 +6964,22 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
         FfiConverterSequenceTypeProviderAvailability.lower(`availability`),
         FfiConverterOptionalString.lower(`promptProfile`),
         FfiConverterOptionalString.lower(`promptHash`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Structural alias validation: no self-aliases, no alias mapped to more
+         * than one canonical within a provider, no alias id reused as a canonical
+         * within the same provider (cycles). Empty vec = valid.
+         */ fun `validateModelAliases`(`aliases`: List<ModelAlias>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_model_aliases(
+    
+        
+        FfiConverterSequenceTypeModelAlias.lower(`aliases`),_status)
 }
     )
     }

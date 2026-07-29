@@ -1,7 +1,7 @@
-//! Provider selection semantics (M7-A, ADR-001). Deterministic and
-//! effect-free: no network, no SDKs, no credentials — the shell reports
-//! availability facts; this module decides identity, readiness, and
-//! substitution visibility. No implicit provider substitution, ever.
+//! Provider selection semantics (M7-A, ADR-001; review-amended).
+//! Deterministic and effect-free. No implicit provider substitution; no
+//! fabricated facts (an unknown provider has NO transport); fail closed on
+//! every configuration inconsistency.
 
 use serde::{Deserialize, Serialize};
 
@@ -71,7 +71,14 @@ pub enum ProviderFailure {
     UnknownProvider,
     MissingCredentials,
     LocalPackNotReady,
-    NotVerified { reason: String },
+    NotVerified {
+        reason: String,
+    },
+    /// Duplicate descriptors/availability rows, provider_id disagreement,
+    /// or an inconsistent credential report — fail closed, never guess.
+    InconsistentConfiguration {
+        reason: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -84,24 +91,31 @@ pub enum ProviderReadiness {
     Unavailable { reason: ProviderFailure },
 }
 
-/// Facts the SHELL reports about one configured provider. `verified_ready`
-/// means the provider-specific readiness contract was actually checked
-/// (Configured is merely structural presence).
+/// The provider-specific readiness contract's observed status. A single
+/// boolean cannot distinguish not-checked, checking, and failed — this can.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum AvailabilityProbe {
+    NotChecked,
+    Checking,
+    Verified,
+    Failed { reason: String },
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ProviderAvailability {
     pub provider_id: String,
     pub credential_state: CredentialState,
-    /// For OnDeviceModelPack: is the pack phase Ready? Others: transport
-    /// probe passed.
-    pub verified_ready: bool,
+    pub probe: AvailabilityProbe,
 }
 
-/// Explicitly registered model-equivalence: resolving `alias` to
-/// `canonical` is NOT substitution.
+/// Explicitly registered, PROVIDER-SCOPED model equivalence (model names
+/// are not globally unique).
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ModelAlias {
+    pub provider_id: String,
     pub canonical_model_id: String,
     pub alias_model_id: String,
 }
@@ -114,7 +128,9 @@ pub struct ResolvedProviderIdentity {
     pub resolved_provider_id: String,
     pub resolved_model_id: String,
     pub model_digest: Option<String>,
-    pub transport: ProviderTransport,
+    /// None for an unknown provider — the transport is unknowable and is
+    /// never fabricated (telemetry must not contain false facts).
+    pub transport: Option<ProviderTransport>,
     pub locality: ProviderLocality,
     pub readiness: ProviderReadiness,
     pub prompt_profile: Option<String>,
@@ -132,8 +148,7 @@ fn empty_caps() -> ProviderCapabilities {
 }
 
 /// Resolve a request against configuration + shell-reported availability.
-/// NEVER substitutes a provider: the resolved provider is always the
-/// requested one; unavailability is expressed, not routed around.
+/// NEVER substitutes a provider; fail closed on inconsistent configuration.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 #[allow(clippy::too_many_arguments)]
 pub fn resolve_provider_identity(
@@ -146,50 +161,93 @@ pub fn resolve_provider_identity(
     prompt_profile: Option<String>,
     prompt_hash: Option<String>,
 ) -> ResolvedProviderIdentity {
-    let descriptor = descriptors
+    let matching_desc: Vec<&ProviderDescriptor> = descriptors
         .iter()
-        .find(|d| d.provider_id == requested_provider_id);
-    let avail = availability
+        .filter(|d| d.provider_id == requested_provider_id)
+        .collect();
+    let matching_avail: Vec<&ProviderAvailability> = availability
         .iter()
-        .find(|a| a.provider_id == requested_provider_id);
+        .filter(|a| a.provider_id == requested_provider_id)
+        .collect();
 
-    let (transport, locality, caps, readiness) = match descriptor {
-        None => (
-            ProviderTransport::HttpEndpoint, // placeholder; readiness blocks use
-            ProviderLocality::Unresolved,    // unknown → conservative egress
+    let inconsistent = |reason: &str| ProviderReadiness::Unavailable {
+        reason: ProviderFailure::InconsistentConfiguration {
+            reason: reason.to_string(),
+        },
+    };
+
+    let (transport, locality, caps, readiness) = if matching_desc.len() > 1 {
+        (
+            None,
+            ProviderLocality::Unresolved,
+            empty_caps(),
+            inconsistent("duplicate descriptors"),
+        )
+    } else if let Some(d) = matching_desc.first() {
+        if matching_avail.len() > 1 {
+            (
+                Some(d.transport),
+                d.locality,
+                d.capabilities.clone(),
+                inconsistent("duplicate availability rows"),
+            )
+        } else {
+            let readiness = match matching_avail.first() {
+                None => ProviderReadiness::Unconfigured,
+                Some(a) => {
+                    if a.provider_id != d.provider_id {
+                        inconsistent("availability provider_id disagreement")
+                    } else if d.credential_requirement == CredentialRequirement::NotRequired
+                        && a.credential_state == CredentialState::Missing
+                    {
+                        inconsistent("credential state Missing for NotRequired provider")
+                    } else if d.credential_requirement == CredentialRequirement::Required
+                        && a.credential_state != CredentialState::Available
+                    {
+                        ProviderReadiness::Unavailable {
+                            reason: ProviderFailure::MissingCredentials,
+                        }
+                    } else {
+                        match &a.probe {
+                            AvailabilityProbe::Verified => ProviderReadiness::Ready,
+                            AvailabilityProbe::Checking => ProviderReadiness::Verifying,
+                            AvailabilityProbe::NotChecked => match d.transport {
+                                // No usable active pack → unavailable, no
+                                // cloud request.
+                                ProviderTransport::OnDeviceModelPack => {
+                                    ProviderReadiness::Unavailable {
+                                        reason: ProviderFailure::LocalPackNotReady,
+                                    }
+                                }
+                                _ => ProviderReadiness::Configured,
+                            },
+                            AvailabilityProbe::Failed { reason } => {
+                                ProviderReadiness::Unavailable {
+                                    reason: ProviderFailure::NotVerified {
+                                        reason: reason.clone(),
+                                    },
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            (
+                Some(d.transport),
+                d.locality,
+                d.capabilities.clone(),
+                readiness,
+            )
+        }
+    } else {
+        (
+            None, // unknown transport stays absent — never fabricated
+            ProviderLocality::Unresolved,
             empty_caps(),
             ProviderReadiness::Unavailable {
                 reason: ProviderFailure::UnknownProvider,
             },
-        ),
-        Some(d) => {
-            let readiness = match avail {
-                None => ProviderReadiness::Unconfigured,
-                Some(a) => {
-                    let cred_missing = d.credential_requirement == CredentialRequirement::Required
-                        && a.credential_state != CredentialState::Available;
-                    if cred_missing {
-                        // Missing credentials → unavailable, no fallback.
-                        ProviderReadiness::Unavailable {
-                            reason: ProviderFailure::MissingCredentials,
-                        }
-                    } else if !a.verified_ready {
-                        match d.transport {
-                            // Missing local pack → unavailable, no cloud request.
-                            ProviderTransport::OnDeviceModelPack => {
-                                ProviderReadiness::Unavailable {
-                                    reason: ProviderFailure::LocalPackNotReady,
-                                }
-                            }
-                            _ => ProviderReadiness::Configured,
-                        }
-                    } else {
-                        ProviderReadiness::Ready
-                    }
-                }
-            };
-            (d.transport, d.locality, d.capabilities.clone(), readiness)
-        }
+        )
     };
 
     ResolvedProviderIdentity {
@@ -207,9 +265,50 @@ pub fn resolve_provider_identity(
     }
 }
 
+/// Structural alias validation: no self-aliases, no alias mapped to more
+/// than one canonical within a provider, no alias id reused as a canonical
+/// within the same provider (cycles). Empty vec = valid.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn validate_model_aliases(aliases: Vec<ModelAlias>) -> Vec<String> {
+    let mut errs = Vec::new();
+    let mut alias_to_canonical: std::collections::HashMap<(String, String), String> =
+        std::collections::HashMap::new();
+    for a in &aliases {
+        if a.alias_model_id == a.canonical_model_id {
+            errs.push(format!(
+                "self-alias '{}' ({})",
+                a.alias_model_id, a.provider_id
+            ));
+        }
+        let key = (a.provider_id.clone(), a.alias_model_id.clone());
+        if let Some(existing) = alias_to_canonical.get(&key) {
+            if existing != &a.canonical_model_id {
+                errs.push(format!(
+                    "alias '{}' maps to multiple canonicals ({})",
+                    a.alias_model_id, a.provider_id
+                ));
+            }
+        } else {
+            alias_to_canonical.insert(key, a.canonical_model_id.clone());
+        }
+    }
+    for a in &aliases {
+        if aliases
+            .iter()
+            .any(|b| b.provider_id == a.provider_id && b.alias_model_id == a.canonical_model_id)
+        {
+            errs.push(format!(
+                "canonical '{}' is itself aliased ({})",
+                a.canonical_model_id, a.provider_id
+            ));
+        }
+    }
+    errs
+}
+
 /// Substitution disclosure: provider mismatch is always substitution; model
-/// mismatch is substitution unless an explicitly registered alias proves
-/// equivalence (in either direction toward the same canonical).
+/// mismatch is substitution unless a VALID, provider-scoped alias proves
+/// equivalence. An invalid alias set authorizes nothing (fail closed).
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn is_substitution(identity: ResolvedProviderIdentity, aliases: Vec<ModelAlias>) -> bool {
     if identity.requested_provider_id != identity.resolved_provider_id {
@@ -218,11 +317,15 @@ pub fn is_substitution(identity: ResolvedProviderIdentity, aliases: Vec<ModelAli
     if identity.requested_model_id == identity.resolved_model_id {
         return false;
     }
+    if !validate_model_aliases(aliases.clone()).is_empty() {
+        return true; // invalid alias set can never authorize equivalence
+    }
     let equivalent = aliases.iter().any(|a| {
-        (a.alias_model_id == identity.requested_model_id
-            && a.canonical_model_id == identity.resolved_model_id)
-            || (a.alias_model_id == identity.resolved_model_id
-                && a.canonical_model_id == identity.requested_model_id)
+        a.provider_id == identity.resolved_provider_id
+            && ((a.alias_model_id == identity.requested_model_id
+                && a.canonical_model_id == identity.resolved_model_id)
+                || (a.alias_model_id == identity.resolved_model_id
+                    && a.canonical_model_id == identity.requested_model_id))
     });
     !equivalent
 }

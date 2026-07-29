@@ -77,6 +77,15 @@ fn invalid_cases_fail_rust_validation() {
                 }
             }
         }
+        // Dual-direction schema verdict per the table's marker.
+        let schema = read("model-pack-catalog-entry.schema.json");
+        let validator = jsonschema::validator_for(&schema).unwrap();
+        let schema_rejects = !validator.is_valid(&v);
+        let marker = case["schemaInvalid"].as_bool().unwrap();
+        assert_eq!(
+            schema_rejects, marker,
+            "case '{name}': schema verdict must match the schemaInvalid marker"
+        );
         match serde_json::from_value::<ModelPackCatalogEntry>(v) {
             Err(_) => {} // failing to even deserialize also counts as rejection
             Ok(typed) => {

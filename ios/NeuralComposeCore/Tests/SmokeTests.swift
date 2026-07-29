@@ -102,6 +102,64 @@ final class SmokeTests: XCTestCase {
         XCTAssertFalse(reloaded.onRecordStart(nowMs: 1))
     }
 
+
+    private func makeEntry() -> ModelPackCatalogEntry {
+        ModelPackCatalogEntry(
+            schemaVersion: 1, packId: "p", packVersion: "1.0.0", kind: .generation,
+            modelFamily: "qwen", modelRevision: "r", quantization: nil,
+            artifactFormat: "gguf", licenseId: "Apache-2.0", sourceRepository: "x",
+            runtimeAbi: "abi", minimumCoreVersion: "0.1.0",
+            artifacts: [
+                ModelArtifact(
+                    artifactId: "w", kind: .weights, relativePath: "m.gguf",
+                    byteSize: 10, sha256Hex: String(repeating: "aa", count: 32)),
+                ModelArtifact(
+                    artifactId: "t", kind: .tokenizer, relativePath: "t.json",
+                    byteSize: 5, sha256Hex: String(repeating: "bb", count: 32)),
+            ],
+            requirements: DeviceRequirements(minimumRamMb: 1024, deviceClass: "phone"),
+            generation: GenerationContract(
+                tokenizerId: "t", contextCap: 2048, promptTemplateId: "chatml",
+                compatiblePromptProfiles: ["focused"]),
+            embedding: nil)
+    }
+
+    func testM7aContractsThroughBindings() throws {
+        let entry = makeEntry()
+        XCTAssertTrue(validateCatalogEntry(entry: entry).isEmpty)
+        let inst = ModelPackInstaller(
+            entry: entry, supportedAbis: ["abi"], verificationPolicyVersion: 1, restored: nil)
+        XCTAssertTrue(inst.onQueued())
+        XCTAssertTrue(inst.onDownloadComplete())
+        // Verification bypass negative path.
+        XCTAssertFalse(inst.onPublished(installedAtMs: 1), "publish before verify must fail")
+        let observed = [
+            ObservedArtifact(
+                relativePath: "m.gguf", byteSize: 10,
+                sha256Hex: String(repeating: "aa", count: 32)),
+            ObservedArtifact(
+                relativePath: "t.json", byteSize: 5,
+                sha256Hex: String(repeating: "bb", count: 32)),
+        ]
+        XCTAssertTrue(inst.verify(observed: observed))
+        XCTAssertTrue(inst.onPublished(installedAtMs: 2))
+        let rec = inst.activeInstallation()!
+        XCTAssertEqual(rec.verifiedInventoryDigest.count, 64)
+        // Invalid restore surfaces RestoreFailure; does not activate.
+        let rej = ModelPackInstaller(
+            entry: entry, supportedAbis: ["abi"], verificationPolicyVersion: 1,
+            restored: .rejected(failure: .trustedCatalogEntryMissing))
+        XCTAssertFalse(rej.snapshot().hasUsableActiveInstallation)
+        XCTAssertEqual(rej.snapshot().restoreFailure, .trustedCatalogEntryMissing)
+        // Unknown provider: transport must be absent.
+        let id = resolveProviderIdentity(
+            requestedProviderId: "nope", requestedModelId: "m", resolvedModelId: "m",
+            modelDigest: nil, descriptors: [], availability: [],
+            promptProfile: nil, promptHash: nil)
+        XCTAssertNil(id.transport)
+        XCTAssertEqual(id.locality, .unresolved)
+    }
+
     func testConfigResolutionNoSilentMockFallback() throws {
         let c = resolveClientMode(useMockRaw: "false", serverRaw: "", wsRaw: "")
         XCTAssertEqual(c.mode, .live)
