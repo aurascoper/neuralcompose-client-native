@@ -4,11 +4,14 @@ node_modules/
 *.xcframework
 ios/Generated/
 ios/Frameworks/
-android/core/src/main/jniLibs/
-android/core/build/
-android/core/.gradle/
+# Gradle/Android build state — never source history. The wrapper jar IS committed.
+android/**/.gradle/
+android/**/build/
+android/**/src/main/jniLibs/
+local.properties
 # xcodegen output — regenerate with `xcodegen generate` in ios/NeuralComposeClient
 *.xcodeproj/
 *.dylib
 *.a
+*.so
 .kotlin/
