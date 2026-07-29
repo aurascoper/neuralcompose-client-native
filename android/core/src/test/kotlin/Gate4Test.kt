@@ -217,6 +217,152 @@ class Gate4Test {
         assertEquals(null, inst.snapshot().activeIntegrityFailure)
     }
 
+
+    private fun m7a2Target(backend: String, accel: uniffi.neuralcompose_mobile_core.AcceleratorClass) =
+        uniffi.neuralcompose_mobile_core.RuntimeTarget(
+            os = "android", architecture = "arm64", acceleratorClass = accel,
+            backendId = backend, runtimeAbi = "nc-gguf-v1", modelFormats = listOf("gguf"),
+            minimumOsVersion = null, minimumBackendVersion = null, minimumDriverVersion = null,
+            capabilities = uniffi.neuralcompose_mobile_core.RuntimeCapabilities(
+                generation = true, embeddings = false, streaming = true,
+                cancellation = true, structuredOutput = false,
+            ),
+        )
+
+    private fun m7a2Variant(id: String, backend: String, accel: uniffi.neuralcompose_mobile_core.AcceleratorClass) =
+        uniffi.neuralcompose_mobile_core.ModelVariant(
+            schemaVersion = 1u, logicalModelId = "qwen2.5-0.5b-instruct", variantId = id,
+            modelPackId = "local-dialogue-basic", runtimeTarget = m7a2Target(backend, accel),
+            quantization = "q4_k_m", artifactFormat = "gguf",
+            numericalContractId = "c0".repeat(32),
+        )
+
+    @Test
+    fun m7a2SelectionNeverFallsBackThroughBindings() {
+        val variants = listOf(
+            m7a2Variant("cpu", "llama-cpp-cpu", uniffi.neuralcompose_mobile_core.AcceleratorClass.CPU),
+            m7a2Variant("qnn", "windows-ml-qnn", uniffi.neuralcompose_mobile_core.AcceleratorClass.NPU),
+        )
+        val device = uniffi.neuralcompose_mobile_core.DeviceRuntimeProfile(
+            os = "android", architecture = "arm64",
+            installedBackendIds = listOf("llama-cpp-cpu"),
+            supportedRuntimeAbis = listOf("nc-gguf-v1"),
+        )
+        val none = uniffi.neuralcompose_mobile_core.RequiredCapabilities(
+            false, false, false, false, false,
+        )
+
+        // Explicit backend absent → Unavailable, never a silent swap to CPU.
+        val denied = uniffi.neuralcompose_mobile_core.selectRuntimeVariant(
+            "qwen2.5-0.5b-instruct", variants, device,
+            uniffi.neuralcompose_mobile_core.BackendRequirement.Explicit("windows-ml-qnn"), none,
+        )
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.RuntimeSelection.Unavailable(
+                uniffi.neuralcompose_mobile_core.SelectionFailure.RequestedBackendNotInstalled(
+                    "windows-ml-qnn",
+                ),
+            ),
+            denied,
+        )
+        // Polarity: no explicit requirement resolves to the installed backend.
+        val allowed = uniffi.neuralcompose_mobile_core.selectRuntimeVariant(
+            "qwen2.5-0.5b-instruct", variants, device,
+            uniffi.neuralcompose_mobile_core.BackendRequirement.AnySupported, none,
+        )
+        assertEquals(
+            true,
+            allowed is uniffi.neuralcompose_mobile_core.RuntimeSelection.Selected &&
+                allowed.variant.runtimeTarget.backendId == "llama-cpp-cpu",
+        )
+
+        // The workload is a capability: these variants generate, not embed.
+        val needsEmbeddings = uniffi.neuralcompose_mobile_core.RequiredCapabilities(
+            false, true, false, false, false,
+        )
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.RuntimeSelection.Unavailable(
+                uniffi.neuralcompose_mobile_core.SelectionFailure.RequiredCapabilityUnavailable(
+                    "embeddings",
+                ),
+            ),
+            uniffi.neuralcompose_mobile_core.selectRuntimeVariant(
+                "qwen2.5-0.5b-instruct", variants, device,
+                uniffi.neuralcompose_mobile_core.BackendRequirement.AnySupported, needsEmbeddings,
+            ),
+        )
+
+        // Two variants of ONE backend must be named, never sorted.
+        val q8 = m7a2Variant("cpu-q8", "llama-cpp-cpu", uniffi.neuralcompose_mobile_core.AcceleratorClass.CPU)
+        val pair = listOf(variants[0], q8)
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.RuntimeSelection.Unavailable(
+                uniffi.neuralcompose_mobile_core.SelectionFailure.AmbiguousVariantsForBackend(
+                    "llama-cpp-cpu",
+                ),
+            ),
+            uniffi.neuralcompose_mobile_core.selectRuntimeVariant(
+                "qwen2.5-0.5b-instruct", pair, device,
+                uniffi.neuralcompose_mobile_core.BackendRequirement.AnySupported, none,
+            ),
+        )
+        val named = uniffi.neuralcompose_mobile_core.selectRuntimeVariant(
+            "qwen2.5-0.5b-instruct", pair, device,
+            uniffi.neuralcompose_mobile_core.BackendRequirement.ExplicitVariant("cpu-q8"), none,
+        )
+        assertEquals(
+            true,
+            named is uniffi.neuralcompose_mobile_core.RuntimeSelection.Selected &&
+                named.variant.variantId == "cpu-q8",
+        )
+    }
+
+    @Test
+    fun m7a2SupportPromotionAndPropertyLawThroughBindings() {
+        // Compiling is not running.
+        val built = uniffi.neuralcompose_mobile_core.SupportEvidence(
+            contractsAndTestsPass = true, buildsOnNamedTarget = true,
+            fixtureRuntimeExecuted = false, physicalDevice = null, osVersion = null,
+            backendVersion = null, signedPackagingAccepted = false, acceptanceDocument = null,
+        )
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.SupportStatus.BUILD_VALIDATED,
+            uniffi.neuralcompose_mobile_core.attainedSupportStatus(built),
+        )
+        assertEquals(
+            false,
+            uniffi.neuralcompose_mobile_core.supportsClaim(
+                built, uniffi.neuralcompose_mobile_core.SupportStatus.DEVICE_VALIDATED,
+            ),
+        )
+        // Channel permutation requires labels.
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.ChannelOrderResult.Ordered(
+                listOf(1.0, 2.0, 3.0, 4.0),
+            ),
+            uniffi.neuralcompose_mobile_core.toCanonicalChannelOrder(
+                listOf(3.0, 1.0, 4.0, 2.0), listOf("AF8", "TP9", "TP10", "AF7"),
+            ),
+        )
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.ChannelOrderResult.Rejected(
+                uniffi.neuralcompose_mobile_core.ChannelPermutationError.LabelsMissing,
+            ),
+            uniffi.neuralcompose_mobile_core.toCanonicalChannelOrder(
+                listOf(3.0, 1.0, 4.0, 2.0), listOf(),
+            ),
+        )
+        // Idempotent indexing; different spaces never share an index.
+        val key = uniffi.neuralcompose_mobile_core.IndexEntryKey("11".repeat(32), "22".repeat(32))
+        assertEquals(1, uniffi.neuralcompose_mobile_core.dedupeIndexEntries(listOf(key, key)).size)
+        assertEquals(
+            false,
+            uniffi.neuralcompose_mobile_core.sharesIndex(
+                key, uniffi.neuralcompose_mobile_core.IndexEntryKey("11".repeat(32), "33".repeat(32)),
+            ),
+        )
+    }
+
     @Test
     fun configResolutionNeverSilentlyFallsBackToMock() {
         val c = resolveClientMode("false", "", "")

@@ -215,6 +215,135 @@ final class SmokeTests: XCTestCase {
         XCTAssertNil(inst.snapshot().activeIntegrityFailure)
     }
 
+
+    // MARK: - M7-A2 (ADR-002) runtime-target, property, and conformance law
+
+    private func m7a2Target(backend: String, accelerator: AcceleratorClass) -> RuntimeTarget {
+        RuntimeTarget(
+            os: "ios", architecture: "arm64", acceleratorClass: accelerator,
+            backendId: backend, runtimeAbi: "nc-gguf-v1", modelFormats: ["gguf"],
+            minimumOsVersion: nil, minimumBackendVersion: nil, minimumDriverVersion: nil,
+            capabilities: RuntimeCapabilities(
+                generation: true, embeddings: false, streaming: true,
+                cancellation: true, structuredOutput: false))
+    }
+
+    private func m7a2Variant(id: String, backend: String, accelerator: AcceleratorClass)
+        -> ModelVariant
+    {
+        ModelVariant(
+            schemaVersion: 1, logicalModelId: "qwen2.5-0.5b-instruct", variantId: id,
+            modelPackId: "local-dialogue-basic",
+            runtimeTarget: m7a2Target(backend: backend, accelerator: accelerator),
+            quantization: "q4_k_m", artifactFormat: "gguf",
+            numericalContractId: String(repeating: "c0", count: 32))
+    }
+
+    func testM7a2SelectionNeverFallsBackThroughBindings() throws {
+        let variants = [
+            m7a2Variant(id: "cpu", backend: "llama-cpp-cpu", accelerator: .cpu),
+            m7a2Variant(id: "coreml", backend: "coreml", accelerator: .npu),
+        ]
+        let device = DeviceRuntimeProfile(
+            os: "ios", architecture: "arm64",
+            installedBackendIds: ["llama-cpp-cpu"], supportedRuntimeAbis: ["nc-gguf-v1"])
+        let none = RequiredCapabilities(
+            generation: false, embeddings: false, streaming: false,
+            cancellation: false, structuredOutput: false)
+
+        // Explicitly required backend is absent → Unavailable, never CPU.
+        let denied = selectRuntimeVariant(
+            logicalModelId: "qwen2.5-0.5b-instruct", variants: variants, device: device,
+            requirement: .explicit(backendId: "coreml"), required: none)
+        XCTAssertEqual(
+            denied,
+            .unavailable(failure: .requestedBackendNotInstalled(backendId: "coreml")),
+            "an explicit backend request must never resolve to another backend")
+
+        // Polarity: with no explicit requirement, the installed backend is used.
+        let allowed = selectRuntimeVariant(
+            logicalModelId: "qwen2.5-0.5b-instruct", variants: variants, device: device,
+            requirement: .anySupported, required: none)
+        guard case let .selected(variant) = allowed else {
+            return XCTFail("expected a selection, got \(allowed)")
+        }
+        XCTAssertEqual(variant.runtimeTarget.backendId, "llama-cpp-cpu")
+
+        // A required capability no variant offers fails closed.
+        let needsStructured = RequiredCapabilities(
+            generation: false, embeddings: false, streaming: false,
+            cancellation: false, structuredOutput: true)
+        XCTAssertEqual(
+            selectRuntimeVariant(
+                logicalModelId: "qwen2.5-0.5b-instruct", variants: variants, device: device,
+                requirement: .anySupported, required: needsStructured),
+            .unavailable(failure: .requiredCapabilityUnavailable(capability: "structuredOutput")))
+
+        // The workload itself is a capability: these variants generate but do
+        // not embed, so an embedding request must not resolve to them.
+        let needsEmbeddings = RequiredCapabilities(
+            generation: false, embeddings: true, streaming: false,
+            cancellation: false, structuredOutput: false)
+        XCTAssertEqual(
+            selectRuntimeVariant(
+                logicalModelId: "qwen2.5-0.5b-instruct", variants: variants, device: device,
+                requirement: .anySupported, required: needsEmbeddings),
+            .unavailable(failure: .requiredCapabilityUnavailable(capability: "embeddings")))
+
+        // Two variants of ONE backend are never separated by a name sort.
+        var q8 = m7a2Variant(id: "cpu-q8", backend: "llama-cpp-cpu", accelerator: .cpu)
+        q8.quantization = "q8_0"
+        XCTAssertEqual(
+            selectRuntimeVariant(
+                logicalModelId: "qwen2.5-0.5b-instruct", variants: [variants[0], q8],
+                device: device, requirement: .anySupported, required: none),
+            .unavailable(failure: .ambiguousVariantsForBackend(backendId: "llama-cpp-cpu")))
+        // Naming the variant resolves it.
+        guard case let .selected(named) = selectRuntimeVariant(
+            logicalModelId: "qwen2.5-0.5b-instruct", variants: [variants[0], q8],
+            device: device, requirement: .explicitVariant(variantId: "cpu-q8"),
+            required: none)
+        else { return XCTFail("explicit variant must resolve") }
+        XCTAssertEqual(named.variantId, "cpu-q8")
+    }
+
+    func testM7a2SupportPromotionAndPropertyLawThroughBindings() throws {
+        // Compiling is not running; running a fixture is not device validation.
+        let built = SupportEvidence(
+            contractsAndTestsPass: true, buildsOnNamedTarget: true,
+            fixtureRuntimeExecuted: false, physicalDevice: nil, osVersion: nil,
+            backendVersion: nil, signedPackagingAccepted: false, acceptanceDocument: nil)
+        XCTAssertEqual(attainedSupportStatus(evidence: built), .buildValidated)
+        XCTAssertFalse(supportsClaim(evidence: built, claimed: .runtimeSmokeValidated))
+        var devicey = built
+        devicey.fixtureRuntimeExecuted = true
+        devicey.physicalDevice = "iPhone 17"
+        devicey.osVersion = "26.0"
+        devicey.backendVersion = "b4321"
+        XCTAssertEqual(attainedSupportStatus(evidence: devicey), .deviceValidated)
+        XCTAssertFalse(supportsClaim(evidence: devicey, claimed: .releaseSupported))
+
+        // Channels permute only with labels; bare values are refused.
+        let values = [1.0, 2.0, 3.0, 4.0]
+        XCTAssertEqual(
+            toCanonicalChannelOrder(
+                values: [3.0, 1.0, 4.0, 2.0], fromLabels: ["AF8", "TP9", "TP10", "AF7"]),
+            .ordered(values: values))
+        XCTAssertEqual(
+            toCanonicalChannelOrder(values: [3.0, 1.0, 4.0, 2.0], fromLabels: []),
+            .rejected(error: .labelsMissing))
+
+        // Indexing the same content in the same space is idempotent.
+        let key = IndexEntryKey(
+            contentSha256Hex: String(repeating: "11", count: 32),
+            embeddingSpaceIdentity: String(repeating: "22", count: 32))
+        XCTAssertEqual(dedupeIndexEntries(keys: [key, key, key]).count, 1)
+        let otherSpace = IndexEntryKey(
+            contentSha256Hex: key.contentSha256Hex,
+            embeddingSpaceIdentity: String(repeating: "33", count: 32))
+        XCTAssertFalse(sharesIndex(a: key, b: otherSpace))
+    }
+
     func testConfigResolutionNoSilentMockFallback() throws {
         let c = resolveClientMode(useMockRaw: "false", serverRaw: "", wsRaw: "")
         XCTAssertEqual(c.mode, .live)

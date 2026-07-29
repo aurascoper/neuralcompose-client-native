@@ -27,3 +27,36 @@ jobs:
         run: cargo test --features uniffi
       - name: Fixture drift check
         run: ./scripts/check-fixtures.sh
+      - name: Generated-binding drift
+        run: ./scripts/check-binding-drift.sh
+      - name: Secret / private-endpoint scan
+        run: ./scripts/check-no-secrets.sh
+      - name: Whitespace and conflict markers
+        run: git diff --check HEAD
+
+  # Tier 1 skeleton (ADR-002): build authorities are required; preview
+  # runners are canaries — visible and investigated, never the sole merge
+  # authority until runner stability is acceptable. No model weights, no
+  # provider secrets, and no hardware claims are produced here.
+  build-matrix:
+    name: build (${{ matrix.label }})
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.canary }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: ubuntu-24.04-x86_64, runner: ubuntu-24.04, canary: false }
+          - { label: windows-2025-x86_64, runner: windows-2025, canary: false }
+          - { label: macos-26-arm64, runner: macos-latest, canary: false }
+          - { label: ubuntu-26.04-preview, runner: ubuntu-latest, canary: true }
+          - { label: windows-arm64-preview, runner: windows-11-arm, canary: true }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
+      - name: Build core
+        run: cargo build -p neuralcompose-mobile-core --all-features
+      - name: Contract tests
+        run: cargo test -p neuralcompose-mobile-core

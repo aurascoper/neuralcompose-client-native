@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RuntimeTarget",
+  "type": "object",
+  "required": ["os", "architecture", "acceleratorClass", "backendId", "runtimeAbi", "modelFormats", "capabilities"],
+  "properties": {
+    "os": { "type": "string", "minLength": 1 },
+    "architecture": { "type": "string", "minLength": 1 },
+    "acceleratorClass": { "enum": ["cpu", "gpu", "npu"] },
+    "backendId": { "type": "string", "minLength": 1 },
+    "runtimeAbi": { "type": "string", "minLength": 1 },
+    "modelFormats": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "minimumOsVersion": { "type": ["string", "null"] },
+    "minimumBackendVersion": { "type": ["string", "null"] },
+    "minimumDriverVersion": { "type": ["string", "null"] },
+    "capabilities": {
+      "type": "object",
+      "required": ["generation", "embeddings", "streaming", "cancellation", "structuredOutput"],
+      "properties": {
+        "generation": { "type": "boolean" },
+        "embeddings": { "type": "boolean" },
+        "streaming": { "type": "boolean" },
+        "cancellation": { "type": "boolean" },
+        "structuredOutput": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

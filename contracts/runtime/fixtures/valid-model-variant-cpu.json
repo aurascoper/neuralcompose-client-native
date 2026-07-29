@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "logicalModelId": "qwen2.5-0.5b-instruct",
+  "variantId": "gguf-q4-cpu-linux-x86_64",
+  "modelPackId": "local-dialogue-basic",
+  "runtimeTarget": {
+    "os": "linux",
+    "architecture": "x86_64",
+    "acceleratorClass": "cpu",
+    "backendId": "llama-cpp-cpu",
+    "runtimeAbi": "nc-gguf-v1",
+    "modelFormats": [
+      "gguf"
+    ],
+    "minimumOsVersion": null,
+    "minimumBackendVersion": null,
+    "minimumDriverVersion": null,
+    "capabilities": {
+      "generation": true,
+      "embeddings": false,
+      "streaming": true,
+      "cancellation": true,
+      "structuredOutput": false
+    }
+  },
+  "quantization": "q4_k_m",
+  "artifactFormat": "gguf",
+  "numericalContractId": "f110b50ec024137dee8a63c550bea95a8b3a41aaaa8d19bc9457bd9aa8f276d3"
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "runtimePackId": "runtime-llama-cpp-vulkan-windows-x86_64",
+  "version": "1.0.0",
+  "target": {
+    "os": "windows",
+    "architecture": "x86_64",
+    "acceleratorClass": "gpu",
+    "backendId": "llama-cpp-vulkan",
+    "runtimeAbi": "nc-gguf-v1",
+    "modelFormats": ["gguf"],
+    "minimumOsVersion": "10.0.22621",
+    "minimumBackendVersion": "b4321",
+    "minimumDriverVersion": null,
+    "capabilities": {
+      "generation": true,
+      "embeddings": false,
+      "streaming": true,
+      "cancellation": true,
+      "structuredOutput": false
+    }
+  },
+  "libraries": [
+    {
+      "libraryId": "core",
+      "relativePath": "lib/llama.dll",
+      "byteSize": 4194304,
+      "sha256Hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "libraryId": "backend",
+      "relativePath": "lib/ggml-vulkan.dll",
+      "byteSize": 1048576,
+      "sha256Hex": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "licenses": ["MIT", "Apache-2.0"],
+  "entrypoints": [
+    { "entrypointId": "generate", "libraryId": "core", "symbol": "nc_generate" }
+  ],
+  "runtimeAbi": "nc-gguf-v1",
+  "signingIdentity": "NeuralCompose Runtime Signing"
+}
