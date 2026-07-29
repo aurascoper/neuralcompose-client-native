@@ -1,0 +1,7 @@
+{
+  "providerId": "neuralcompose-openai",
+  "transport": "brokeredCloud",
+  "locality": "cloud",
+  "credentialRequirement": "required",
+  "capabilities": { "generation": true, "embeddings": true, "streaming": true, "cancellation": true }
+}

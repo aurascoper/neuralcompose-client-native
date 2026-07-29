@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "InstalledModelPack",
+  "type": "object",
+  "required": ["packId", "packVersion", "installedAtMs", "artifactDigests", "runtimeAbi", "verificationPolicyVersion"],
+  "properties": {
+    "packId": { "type": "string" },
+    "packVersion": { "type": "string" },
+    "installedAtMs": { "type": "integer", "minimum": 0 },
+    "artifactDigests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["artifactId", "relativePath", "byteSize", "sha256Hex"],
+        "properties": {
+          "artifactId": { "type": "string" }, "relativePath": { "type": "string" },
+          "byteSize": { "type": "integer" }, "sha256Hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "runtimeAbi": { "type": "string" },
+    "verificationPolicyVersion": { "type": "integer", "minimum": 1 }
+  },
+  "additionalProperties": false
+}

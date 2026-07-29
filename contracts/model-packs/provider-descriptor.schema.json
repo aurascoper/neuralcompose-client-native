@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProviderDescriptor",
+  "type": "object",
+  "required": ["providerId", "transport", "locality", "credentialRequirement", "capabilities"],
+  "properties": {
+    "providerId": { "type": "string", "minLength": 1 },
+    "transport": { "enum": ["onDeviceModelPack", "systemModel", "httpEndpoint", "brokeredCloud"] },
+    "locality": { "enum": ["onDevice", "localNetwork", "remoteEndpoint", "cloud", "unresolved"] },
+    "credentialRequirement": { "enum": ["notRequired", "required"] },
+    "capabilities": {
+      "type": "object",
+      "required": ["generation", "embeddings", "streaming", "cancellation"],
+      "properties": {
+        "generation": { "type": "boolean" }, "embeddings": { "type": "boolean" },
+        "streaming": { "type": "boolean" }, "cancellation": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

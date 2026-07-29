@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "packId": "local-dialogue-basic",
+  "packVersion": "1.0.0",
+  "kind": "generation",
+  "modelFamily": "qwen2.5",
+  "modelRevision": "0.5b-instruct",
+  "quantization": "q4_k_m",
+  "artifactFormat": "gguf",
+  "licenseId": "Apache-2.0",
+  "sourceRepository": "example/qwen2.5-0.5b",
+  "runtimeAbi": "nc-gguf-v1",
+  "minimumCoreVersion": "0.1.0",
+  "artifacts": [
+    { "artifactId": "weights", "kind": "weights", "relativePath": "model.gguf", "byteSize": 245366784, "sha256Hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+    { "artifactId": "tokenizer", "kind": "tokenizer", "relativePath": "tokenizer.json", "byteSize": 7031357, "sha256Hex": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }
+  ],
+  "requirements": { "minimumRamMb": 3072, "deviceClass": "modern-phone" },
+  "generation": { "tokenizerId": "tokenizer", "contextCap": 4096, "promptTemplateId": "chatml", "compatiblePromptProfiles": ["focused", "reflective"] },
+  "embedding": null
+}
