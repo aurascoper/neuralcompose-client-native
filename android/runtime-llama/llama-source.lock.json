@@ -1,0 +1,31 @@
+{
+  "comment": "Pinned llama.cpp source for the M7-B Android CPU runtime. The source is FETCHED and BUILT by build-llama-android.sh, never vendored as an opaque blob and never committed as a prebuilt .so. Changing any value here changes the runtime identity the app reports.",
+  "repository": "ggml-org/llama.cpp",
+  "commit": "f5b9bd39b56c7a7839a9795a100b6a00b84ac961",
+  "sourceArchiveSha256": "723852db4941418c4f8d9a6d39e86ad6116922476ec1b6f3b17bf1723e53daa1",
+  "sourceArchiveNote": "sha256 of `git archive --format=tar <commit>` — verified after fetch, before any build",
+  "androidAbi": "arm64-v8a",
+  "androidPlatform": "android-26",
+  "ndkVersion": "28.2.13676358",
+  "cmakeVersion": "4.3.4",
+  "buildOptions": {
+    "server": false,
+    "examples": false,
+    "tests": false,
+    "tools": false,
+    "curl": false,
+    "openmp": false,
+    "vulkan": false,
+    "opencl": false,
+    "buildType": "Release",
+    "sharedLibs": false
+  },
+  "nonScope": [
+    "Vulkan / NNAPI / QNN or any accelerator backend",
+    "x86 or x86_64 Android",
+    "iOS, Windows, Linux",
+    "runtime-pack downloading",
+    "multiple simultaneous models",
+    "model families beyond the two pinned M7-B Qwen candidates"
+  ]
+}
