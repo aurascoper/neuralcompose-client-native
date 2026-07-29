@@ -703,6 +703,28 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_variant_binds_to_contract(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_admit_result(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_battery_delta_is_energy_evidence(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_candidate_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_evaluation_protocol_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_meets_thresholds(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_quality_score(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_rendered_prompt_hash(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_semantic_prompt_hash(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_evaluation_protocol(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_run_environment(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_embedding_space_identity(
@@ -997,6 +1019,28 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_variant_binds_to_contract(`variant`: RustBuffer.ByValue,`policy`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_func_admit_result(`result`: RustBuffer.ByValue,`candidate`: RustBuffer.ByValue,`protocol`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_battery_delta_is_energy_evidence(`env`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_func_candidate_identity(`candidate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_evaluate_promotion(`protocol`: RustBuffer.ByValue,`candidateA`: RustBuffer.ByValue,`resultA`: RustBuffer.ByValue,`candidateB`: RustBuffer.ByValue,`resultB`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_evaluation_protocol_identity(`protocol`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_meets_thresholds(`cost`: RustBuffer.ByValue,`t`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_quality_score(`panel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_rendered_prompt_hash(`rendered`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_semantic_prompt_hash(`promptProfile`: RustBuffer.ByValue,`message`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_validate_evaluation_protocol(`protocol`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_validate_run_environment(`env`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_catalog_entry_digest(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_embedding_space_identity(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1213,6 +1257,39 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_variant_binds_to_contract() != 55408) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_admit_result() != 42920) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_battery_delta_is_energy_evidence() != 32916) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_candidate_identity() != 36234) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion() != 42781) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_evaluation_protocol_identity() != 15982) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_meets_thresholds() != 62939) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_quality_score() != 35980) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_rendered_prompt_hash() != 63373) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_semantic_prompt_hash() != 50945) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_evaluation_protocol() != 17041) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_run_environment() != 53649) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest() != 27683) {
@@ -3966,6 +4043,169 @@ public object FfiConverterTypeBackendObservation: FfiConverterRustBuffer<Backend
 
 
 /**
+ * A benchmark prompt carries TWO identities. The semantic input must be
+ * identical across models; the rendered bytes may legitimately differ
+ * because official chat templates differ — and that difference has to be
+ * visible in provenance rather than silently averaged away.
+ */
+data class BenchmarkPrompt (
+    var `promptId`: kotlin.String
+    , 
+    var `promptProfile`: kotlin.String
+    , 
+    /**
+     * Hash of the semantic message — same for every candidate.
+     */
+    var `semanticPromptHash`: kotlin.String
+    , 
+    /**
+     * Hash of the exact bytes this candidate's template rendered.
+     */
+    var `renderedPromptHash`: kotlin.String
+    , 
+    /**
+     * Token ids the runtime actually fed the model, hashed.
+     */
+    var `inputTokenIdsHash`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer<BenchmarkPrompt> {
+    override fun read(buf: ByteBuffer): BenchmarkPrompt {
+        return BenchmarkPrompt(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: BenchmarkPrompt) = (
+            FfiConverterString.allocationSize(value.`promptId`) +
+            FfiConverterString.allocationSize(value.`promptProfile`) +
+            FfiConverterString.allocationSize(value.`semanticPromptHash`) +
+            FfiConverterString.allocationSize(value.`renderedPromptHash`) +
+            FfiConverterString.allocationSize(value.`inputTokenIdsHash`)
+    )
+
+    override fun write(value: BenchmarkPrompt, buf: ByteBuffer) {
+            FfiConverterString.write(value.`promptId`, buf)
+            FfiConverterString.write(value.`promptProfile`, buf)
+            FfiConverterString.write(value.`semanticPromptHash`, buf)
+            FfiConverterString.write(value.`renderedPromptHash`, buf)
+            FfiConverterString.write(value.`inputTokenIdsHash`, buf)
+    }
+}
+
+
+
+/**
+ * One candidate's complete result under one frozen protocol.
+ */
+data class CandidateResult (
+    var `candidateId`: kotlin.String
+    , 
+    var `candidateIdentity`: kotlin.String
+    , 
+    var `protocolIdentity`: kotlin.String
+    , 
+    var `device`: kotlin.String
+    , 
+    var `osVersion`: kotlin.String
+    , 
+    var `runtimeIdentity`: kotlin.String
+    , 
+    /**
+     * Every prompt actually run, with both prompt identities.
+     */
+    var `prompts`: List<BenchmarkPrompt>
+    , 
+    var `cost`: CostObservation
+    , 
+    var `quality`: QualityPanel
+    , 
+    /**
+     * v2: why this run is or is not a usable measurement.
+     */
+    var `disposition`: RunDisposition
+    , 
+    /**
+     * v3: one entry per planned run, as observed.
+     */
+    var `observations`: List<RunObservation>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCandidateResult: FfiConverterRustBuffer<CandidateResult> {
+    override fun read(buf: ByteBuffer): CandidateResult {
+        return CandidateResult(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeBenchmarkPrompt.read(buf),
+            FfiConverterTypeCostObservation.read(buf),
+            FfiConverterTypeQualityPanel.read(buf),
+            FfiConverterTypeRunDisposition.read(buf),
+            FfiConverterSequenceTypeRunObservation.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CandidateResult) = (
+            FfiConverterString.allocationSize(value.`candidateId`) +
+            FfiConverterString.allocationSize(value.`candidateIdentity`) +
+            FfiConverterString.allocationSize(value.`protocolIdentity`) +
+            FfiConverterString.allocationSize(value.`device`) +
+            FfiConverterString.allocationSize(value.`osVersion`) +
+            FfiConverterString.allocationSize(value.`runtimeIdentity`) +
+            FfiConverterSequenceTypeBenchmarkPrompt.allocationSize(value.`prompts`) +
+            FfiConverterTypeCostObservation.allocationSize(value.`cost`) +
+            FfiConverterTypeQualityPanel.allocationSize(value.`quality`) +
+            FfiConverterTypeRunDisposition.allocationSize(value.`disposition`) +
+            FfiConverterSequenceTypeRunObservation.allocationSize(value.`observations`)
+    )
+
+    override fun write(value: CandidateResult, buf: ByteBuffer) {
+            FfiConverterString.write(value.`candidateId`, buf)
+            FfiConverterString.write(value.`candidateIdentity`, buf)
+            FfiConverterString.write(value.`protocolIdentity`, buf)
+            FfiConverterString.write(value.`device`, buf)
+            FfiConverterString.write(value.`osVersion`, buf)
+            FfiConverterString.write(value.`runtimeIdentity`, buf)
+            FfiConverterSequenceTypeBenchmarkPrompt.write(value.`prompts`, buf)
+            FfiConverterTypeCostObservation.write(value.`cost`, buf)
+            FfiConverterTypeQualityPanel.write(value.`quality`, buf)
+            FfiConverterTypeRunDisposition.write(value.`disposition`, buf)
+            FfiConverterSequenceTypeRunObservation.write(value.`observations`, buf)
+    }
+}
+
+
+
+/**
  * Build identity the shell supplies once per recording.
  */
 data class CaptureBuildIdentity (
@@ -4266,6 +4506,228 @@ public object FfiConverterTypeChannelSnapshot: FfiConverterRustBuffer<ChannelSna
 
 
 
+/**
+ * The reproducible conversion record. Every field is required for a
+ * `DerivedByConversion` artifact — an unreproducible artifact is not
+ * evidence.
+ */
+data class ConversionRecord (
+    /**
+     * Exact upstream source revision the weights came from.
+     */
+    var `sourceRepo`: kotlin.String
+    , 
+    var `sourceRevision`: kotlin.String
+    , 
+    /**
+     * One pinned llama.cpp commit does both conversion and quantization.
+     */
+    var `conversionCommit`: kotlin.String
+    , 
+    var `quantizerCommit`: kotlin.String
+    , 
+    var `conversionCommand`: kotlin.String
+    , 
+    var `quantizeCommand`: kotlin.String
+    , 
+    /**
+     * The unquantized GGUF produced before quantization — hashed so the
+     * chain is auditable end to end, not just at its final link.
+     */
+    var `intermediateSha256Hex`: kotlin.String
+    , 
+    var `outputSha256Hex`: kotlin.String
+    , 
+    var `quantization`: kotlin.String
+    , 
+    /**
+     * `None` means no importance matrix was used. Never invent a calibration
+     * corpus to fill this field.
+     */
+    var `importanceMatrix`: kotlin.String?
+    , 
+    var `calibrationDataset`: kotlin.String?
+    , 
+    /**
+     * Requantizing an already-quantized file degrades quality; the pipeline
+     * must refuse it.
+     */
+    var `allowRequantize`: kotlin.Boolean
+    , 
+    var `pureQuantization`: kotlin.Boolean
+    , 
+    var `sourcePrecision`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConversionRecord: FfiConverterRustBuffer<ConversionRecord> {
+    override fun read(buf: ByteBuffer): ConversionRecord {
+        return ConversionRecord(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ConversionRecord) = (
+            FfiConverterString.allocationSize(value.`sourceRepo`) +
+            FfiConverterString.allocationSize(value.`sourceRevision`) +
+            FfiConverterString.allocationSize(value.`conversionCommit`) +
+            FfiConverterString.allocationSize(value.`quantizerCommit`) +
+            FfiConverterString.allocationSize(value.`conversionCommand`) +
+            FfiConverterString.allocationSize(value.`quantizeCommand`) +
+            FfiConverterString.allocationSize(value.`intermediateSha256Hex`) +
+            FfiConverterString.allocationSize(value.`outputSha256Hex`) +
+            FfiConverterString.allocationSize(value.`quantization`) +
+            FfiConverterOptionalString.allocationSize(value.`importanceMatrix`) +
+            FfiConverterOptionalString.allocationSize(value.`calibrationDataset`) +
+            FfiConverterBoolean.allocationSize(value.`allowRequantize`) +
+            FfiConverterBoolean.allocationSize(value.`pureQuantization`) +
+            FfiConverterString.allocationSize(value.`sourcePrecision`)
+    )
+
+    override fun write(value: ConversionRecord, buf: ByteBuffer) {
+            FfiConverterString.write(value.`sourceRepo`, buf)
+            FfiConverterString.write(value.`sourceRevision`, buf)
+            FfiConverterString.write(value.`conversionCommit`, buf)
+            FfiConverterString.write(value.`quantizerCommit`, buf)
+            FfiConverterString.write(value.`conversionCommand`, buf)
+            FfiConverterString.write(value.`quantizeCommand`, buf)
+            FfiConverterString.write(value.`intermediateSha256Hex`, buf)
+            FfiConverterString.write(value.`outputSha256Hex`, buf)
+            FfiConverterString.write(value.`quantization`, buf)
+            FfiConverterOptionalString.write(value.`importanceMatrix`, buf)
+            FfiConverterOptionalString.write(value.`calibrationDataset`, buf)
+            FfiConverterBoolean.write(value.`allowRequantize`, buf)
+            FfiConverterBoolean.write(value.`pureQuantization`, buf)
+            FfiConverterString.write(value.`sourcePrecision`, buf)
+    }
+}
+
+
+
+/**
+ * Measurements only the device can make. Rust receives these; it never
+ * reads a battery or a thermal sensor itself.
+ */
+data class CostObservation (
+    var `coldLoadMs`: kotlin.ULong
+    , 
+    var `warmLoadMs`: kotlin.ULong
+    , 
+    var `timeToFirstTokenMs`: kotlin.ULong
+    , 
+    var `promptTokensPerSecond`: kotlin.Double
+    , 
+    var `generationTokensPerSecond`: kotlin.Double
+    , 
+    var `peakRssMb`: kotlin.ULong
+    , 
+    var `modelMemoryMb`: kotlin.ULong
+    , 
+    var `cancellationLatencyMs`: kotlin.ULong
+    , 
+    var `installedBytes`: kotlin.ULong
+    , 
+    var `batteryDropTenthsPercent`: kotlin.UInt
+    , 
+    var `peakTemperatureCelsiusTenths`: kotlin.UInt
+    , 
+    /**
+     * True when the device throttled during the run — such a run is not a
+     * representative measurement and cannot promote anything.
+     */
+    var `thermallyThrottled`: kotlin.Boolean
+    , 
+    var `backgroundForegroundRecovered`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCostObservation: FfiConverterRustBuffer<CostObservation> {
+    override fun read(buf: ByteBuffer): CostObservation {
+        return CostObservation(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CostObservation) = (
+            FfiConverterULong.allocationSize(value.`coldLoadMs`) +
+            FfiConverterULong.allocationSize(value.`warmLoadMs`) +
+            FfiConverterULong.allocationSize(value.`timeToFirstTokenMs`) +
+            FfiConverterDouble.allocationSize(value.`promptTokensPerSecond`) +
+            FfiConverterDouble.allocationSize(value.`generationTokensPerSecond`) +
+            FfiConverterULong.allocationSize(value.`peakRssMb`) +
+            FfiConverterULong.allocationSize(value.`modelMemoryMb`) +
+            FfiConverterULong.allocationSize(value.`cancellationLatencyMs`) +
+            FfiConverterULong.allocationSize(value.`installedBytes`) +
+            FfiConverterUInt.allocationSize(value.`batteryDropTenthsPercent`) +
+            FfiConverterUInt.allocationSize(value.`peakTemperatureCelsiusTenths`) +
+            FfiConverterBoolean.allocationSize(value.`thermallyThrottled`) +
+            FfiConverterBoolean.allocationSize(value.`backgroundForegroundRecovered`)
+    )
+
+    override fun write(value: CostObservation, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`coldLoadMs`, buf)
+            FfiConverterULong.write(value.`warmLoadMs`, buf)
+            FfiConverterULong.write(value.`timeToFirstTokenMs`, buf)
+            FfiConverterDouble.write(value.`promptTokensPerSecond`, buf)
+            FfiConverterDouble.write(value.`generationTokensPerSecond`, buf)
+            FfiConverterULong.write(value.`peakRssMb`, buf)
+            FfiConverterULong.write(value.`modelMemoryMb`, buf)
+            FfiConverterULong.write(value.`cancellationLatencyMs`, buf)
+            FfiConverterULong.write(value.`installedBytes`, buf)
+            FfiConverterUInt.write(value.`batteryDropTenthsPercent`, buf)
+            FfiConverterUInt.write(value.`peakTemperatureCelsiusTenths`, buf)
+            FfiConverterBoolean.write(value.`thermallyThrottled`, buf)
+            FfiConverterBoolean.write(value.`backgroundForegroundRecovered`, buf)
+    }
+}
+
+
+
 data class DeviceRequirements (
     var `minimumRamMb`: kotlin.UInt
     , 
@@ -4411,6 +4873,229 @@ public object FfiConverterTypeEmbeddingContract: FfiConverterRustBuffer<Embeddin
 
 
 
+data class EvaluationCandidate (
+    var `candidateId`: kotlin.String
+    , 
+    var `modelFamily`: kotlin.String
+    , 
+    var `modelRevision`: kotlin.String
+    , 
+    var `quantization`: kotlin.String
+    , 
+    var `variantId`: kotlin.String
+    , 
+    var `role`: CandidateRole
+    , 
+    var `provenance`: ArtifactProvenance
+    , 
+    var `artifactSha256Hex`: kotlin.String
+    , 
+    var `tokenizerIdentity`: kotlin.String
+    , 
+    var `chatTemplateIdentity`: kotlin.String
+    , 
+    /**
+     * Qwen3 defaults to thinking mode; a non-thinking comparison must prove
+     * it is off rather than trust a runtime flag.
+     */
+    var `thinkingModeDisabled`: kotlin.Boolean
+    , 
+    /**
+     * Present exactly when `provenance` is `DerivedByConversion`.
+     */
+    var `conversion`: ConversionRecord?
+    , 
+    /**
+     * v3: declared in advance, so a harness cannot render something else
+     * and still be admitted.
+     */
+    var `promptBindings`: List<PromptBinding>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEvaluationCandidate: FfiConverterRustBuffer<EvaluationCandidate> {
+    override fun read(buf: ByteBuffer): EvaluationCandidate {
+        return EvaluationCandidate(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeCandidateRole.read(buf),
+            FfiConverterTypeArtifactProvenance.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalTypeConversionRecord.read(buf),
+            FfiConverterSequenceTypePromptBinding.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EvaluationCandidate) = (
+            FfiConverterString.allocationSize(value.`candidateId`) +
+            FfiConverterString.allocationSize(value.`modelFamily`) +
+            FfiConverterString.allocationSize(value.`modelRevision`) +
+            FfiConverterString.allocationSize(value.`quantization`) +
+            FfiConverterString.allocationSize(value.`variantId`) +
+            FfiConverterTypeCandidateRole.allocationSize(value.`role`) +
+            FfiConverterTypeArtifactProvenance.allocationSize(value.`provenance`) +
+            FfiConverterString.allocationSize(value.`artifactSha256Hex`) +
+            FfiConverterString.allocationSize(value.`tokenizerIdentity`) +
+            FfiConverterString.allocationSize(value.`chatTemplateIdentity`) +
+            FfiConverterBoolean.allocationSize(value.`thinkingModeDisabled`) +
+            FfiConverterOptionalTypeConversionRecord.allocationSize(value.`conversion`) +
+            FfiConverterSequenceTypePromptBinding.allocationSize(value.`promptBindings`)
+    )
+
+    override fun write(value: EvaluationCandidate, buf: ByteBuffer) {
+            FfiConverterString.write(value.`candidateId`, buf)
+            FfiConverterString.write(value.`modelFamily`, buf)
+            FfiConverterString.write(value.`modelRevision`, buf)
+            FfiConverterString.write(value.`quantization`, buf)
+            FfiConverterString.write(value.`variantId`, buf)
+            FfiConverterTypeCandidateRole.write(value.`role`, buf)
+            FfiConverterTypeArtifactProvenance.write(value.`provenance`, buf)
+            FfiConverterString.write(value.`artifactSha256Hex`, buf)
+            FfiConverterString.write(value.`tokenizerIdentity`, buf)
+            FfiConverterString.write(value.`chatTemplateIdentity`, buf)
+            FfiConverterBoolean.write(value.`thinkingModeDisabled`, buf)
+            FfiConverterOptionalTypeConversionRecord.write(value.`conversion`, buf)
+            FfiConverterSequenceTypePromptBinding.write(value.`promptBindings`, buf)
+    }
+}
+
+
+
+data class EvaluationProtocol (
+    var `protocolVersion`: kotlin.UInt
+    , 
+    var `corpusId`: kotlin.String
+    , 
+    /**
+     * Digest of the committed sanitized corpus file.
+     */
+    var `corpusSha256Hex`: kotlin.String
+    , 
+    var `promptCount`: kotlin.UInt
+    , 
+    var `qualityRubricId`: kotlin.String
+    , 
+    var `sampler`: SamplerConfig
+    , 
+    /**
+     * Frozen seeds; multiple, so one lucky sample cannot decide anything.
+     */
+    var `seeds`: List<kotlin.ULong>
+    , 
+    var `warmupRuns`: kotlin.UInt
+    , 
+    var `timedRuns`: kotlin.UInt
+    , 
+    var `sustainedSeconds`: kotlin.UInt
+    , 
+    var `perRunTimeoutMs`: kotlin.ULong
+    , 
+    var `thresholds`: PromotionThresholds
+    , 
+    /**
+     * v2: the conditions a measurement is taken under. Absent in v1, which
+     * is why v1 could not support an honest battery or cold-load claim.
+     */
+    var `environment`: RunEnvironment
+    , 
+    /**
+     * v3: the frozen semantic corpus every candidate shares.
+     */
+    var `expectedPrompts`: List<ExpectedPrompt>
+    , 
+    /**
+     * v3: the exact run schedule, not merely the alternating property.
+     */
+    var `runPlan`: List<RunPlanEntry>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEvaluationProtocol: FfiConverterRustBuffer<EvaluationProtocol> {
+    override fun read(buf: ByteBuffer): EvaluationProtocol {
+        return EvaluationProtocol(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeSamplerConfig.read(buf),
+            FfiConverterSequenceULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypePromotionThresholds.read(buf),
+            FfiConverterTypeRunEnvironment.read(buf),
+            FfiConverterSequenceTypeExpectedPrompt.read(buf),
+            FfiConverterSequenceTypeRunPlanEntry.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EvaluationProtocol) = (
+            FfiConverterUInt.allocationSize(value.`protocolVersion`) +
+            FfiConverterString.allocationSize(value.`corpusId`) +
+            FfiConverterString.allocationSize(value.`corpusSha256Hex`) +
+            FfiConverterUInt.allocationSize(value.`promptCount`) +
+            FfiConverterString.allocationSize(value.`qualityRubricId`) +
+            FfiConverterTypeSamplerConfig.allocationSize(value.`sampler`) +
+            FfiConverterSequenceULong.allocationSize(value.`seeds`) +
+            FfiConverterUInt.allocationSize(value.`warmupRuns`) +
+            FfiConverterUInt.allocationSize(value.`timedRuns`) +
+            FfiConverterUInt.allocationSize(value.`sustainedSeconds`) +
+            FfiConverterULong.allocationSize(value.`perRunTimeoutMs`) +
+            FfiConverterTypePromotionThresholds.allocationSize(value.`thresholds`) +
+            FfiConverterTypeRunEnvironment.allocationSize(value.`environment`) +
+            FfiConverterSequenceTypeExpectedPrompt.allocationSize(value.`expectedPrompts`) +
+            FfiConverterSequenceTypeRunPlanEntry.allocationSize(value.`runPlan`)
+    )
+
+    override fun write(value: EvaluationProtocol, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`protocolVersion`, buf)
+            FfiConverterString.write(value.`corpusId`, buf)
+            FfiConverterString.write(value.`corpusSha256Hex`, buf)
+            FfiConverterUInt.write(value.`promptCount`, buf)
+            FfiConverterString.write(value.`qualityRubricId`, buf)
+            FfiConverterTypeSamplerConfig.write(value.`sampler`, buf)
+            FfiConverterSequenceULong.write(value.`seeds`, buf)
+            FfiConverterUInt.write(value.`warmupRuns`, buf)
+            FfiConverterUInt.write(value.`timedRuns`, buf)
+            FfiConverterUInt.write(value.`sustainedSeconds`, buf)
+            FfiConverterULong.write(value.`perRunTimeoutMs`, buf)
+            FfiConverterTypePromotionThresholds.write(value.`thresholds`, buf)
+            FfiConverterTypeRunEnvironment.write(value.`environment`, buf)
+            FfiConverterSequenceTypeExpectedPrompt.write(value.`expectedPrompts`, buf)
+            FfiConverterSequenceTypeRunPlanEntry.write(value.`runPlan`, buf)
+    }
+}
+
+
+
 /**
  * A detected span: *where* it is, plus *what* it is and under which frozen
  * detector parameters. Shifting must move the range and nothing else.
@@ -4453,6 +5138,47 @@ public object FfiConverterTypeEventSpan: FfiConverterRustBuffer<EventSpan> {
             FfiConverterString.write(value.`eventKind`, buf)
             FfiConverterTypeSampleWindow.write(value.`window`, buf)
             FfiConverterString.write(value.`detectorParametersDigest`, buf)
+    }
+}
+
+
+
+/**
+ * A frozen corpus entry: the semantic input every candidate shares.
+ */
+data class ExpectedPrompt (
+    var `promptId`: kotlin.String
+    , 
+    var `semanticPromptHash`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeExpectedPrompt: FfiConverterRustBuffer<ExpectedPrompt> {
+    override fun read(buf: ByteBuffer): ExpectedPrompt {
+        return ExpectedPrompt(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ExpectedPrompt) = (
+            FfiConverterString.allocationSize(value.`promptId`) +
+            FfiConverterString.allocationSize(value.`semanticPromptHash`)
+    )
+
+    override fun write(value: ExpectedPrompt, buf: ByteBuffer) {
+            FfiConverterString.write(value.`promptId`, buf)
+            FfiConverterString.write(value.`semanticPromptHash`, buf)
     }
 }
 
@@ -5170,6 +5896,144 @@ public object FfiConverterTypePresentation: FfiConverterRustBuffer<Presentation>
 
 
 
+/**
+ * The ceilings a candidate must meet to be promotable. Frozen before any
+ * candidate runs.
+ */
+data class PromotionThresholds (
+    var `maxColdLoadMs`: kotlin.ULong
+    , 
+    var `maxTimeToFirstTokenMs`: kotlin.ULong
+    , 
+    var `minGenerationTokensPerSecond`: kotlin.Double
+    , 
+    var `maxPeakRssMb`: kotlin.ULong
+    , 
+    var `maxInstalledBytes`: kotlin.ULong
+    , 
+    var `maxCancellationLatencyMs`: kotlin.ULong
+    , 
+    /**
+     * v3: battery only gates promotion when the run was actually on
+     * battery. Plugged in, the figure is telemetry and cannot pass or fail
+     * a candidate.
+     */
+    var `batteryPolicy`: BatteryEvidencePolicy
+    , 
+    /**
+     * Abort rather than record a thermally-throttled number as if it were
+     * representative.
+     */
+    var `thermalCutoffCelsiusTenths`: kotlin.UInt
+    , 
+    /**
+     * A candidate must beat the other's quality panel by at least this
+     * margin to justify being larger.
+     */
+    var `materialQualityMargin`: kotlin.Double
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePromotionThresholds: FfiConverterRustBuffer<PromotionThresholds> {
+    override fun read(buf: ByteBuffer): PromotionThresholds {
+        return PromotionThresholds(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypeBatteryEvidencePolicy.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: PromotionThresholds) = (
+            FfiConverterULong.allocationSize(value.`maxColdLoadMs`) +
+            FfiConverterULong.allocationSize(value.`maxTimeToFirstTokenMs`) +
+            FfiConverterDouble.allocationSize(value.`minGenerationTokensPerSecond`) +
+            FfiConverterULong.allocationSize(value.`maxPeakRssMb`) +
+            FfiConverterULong.allocationSize(value.`maxInstalledBytes`) +
+            FfiConverterULong.allocationSize(value.`maxCancellationLatencyMs`) +
+            FfiConverterTypeBatteryEvidencePolicy.allocationSize(value.`batteryPolicy`) +
+            FfiConverterUInt.allocationSize(value.`thermalCutoffCelsiusTenths`) +
+            FfiConverterDouble.allocationSize(value.`materialQualityMargin`)
+    )
+
+    override fun write(value: PromotionThresholds, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`maxColdLoadMs`, buf)
+            FfiConverterULong.write(value.`maxTimeToFirstTokenMs`, buf)
+            FfiConverterDouble.write(value.`minGenerationTokensPerSecond`, buf)
+            FfiConverterULong.write(value.`maxPeakRssMb`, buf)
+            FfiConverterULong.write(value.`maxInstalledBytes`, buf)
+            FfiConverterULong.write(value.`maxCancellationLatencyMs`, buf)
+            FfiConverterTypeBatteryEvidencePolicy.write(value.`batteryPolicy`, buf)
+            FfiConverterUInt.write(value.`thermalCutoffCelsiusTenths`, buf)
+            FfiConverterDouble.write(value.`materialQualityMargin`, buf)
+    }
+}
+
+
+
+/**
+ * The candidate-specific rendering of one frozen prompt. Rendered bytes and
+ * token ids legitimately differ per template — but they are declared in
+ * advance, so the harness cannot silently render something else.
+ */
+data class PromptBinding (
+    var `promptId`: kotlin.String
+    , 
+    var `renderedPromptHash`: kotlin.String
+    , 
+    var `inputTokenIdsHash`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePromptBinding: FfiConverterRustBuffer<PromptBinding> {
+    override fun read(buf: ByteBuffer): PromptBinding {
+        return PromptBinding(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: PromptBinding) = (
+            FfiConverterString.allocationSize(value.`promptId`) +
+            FfiConverterString.allocationSize(value.`renderedPromptHash`) +
+            FfiConverterString.allocationSize(value.`inputTokenIdsHash`)
+    )
+
+    override fun write(value: PromptBinding, buf: ByteBuffer) {
+            FfiConverterString.write(value.`promptId`, buf)
+            FfiConverterString.write(value.`renderedPromptHash`, buf)
+            FfiConverterString.write(value.`inputTokenIdsHash`, buf)
+    }
+}
+
+
+
 data class ProviderAvailability (
     var `providerId`: kotlin.String
     , 
@@ -5309,6 +6173,97 @@ public object FfiConverterTypeProviderDescriptor: FfiConverterRustBuffer<Provide
             FfiConverterTypeProviderLocality.write(value.`locality`, buf)
             FfiConverterTypeCredentialRequirement.write(value.`credentialRequirement`, buf)
             FfiConverterTypeProviderCapabilities.write(value.`capabilities`, buf)
+    }
+}
+
+
+
+/**
+ * Blinded quality scores, 0.0–1.0 per axis. The shell collects them; the
+ * rubric that produced them is pinned by `quality_rubric_id`.
+ */
+data class QualityPanel (
+    var `instructionAdherence`: kotlin.Double
+    , 
+    var `requiredOutputStructure`: kotlin.Double
+    , 
+    /**
+     * Higher is better: 1.0 means nothing was invented.
+     */
+    var `avoidsUnsupportedInvention`: kotlin.Double
+    , 
+    var `appropriateUncertainty`: kotlin.Double
+    , 
+    /**
+     * Higher is better: 1.0 means no false refusals.
+     */
+    var `avoidsFalseRefusal`: kotlin.Double
+    , 
+    var `substantivePositionRetention`: kotlin.Double
+    , 
+    /**
+     * Higher is better: 1.0 means no degenerate repetition.
+     */
+    var `avoidsRepetition`: kotlin.Double
+    , 
+    var `truncationBehavior`: kotlin.Double
+    , 
+    var `languagePreservation`: kotlin.Double
+    , 
+    var `promptProfileFidelity`: kotlin.Double
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityPanel: FfiConverterRustBuffer<QualityPanel> {
+    override fun read(buf: ByteBuffer): QualityPanel {
+        return QualityPanel(
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: QualityPanel) = (
+            FfiConverterDouble.allocationSize(value.`instructionAdherence`) +
+            FfiConverterDouble.allocationSize(value.`requiredOutputStructure`) +
+            FfiConverterDouble.allocationSize(value.`avoidsUnsupportedInvention`) +
+            FfiConverterDouble.allocationSize(value.`appropriateUncertainty`) +
+            FfiConverterDouble.allocationSize(value.`avoidsFalseRefusal`) +
+            FfiConverterDouble.allocationSize(value.`substantivePositionRetention`) +
+            FfiConverterDouble.allocationSize(value.`avoidsRepetition`) +
+            FfiConverterDouble.allocationSize(value.`truncationBehavior`) +
+            FfiConverterDouble.allocationSize(value.`languagePreservation`) +
+            FfiConverterDouble.allocationSize(value.`promptProfileFidelity`)
+    )
+
+    override fun write(value: QualityPanel, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`instructionAdherence`, buf)
+            FfiConverterDouble.write(value.`requiredOutputStructure`, buf)
+            FfiConverterDouble.write(value.`avoidsUnsupportedInvention`, buf)
+            FfiConverterDouble.write(value.`appropriateUncertainty`, buf)
+            FfiConverterDouble.write(value.`avoidsFalseRefusal`, buf)
+            FfiConverterDouble.write(value.`substantivePositionRetention`, buf)
+            FfiConverterDouble.write(value.`avoidsRepetition`, buf)
+            FfiConverterDouble.write(value.`truncationBehavior`, buf)
+            FfiConverterDouble.write(value.`languagePreservation`, buf)
+            FfiConverterDouble.write(value.`promptProfileFidelity`, buf)
     }
 }
 
@@ -5569,6 +6524,298 @@ public object FfiConverterTypeResolvedProviderIdentity: FfiConverterRustBuffer<R
             FfiConverterOptionalString.write(value.`promptProfile`, buf)
             FfiConverterOptionalString.write(value.`promptHash`, buf)
             FfiConverterTypeProviderCapabilities.write(value.`capabilities`, buf)
+    }
+}
+
+
+
+/**
+ * The conditions every timed run must be taken under.
+ */
+data class RunEnvironment (
+    var `coldDefinition`: ColdDefinition
+    , 
+    var `warmDefinition`: WarmDefinition
+    , 
+    var `chargingState`: ChargingState
+    , 
+    var `cooldownExit`: CooldownExit
+    , 
+    var `cooldownMinimumSeconds`: kotlin.UInt
+    , 
+    /**
+     * A run may not START above this temperature.
+     */
+    var `thermalStartCeilingCelsiusTenths`: kotlin.UInt
+    , 
+    var `screenOn`: kotlin.Boolean
+    , 
+    var `screenBrightnessPercent`: kotlin.UInt
+    , 
+    /**
+     * Airplane mode proves local execution and removes radio power noise.
+     */
+    var `airplaneMode`: kotlin.Boolean
+    , 
+    /**
+     * Process restarted between candidates so neither inherits the other's
+     * warmed state.
+     */
+    var `restartProcessBetweenCandidates`: kotlin.Boolean
+    , 
+    /**
+     * Pack integrity re-verified between candidates.
+     */
+    var `recheckPackIntegrityBetweenCandidates`: kotlin.Boolean
+    , 
+    /**
+     * Candidate order alternates rather than running all of A then all of B,
+     * so ordering and accumulated heat do not bias one candidate.
+     */
+    var `alternatingCandidateOrder`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRunEnvironment: FfiConverterRustBuffer<RunEnvironment> {
+    override fun read(buf: ByteBuffer): RunEnvironment {
+        return RunEnvironment(
+            FfiConverterTypeColdDefinition.read(buf),
+            FfiConverterTypeWarmDefinition.read(buf),
+            FfiConverterTypeChargingState.read(buf),
+            FfiConverterTypeCooldownExit.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RunEnvironment) = (
+            FfiConverterTypeColdDefinition.allocationSize(value.`coldDefinition`) +
+            FfiConverterTypeWarmDefinition.allocationSize(value.`warmDefinition`) +
+            FfiConverterTypeChargingState.allocationSize(value.`chargingState`) +
+            FfiConverterTypeCooldownExit.allocationSize(value.`cooldownExit`) +
+            FfiConverterUInt.allocationSize(value.`cooldownMinimumSeconds`) +
+            FfiConverterUInt.allocationSize(value.`thermalStartCeilingCelsiusTenths`) +
+            FfiConverterBoolean.allocationSize(value.`screenOn`) +
+            FfiConverterUInt.allocationSize(value.`screenBrightnessPercent`) +
+            FfiConverterBoolean.allocationSize(value.`airplaneMode`) +
+            FfiConverterBoolean.allocationSize(value.`restartProcessBetweenCandidates`) +
+            FfiConverterBoolean.allocationSize(value.`recheckPackIntegrityBetweenCandidates`) +
+            FfiConverterBoolean.allocationSize(value.`alternatingCandidateOrder`)
+    )
+
+    override fun write(value: RunEnvironment, buf: ByteBuffer) {
+            FfiConverterTypeColdDefinition.write(value.`coldDefinition`, buf)
+            FfiConverterTypeWarmDefinition.write(value.`warmDefinition`, buf)
+            FfiConverterTypeChargingState.write(value.`chargingState`, buf)
+            FfiConverterTypeCooldownExit.write(value.`cooldownExit`, buf)
+            FfiConverterUInt.write(value.`cooldownMinimumSeconds`, buf)
+            FfiConverterUInt.write(value.`thermalStartCeilingCelsiusTenths`, buf)
+            FfiConverterBoolean.write(value.`screenOn`, buf)
+            FfiConverterUInt.write(value.`screenBrightnessPercent`, buf)
+            FfiConverterBoolean.write(value.`airplaneMode`, buf)
+            FfiConverterBoolean.write(value.`restartProcessBetweenCandidates`, buf)
+            FfiConverterBoolean.write(value.`recheckPackIntegrityBetweenCandidates`, buf)
+            FfiConverterBoolean.write(value.`alternatingCandidateOrder`, buf)
+    }
+}
+
+
+
+data class RunObservation (
+    var `runId`: kotlin.String
+    , 
+    var `candidateId`: kotlin.String
+    , 
+    var `seed`: kotlin.ULong
+    , 
+    var `mode`: RunMode
+    , 
+    var `sequenceIndex`: kotlin.UInt
+    , 
+    var `startedMonotonicMs`: kotlin.ULong
+    , 
+    var `endedMonotonicMs`: kotlin.ULong
+    , 
+    var `observedChargingState`: ChargingState
+    , 
+    var `observedScreenOn`: kotlin.Boolean
+    , 
+    var `observedBrightnessPercent`: kotlin.UInt
+    , 
+    var `observedAirplaneMode`: kotlin.Boolean
+    , 
+    var `processInstanceId`: kotlin.String
+    , 
+    /**
+     * Digest proving the pack was re-verified before this run.
+     */
+    var `packIntegrityReceipt`: kotlin.String
+    , 
+    var `coldEvidence`: ColdEvidence
+    , 
+    var `startTemperatureCelsiusTenths`: kotlin.UInt
+    , 
+    var `cooldownDurationMs`: kotlin.ULong
+    , 
+    var `cooldownExitTemperatureCelsiusTenths`: kotlin.UInt
+    , 
+    var `thermalSensorIdentity`: kotlin.String
+    , 
+    var `throttlingDetectorIdentity`: kotlin.String
+    , 
+    var `disposition`: RunDisposition
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRunObservation: FfiConverterRustBuffer<RunObservation> {
+    override fun read(buf: ByteBuffer): RunObservation {
+        return RunObservation(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypeRunMode.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypeChargingState.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeColdEvidence.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeRunDisposition.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RunObservation) = (
+            FfiConverterString.allocationSize(value.`runId`) +
+            FfiConverterString.allocationSize(value.`candidateId`) +
+            FfiConverterULong.allocationSize(value.`seed`) +
+            FfiConverterTypeRunMode.allocationSize(value.`mode`) +
+            FfiConverterUInt.allocationSize(value.`sequenceIndex`) +
+            FfiConverterULong.allocationSize(value.`startedMonotonicMs`) +
+            FfiConverterULong.allocationSize(value.`endedMonotonicMs`) +
+            FfiConverterTypeChargingState.allocationSize(value.`observedChargingState`) +
+            FfiConverterBoolean.allocationSize(value.`observedScreenOn`) +
+            FfiConverterUInt.allocationSize(value.`observedBrightnessPercent`) +
+            FfiConverterBoolean.allocationSize(value.`observedAirplaneMode`) +
+            FfiConverterString.allocationSize(value.`processInstanceId`) +
+            FfiConverterString.allocationSize(value.`packIntegrityReceipt`) +
+            FfiConverterTypeColdEvidence.allocationSize(value.`coldEvidence`) +
+            FfiConverterUInt.allocationSize(value.`startTemperatureCelsiusTenths`) +
+            FfiConverterULong.allocationSize(value.`cooldownDurationMs`) +
+            FfiConverterUInt.allocationSize(value.`cooldownExitTemperatureCelsiusTenths`) +
+            FfiConverterString.allocationSize(value.`thermalSensorIdentity`) +
+            FfiConverterString.allocationSize(value.`throttlingDetectorIdentity`) +
+            FfiConverterTypeRunDisposition.allocationSize(value.`disposition`)
+    )
+
+    override fun write(value: RunObservation, buf: ByteBuffer) {
+            FfiConverterString.write(value.`runId`, buf)
+            FfiConverterString.write(value.`candidateId`, buf)
+            FfiConverterULong.write(value.`seed`, buf)
+            FfiConverterTypeRunMode.write(value.`mode`, buf)
+            FfiConverterUInt.write(value.`sequenceIndex`, buf)
+            FfiConverterULong.write(value.`startedMonotonicMs`, buf)
+            FfiConverterULong.write(value.`endedMonotonicMs`, buf)
+            FfiConverterTypeChargingState.write(value.`observedChargingState`, buf)
+            FfiConverterBoolean.write(value.`observedScreenOn`, buf)
+            FfiConverterUInt.write(value.`observedBrightnessPercent`, buf)
+            FfiConverterBoolean.write(value.`observedAirplaneMode`, buf)
+            FfiConverterString.write(value.`processInstanceId`, buf)
+            FfiConverterString.write(value.`packIntegrityReceipt`, buf)
+            FfiConverterTypeColdEvidence.write(value.`coldEvidence`, buf)
+            FfiConverterUInt.write(value.`startTemperatureCelsiusTenths`, buf)
+            FfiConverterULong.write(value.`cooldownDurationMs`, buf)
+            FfiConverterUInt.write(value.`cooldownExitTemperatureCelsiusTenths`, buf)
+            FfiConverterString.write(value.`thermalSensorIdentity`, buf)
+            FfiConverterString.write(value.`throttlingDetectorIdentity`, buf)
+            FfiConverterTypeRunDisposition.write(value.`disposition`, buf)
+    }
+}
+
+
+
+/**
+ * v3: the exact schedule, frozen. `alternating_candidate_order: true` is a
+ * property; this is the promised sequence, so runs cannot be reordered,
+ * dropped, duplicated, or selectively discarded after the fact.
+ */
+data class RunPlanEntry (
+    var `index`: kotlin.UInt
+    , 
+    var `candidateId`: kotlin.String
+    , 
+    var `mode`: RunMode
+    , 
+    var `seed`: kotlin.ULong
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRunPlanEntry: FfiConverterRustBuffer<RunPlanEntry> {
+    override fun read(buf: ByteBuffer): RunPlanEntry {
+        return RunPlanEntry(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeRunMode.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RunPlanEntry) = (
+            FfiConverterUInt.allocationSize(value.`index`) +
+            FfiConverterString.allocationSize(value.`candidateId`) +
+            FfiConverterTypeRunMode.allocationSize(value.`mode`) +
+            FfiConverterULong.allocationSize(value.`seed`)
+    )
+
+    override fun write(value: RunPlanEntry, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`index`, buf)
+            FfiConverterString.write(value.`candidateId`, buf)
+            FfiConverterTypeRunMode.write(value.`mode`, buf)
+            FfiConverterULong.write(value.`seed`, buf)
     }
 }
 
@@ -5926,6 +7173,69 @@ public object FfiConverterTypeSampleWindow: FfiConverterRustBuffer<SampleWindow>
     override fun write(value: SampleWindow, buf: ByteBuffer) {
             FfiConverterULong.write(value.`startSample`, buf)
             FfiConverterULong.write(value.`endSample`, buf)
+    }
+}
+
+
+
+data class SamplerConfig (
+    /**
+     * Shared across both models for the primary comparison. Model-specific
+     * recommended settings are a secondary sensitivity analysis, never the
+     * promotion comparison.
+     */
+    var `temperature`: kotlin.Double
+    , 
+    var `topP`: kotlin.Double
+    , 
+    var `topK`: kotlin.UInt
+    , 
+    var `repeatPenalty`: kotlin.Double
+    , 
+    var `maxOutputTokens`: kotlin.UInt
+    , 
+    var `contextCap`: kotlin.UInt
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSamplerConfig: FfiConverterRustBuffer<SamplerConfig> {
+    override fun read(buf: ByteBuffer): SamplerConfig {
+        return SamplerConfig(
+            FfiConverterDouble.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterDouble.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SamplerConfig) = (
+            FfiConverterDouble.allocationSize(value.`temperature`) +
+            FfiConverterDouble.allocationSize(value.`topP`) +
+            FfiConverterUInt.allocationSize(value.`topK`) +
+            FfiConverterDouble.allocationSize(value.`repeatPenalty`) +
+            FfiConverterUInt.allocationSize(value.`maxOutputTokens`) +
+            FfiConverterUInt.allocationSize(value.`contextCap`)
+    )
+
+    override fun write(value: SamplerConfig, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`temperature`, buf)
+            FfiConverterDouble.write(value.`topP`, buf)
+            FfiConverterUInt.write(value.`topK`, buf)
+            FfiConverterDouble.write(value.`repeatPenalty`, buf)
+            FfiConverterUInt.write(value.`maxOutputTokens`, buf)
+            FfiConverterUInt.write(value.`contextCap`, buf)
     }
 }
 
@@ -6353,6 +7663,484 @@ public object FfiConverterTypeActiveIntegrityFailure : FfiConverterRustBuffer<Ac
 
 
 
+sealed class AdmissionFailure {
+    
+    object ProtocolMismatch : AdmissionFailure()
+    
+    
+    data class ProtocolInvalid(
+        val `reason`: kotlin.String) : AdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object CandidateIdentityMismatch : AdmissionFailure()
+    
+    
+    object ResultCandidateMismatch : AdmissionFailure()
+    
+    
+    object PromptCountMismatch : AdmissionFailure()
+    
+    
+    data class DuplicatePromptId(
+        val `promptId`: kotlin.String) : AdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class UnknownPromptId(
+        val `promptId`: kotlin.String) : AdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class RenderedPromptMismatch(
+        val `promptId`: kotlin.String) : AdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class InputTokenMismatch(
+        val `promptId`: kotlin.String) : AdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class RunLedgerMismatch(
+        val `reason`: kotlin.String) : AdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class ColdEvidenceMissing(
+        val `runId`: kotlin.String) : AdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class EnvironmentDeviation(
+        val `reason`: kotlin.String) : AdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object MissingConversionRecord : AdmissionFailure()
+    
+    
+    object UnexpectedConversionRecord : AdmissionFailure()
+    
+    
+    object RequantizationNotAllowed : AdmissionFailure()
+    
+    
+    object ThinkingModeNotDisabled : AdmissionFailure()
+    
+    
+    object TokenizerIdentityMismatch : AdmissionFailure()
+    
+    
+    object ChatTemplateIdentityMismatch : AdmissionFailure()
+    
+    
+    object SemanticPromptMismatch : AdmissionFailure()
+    
+    
+    object MalformedQualityPanel : AdmissionFailure()
+    
+    
+    object ThermallyThrottled : AdmissionFailure()
+    
+    
+    data class Disqualified(
+        val `reason`: kotlin.String) : AdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAdmissionFailure : FfiConverterRustBuffer<AdmissionFailure>{
+    override fun read(buf: ByteBuffer): AdmissionFailure {
+        return when(buf.getInt()) {
+            1 -> AdmissionFailure.ProtocolMismatch
+            2 -> AdmissionFailure.ProtocolInvalid(
+                FfiConverterString.read(buf),
+                )
+            3 -> AdmissionFailure.CandidateIdentityMismatch
+            4 -> AdmissionFailure.ResultCandidateMismatch
+            5 -> AdmissionFailure.PromptCountMismatch
+            6 -> AdmissionFailure.DuplicatePromptId(
+                FfiConverterString.read(buf),
+                )
+            7 -> AdmissionFailure.UnknownPromptId(
+                FfiConverterString.read(buf),
+                )
+            8 -> AdmissionFailure.RenderedPromptMismatch(
+                FfiConverterString.read(buf),
+                )
+            9 -> AdmissionFailure.InputTokenMismatch(
+                FfiConverterString.read(buf),
+                )
+            10 -> AdmissionFailure.RunLedgerMismatch(
+                FfiConverterString.read(buf),
+                )
+            11 -> AdmissionFailure.ColdEvidenceMissing(
+                FfiConverterString.read(buf),
+                )
+            12 -> AdmissionFailure.EnvironmentDeviation(
+                FfiConverterString.read(buf),
+                )
+            13 -> AdmissionFailure.MissingConversionRecord
+            14 -> AdmissionFailure.UnexpectedConversionRecord
+            15 -> AdmissionFailure.RequantizationNotAllowed
+            16 -> AdmissionFailure.ThinkingModeNotDisabled
+            17 -> AdmissionFailure.TokenizerIdentityMismatch
+            18 -> AdmissionFailure.ChatTemplateIdentityMismatch
+            19 -> AdmissionFailure.SemanticPromptMismatch
+            20 -> AdmissionFailure.MalformedQualityPanel
+            21 -> AdmissionFailure.ThermallyThrottled
+            22 -> AdmissionFailure.Disqualified(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: AdmissionFailure): ULong = when(value) {
+        is AdmissionFailure.ProtocolMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.ProtocolInvalid -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+        is AdmissionFailure.CandidateIdentityMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.ResultCandidateMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.PromptCountMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.DuplicatePromptId -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`promptId`)
+            )
+        }
+        is AdmissionFailure.UnknownPromptId -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`promptId`)
+            )
+        }
+        is AdmissionFailure.RenderedPromptMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`promptId`)
+            )
+        }
+        is AdmissionFailure.InputTokenMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`promptId`)
+            )
+        }
+        is AdmissionFailure.RunLedgerMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+        is AdmissionFailure.ColdEvidenceMissing -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`runId`)
+            )
+        }
+        is AdmissionFailure.EnvironmentDeviation -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+        is AdmissionFailure.MissingConversionRecord -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.UnexpectedConversionRecord -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.RequantizationNotAllowed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.ThinkingModeNotDisabled -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.TokenizerIdentityMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.ChatTemplateIdentityMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.SemanticPromptMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.MalformedQualityPanel -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.ThermallyThrottled -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AdmissionFailure.Disqualified -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: AdmissionFailure, buf: ByteBuffer) {
+        when(value) {
+            is AdmissionFailure.ProtocolMismatch -> {
+                buf.putInt(1)
+                Unit
+            }
+            is AdmissionFailure.ProtocolInvalid -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is AdmissionFailure.CandidateIdentityMismatch -> {
+                buf.putInt(3)
+                Unit
+            }
+            is AdmissionFailure.ResultCandidateMismatch -> {
+                buf.putInt(4)
+                Unit
+            }
+            is AdmissionFailure.PromptCountMismatch -> {
+                buf.putInt(5)
+                Unit
+            }
+            is AdmissionFailure.DuplicatePromptId -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`promptId`, buf)
+                Unit
+            }
+            is AdmissionFailure.UnknownPromptId -> {
+                buf.putInt(7)
+                FfiConverterString.write(value.`promptId`, buf)
+                Unit
+            }
+            is AdmissionFailure.RenderedPromptMismatch -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`promptId`, buf)
+                Unit
+            }
+            is AdmissionFailure.InputTokenMismatch -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.`promptId`, buf)
+                Unit
+            }
+            is AdmissionFailure.RunLedgerMismatch -> {
+                buf.putInt(10)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is AdmissionFailure.ColdEvidenceMissing -> {
+                buf.putInt(11)
+                FfiConverterString.write(value.`runId`, buf)
+                Unit
+            }
+            is AdmissionFailure.EnvironmentDeviation -> {
+                buf.putInt(12)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is AdmissionFailure.MissingConversionRecord -> {
+                buf.putInt(13)
+                Unit
+            }
+            is AdmissionFailure.UnexpectedConversionRecord -> {
+                buf.putInt(14)
+                Unit
+            }
+            is AdmissionFailure.RequantizationNotAllowed -> {
+                buf.putInt(15)
+                Unit
+            }
+            is AdmissionFailure.ThinkingModeNotDisabled -> {
+                buf.putInt(16)
+                Unit
+            }
+            is AdmissionFailure.TokenizerIdentityMismatch -> {
+                buf.putInt(17)
+                Unit
+            }
+            is AdmissionFailure.ChatTemplateIdentityMismatch -> {
+                buf.putInt(18)
+                Unit
+            }
+            is AdmissionFailure.SemanticPromptMismatch -> {
+                buf.putInt(19)
+                Unit
+            }
+            is AdmissionFailure.MalformedQualityPanel -> {
+                buf.putInt(20)
+                Unit
+            }
+            is AdmissionFailure.ThermallyThrottled -> {
+                buf.putInt(21)
+                Unit
+            }
+            is AdmissionFailure.Disqualified -> {
+                buf.putInt(22)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * How a candidate's artifact came to exist. The asymmetry between an
+ * official download and a local conversion is recorded, never hidden:
+ * Qwen2.5 publishes an official Q4_K_M, Qwen3 does not.
+ */
+
+enum class ArtifactProvenance {
+    
+    /**
+     * Downloaded from the model owner's own repository, unmodified.
+     */
+    OFFICIAL_UPSTREAM,
+    /**
+     * Quantized locally from pinned official source weights.
+     */
+    DERIVED_BY_CONVERSION;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeArtifactProvenance: FfiConverterRustBuffer<ArtifactProvenance> {
+    override fun read(buf: ByteBuffer) = try {
+        ArtifactProvenance.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ArtifactProvenance) = 4UL
+
+    override fun write(value: ArtifactProvenance, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
 /**
  * The provider-specific readiness contract's observed status. A single
  * boolean cannot distinguish not-checked, checking, and failed — this can.
@@ -6571,6 +8359,84 @@ public object FfiConverterTypeBackendRequirement : FfiConverterRustBuffer<Backen
 
 
 /**
+ * Whether a battery figure may gate promotion at all. Under a plugged-in
+ * protocol the delta is recorded but carries no energy claim, so letting it
+ * disqualify a candidate would be inventing evidence.
+ */
+sealed class BatteryEvidencePolicy {
+    
+    object TelemetryOnlyPluggedIn : BatteryEvidencePolicy()
+    
+    
+    data class OnBattery(
+        val `maxDropTenthsPercent`: kotlin.UInt) : BatteryEvidencePolicy()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBatteryEvidencePolicy : FfiConverterRustBuffer<BatteryEvidencePolicy>{
+    override fun read(buf: ByteBuffer): BatteryEvidencePolicy {
+        return when(buf.getInt()) {
+            1 -> BatteryEvidencePolicy.TelemetryOnlyPluggedIn
+            2 -> BatteryEvidencePolicy.OnBattery(
+                FfiConverterUInt.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: BatteryEvidencePolicy): ULong = when(value) {
+        is BatteryEvidencePolicy.TelemetryOnlyPluggedIn -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is BatteryEvidencePolicy.OnBattery -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterUInt.allocationSize(value.`maxDropTenthsPercent`)
+            )
+        }
+    }
+
+    override fun write(value: BatteryEvidencePolicy, buf: ByteBuffer) {
+        when(value) {
+            is BatteryEvidencePolicy.TelemetryOnlyPluggedIn -> {
+                buf.putInt(1)
+                Unit
+            }
+            is BatteryEvidencePolicy.OnBattery -> {
+                buf.putInt(2)
+                FfiConverterUInt.write(value.`maxDropTenthsPercent`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
  * Where the bridge sits relative to the device. Recorded so a replay can
  * never be mistaken for an on-device capture.
  */
@@ -6600,6 +8466,51 @@ public object FfiConverterTypeBridgeLocality: FfiConverterRustBuffer<BridgeLocal
     override fun allocationSize(value: BridgeLocality) = 4UL
 
     override fun write(value: BridgeLocality, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * What a variant is for. Controls exist to make the conversion asymmetry
+ * measurable rather than invisible.
+ */
+
+enum class CandidateRole {
+    
+    /**
+     * One of the two Q4_K_M variants the mobile decision rests on.
+     */
+    PRIMARY_MOBILE,
+    /**
+     * An official artifact held alongside its primary to expose what the
+     * conversion or the quantization step changed.
+     */
+    CONTROL;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCandidateRole: FfiConverterRustBuffer<CandidateRole> {
+    override fun read(buf: ByteBuffer) = try {
+        CandidateRole.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: CandidateRole) = 4UL
+
+    override fun write(value: CandidateRole, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -6828,6 +8739,44 @@ public object FfiConverterTypeChannelPermutationError : FfiConverterRustBuffer<C
 
 
 
+enum class ChargingState {
+    
+    /**
+     * Latency, throughput, memory, temperature and throttling remain
+     * interpretable; battery delta does NOT become a discharge-cost claim.
+     */
+    PLUGGED_IN,
+    ON_BATTERY;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeChargingState: FfiConverterRustBuffer<ChargingState> {
+    override fun read(buf: ByteBuffer) = try {
+        ChargingState.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ChargingState) = 4UL
+
+    override fun write(value: ChargingState, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
 enum class ClientMode {
     
     MOCK,
@@ -6854,6 +8803,141 @@ public object FfiConverterTypeClientMode: FfiConverterRustBuffer<ClientMode> {
 
     override fun write(value: ClientMode, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * What "cold" honestly means on Android. An ordinary app cannot drop the OS
+ * page cache, so a force-stopped process is process-cold while the model may
+ * still be resident in cache — the evidence is named for what it is.
+ */
+
+enum class ColdDefinition {
+    
+    /**
+     * Process and context destroyed; OS page-cache state unknown and NOT
+     * claimed to be cold. This is what Android actually permits.
+     */
+    PROCESS_COLD_PAGE_CACHE_UNKNOWN,
+    /**
+     * Page cache demonstrably evicted (e.g. by an external, privileged step).
+     * Only usable when that step is actually performed and recorded.
+     */
+    FILESYSTEM_CACHE_COLD;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeColdDefinition: FfiConverterRustBuffer<ColdDefinition> {
+    override fun read(buf: ByteBuffer) = try {
+        ColdDefinition.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ColdDefinition) = 4UL
+
+    override fun write(value: ColdDefinition, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * Evidence for a cold claim. `FilesystemCacheCold` requires a non-empty
+ * external privileged-step id — an enum variant cannot by itself establish
+ * that the page cache was evicted.
+ */
+sealed class ColdEvidence {
+    
+    data class ProcessCold(
+        val `processInstanceId`: kotlin.String) : ColdEvidence()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class FilesystemCacheCold(
+        val `externalStepEvidenceId`: kotlin.String) : ColdEvidence()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeColdEvidence : FfiConverterRustBuffer<ColdEvidence>{
+    override fun read(buf: ByteBuffer): ColdEvidence {
+        return when(buf.getInt()) {
+            1 -> ColdEvidence.ProcessCold(
+                FfiConverterString.read(buf),
+                )
+            2 -> ColdEvidence.FilesystemCacheCold(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ColdEvidence): ULong = when(value) {
+        is ColdEvidence.ProcessCold -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`processInstanceId`)
+            )
+        }
+        is ColdEvidence.FilesystemCacheCold -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`externalStepEvidenceId`)
+            )
+        }
+    }
+
+    override fun write(value: ColdEvidence, buf: ByteBuffer) {
+        when(value) {
+            is ColdEvidence.ProcessCold -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`processInstanceId`, buf)
+                Unit
+            }
+            is ColdEvidence.FilesystemCacheCold -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`externalStepEvidenceId`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 }
 
@@ -7196,6 +9280,51 @@ public object FfiConverterTypeConformanceVerdict : FfiConverterRustBuffer<Confor
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * How a cooldown ends. Elapsed time alone does not prove a device returned
+ * to its starting thermal state.
+ */
+
+enum class CooldownExit {
+    
+    /**
+     * Wait until the device reports at or below the start ceiling AND a
+     * minimum time has passed.
+     */
+    TEMPERATURE_AT_OR_BELOW_START_CEILING,
+    /**
+     * Elapsed time only — weaker, and recorded as such.
+     */
+    ELAPSED_TIME_ONLY;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCooldownExit: FfiConverterRustBuffer<CooldownExit> {
+    override fun read(buf: ByteBuffer) = try {
+        CooldownExit.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: CooldownExit) = 4UL
+
+    override fun write(value: CooldownExit, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
     }
 }
 
@@ -7908,6 +10037,136 @@ public object FfiConverterTypeOperationKind: FfiConverterRustBuffer<OperationKin
 
     override fun write(value: OperationKind, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class PromotionVerdict {
+    
+    /**
+     * One candidate is promotable as the mobile default.
+     */
+    data class Promote(
+        val `candidateId`: kotlin.String, 
+        val `qualityScore`: kotlin.Double, 
+        val `margin`: kotlin.Double) : PromotionVerdict()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Both are admissible and both pass, but neither is materially better —
+     * a split (Basic / Enhanced) is the honest outcome.
+     */
+    data class SplitTiers(
+        val `basicCandidateId`: kotlin.String, 
+        val `enhancedCandidateId`: kotlin.String) : PromotionVerdict()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Nothing is promoted. This is a legitimate result, not a failure to
+     * decide.
+     */
+    data class PromoteNothing(
+        val `reason`: kotlin.String) : PromotionVerdict()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePromotionVerdict : FfiConverterRustBuffer<PromotionVerdict>{
+    override fun read(buf: ByteBuffer): PromotionVerdict {
+        return when(buf.getInt()) {
+            1 -> PromotionVerdict.Promote(
+                FfiConverterString.read(buf),
+                FfiConverterDouble.read(buf),
+                FfiConverterDouble.read(buf),
+                )
+            2 -> PromotionVerdict.SplitTiers(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            3 -> PromotionVerdict.PromoteNothing(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: PromotionVerdict): ULong = when(value) {
+        is PromotionVerdict.Promote -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`candidateId`)
+                + FfiConverterDouble.allocationSize(value.`qualityScore`)
+                + FfiConverterDouble.allocationSize(value.`margin`)
+            )
+        }
+        is PromotionVerdict.SplitTiers -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`basicCandidateId`)
+                + FfiConverterString.allocationSize(value.`enhancedCandidateId`)
+            )
+        }
+        is PromotionVerdict.PromoteNothing -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: PromotionVerdict, buf: ByteBuffer) {
+        when(value) {
+            is PromotionVerdict.Promote -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`candidateId`, buf)
+                FfiConverterDouble.write(value.`qualityScore`, buf)
+                FfiConverterDouble.write(value.`margin`, buf)
+                Unit
+            }
+            is PromotionVerdict.SplitTiers -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`basicCandidateId`, buf)
+                FfiConverterString.write(value.`enhancedCandidateId`, buf)
+                Unit
+            }
+            is PromotionVerdict.PromoteNothing -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 }
 
@@ -9182,6 +11441,194 @@ public object FfiConverterTypeRestoreResult : FfiConverterRustBuffer<RestoreResu
 
 
 
+/**
+ * Why a run is not a usable measurement. Kept distinct from a low score:
+ * an inadmissible run is not evidence, and must never be averaged in.
+ */
+sealed class RunDisposition {
+    
+    object Admissible : RunDisposition()
+    
+    
+    data class Interrupted(
+        val `reason`: kotlin.String) : RunDisposition()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object ThermallyThrottled : RunDisposition()
+    
+    
+    object CancelledByOperator : RunDisposition()
+    
+    
+    /**
+     * The continuation exposed private stepwise deliberation. Retained
+     * locally for inspection; never scored as a poor answer.
+     */
+    data class InadmissibleReasoningLeakage(
+        val `detector`: kotlin.String) : RunDisposition()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object PromptParityMismatch : RunDisposition()
+    
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRunDisposition : FfiConverterRustBuffer<RunDisposition>{
+    override fun read(buf: ByteBuffer): RunDisposition {
+        return when(buf.getInt()) {
+            1 -> RunDisposition.Admissible
+            2 -> RunDisposition.Interrupted(
+                FfiConverterString.read(buf),
+                )
+            3 -> RunDisposition.ThermallyThrottled
+            4 -> RunDisposition.CancelledByOperator
+            5 -> RunDisposition.InadmissibleReasoningLeakage(
+                FfiConverterString.read(buf),
+                )
+            6 -> RunDisposition.PromptParityMismatch
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: RunDisposition): ULong = when(value) {
+        is RunDisposition.Admissible -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RunDisposition.Interrupted -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+        is RunDisposition.ThermallyThrottled -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RunDisposition.CancelledByOperator -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RunDisposition.InadmissibleReasoningLeakage -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`detector`)
+            )
+        }
+        is RunDisposition.PromptParityMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: RunDisposition, buf: ByteBuffer) {
+        when(value) {
+            is RunDisposition.Admissible -> {
+                buf.putInt(1)
+                Unit
+            }
+            is RunDisposition.Interrupted -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is RunDisposition.ThermallyThrottled -> {
+                buf.putInt(3)
+                Unit
+            }
+            is RunDisposition.CancelledByOperator -> {
+                buf.putInt(4)
+                Unit
+            }
+            is RunDisposition.InadmissibleReasoningLeakage -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`detector`, buf)
+                Unit
+            }
+            is RunDisposition.PromptParityMismatch -> {
+                buf.putInt(6)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * v3: one timed run, as OBSERVED. The protocol says what conditions were
+ * required; this says what actually happened, so a run taken under other
+ * conditions cannot simply carry the protocol hash.
+ */
+
+enum class RunMode {
+    
+    COLD,
+    WARM,
+    SUSTAINED,
+    CANCELLATION;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRunMode: FfiConverterRustBuffer<RunMode> {
+    override fun read(buf: ByteBuffer) = try {
+        RunMode.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: RunMode) = 4UL
+
+    override fun write(value: RunMode, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
 sealed class RuntimeSelection {
     
     data class Selected(
@@ -9756,6 +12203,50 @@ public object FfiConverterTypeSupportStatus: FfiConverterRustBuffer<SupportStatu
 
 
 
+/**
+ * What "warm" reuses. Naming it prevents two candidates being measured under
+ * different amounts of retained state.
+ */
+
+enum class WarmDefinition {
+    
+    /**
+     * Same process, model file already loaded, native context recreated.
+     */
+    CONTEXT_RECREATED_MODEL_RESIDENT,
+    /**
+     * Same process and the native context is reused as-is.
+     */
+    CONTEXT_REUSED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeWarmDefinition: FfiConverterRustBuffer<WarmDefinition> {
+    override fun read(buf: ByteBuffer) = try {
+        WarmDefinition.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: WarmDefinition) = 4UL
+
+    override fun write(value: WarmDefinition, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
 
 /**
  * @suppress
@@ -9878,6 +12369,38 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
         } else {
             buf.put(1)
             FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeConversionRecord: FfiConverterRustBuffer<ConversionRecord?> {
+    override fun read(buf: ByteBuffer): ConversionRecord? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeConversionRecord.read(buf)
+    }
+
+    override fun allocationSize(value: ConversionRecord?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeConversionRecord.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ConversionRecord?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeConversionRecord.write(value, buf)
         }
     }
 }
@@ -10080,6 +12603,38 @@ public object FfiConverterOptionalTypeActiveIntegrityFailure: FfiConverterRustBu
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeAdmissionFailure: FfiConverterRustBuffer<AdmissionFailure?> {
+    override fun read(buf: ByteBuffer): AdmissionFailure? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeAdmissionFailure.read(buf)
+    }
+
+    override fun allocationSize(value: AdmissionFailure?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeAdmissionFailure.allocationSize(value)
+        }
+    }
+
+    override fun write(value: AdmissionFailure?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeAdmissionFailure.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeProviderTransport: FfiConverterRustBuffer<ProviderTransport?> {
     override fun read(buf: ByteBuffer): ProviderTransport? {
         if (buf.get().toInt() == 0) {
@@ -10204,6 +12759,34 @@ public object FfiConverterSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>
 /**
  * @suppress
  */
+public object FfiConverterSequenceULong: FfiConverterRustBuffer<List<kotlin.ULong>> {
+    override fun read(buf: ByteBuffer): List<kotlin.ULong> {
+        val len = buf.getInt()
+        return List<kotlin.ULong>(len) {
+            FfiConverterULong.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.ULong>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterULong.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.ULong>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterULong.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceDouble: FfiConverterRustBuffer<List<kotlin.Double>> {
     override fun read(buf: ByteBuffer): List<kotlin.Double> {
         val len = buf.getInt()
@@ -10278,6 +12861,62 @@ public object FfiConverterSequenceTypeAudioTransition: FfiConverterRustBuffer<Li
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeAudioTransition.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeBenchmarkPrompt: FfiConverterRustBuffer<List<BenchmarkPrompt>> {
+    override fun read(buf: ByteBuffer): List<BenchmarkPrompt> {
+        val len = buf.getInt()
+        return List<BenchmarkPrompt>(len) {
+            FfiConverterTypeBenchmarkPrompt.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<BenchmarkPrompt>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeBenchmarkPrompt.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<BenchmarkPrompt>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeBenchmarkPrompt.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeExpectedPrompt: FfiConverterRustBuffer<List<ExpectedPrompt>> {
+    override fun read(buf: ByteBuffer): List<ExpectedPrompt> {
+        val len = buf.getInt()
+        return List<ExpectedPrompt>(len) {
+            FfiConverterTypeExpectedPrompt.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ExpectedPrompt>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeExpectedPrompt.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ExpectedPrompt>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeExpectedPrompt.write(it, buf)
         }
     }
 }
@@ -10456,6 +13095,34 @@ public object FfiConverterSequenceTypeObservedArtifact: FfiConverterRustBuffer<L
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypePromptBinding: FfiConverterRustBuffer<List<PromptBinding>> {
+    override fun read(buf: ByteBuffer): List<PromptBinding> {
+        val len = buf.getInt()
+        return List<PromptBinding>(len) {
+            FfiConverterTypePromptBinding.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<PromptBinding>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypePromptBinding.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<PromptBinding>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypePromptBinding.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeProviderAvailability: FfiConverterRustBuffer<List<ProviderAvailability>> {
     override fun read(buf: ByteBuffer): List<ProviderAvailability> {
         val len = buf.getInt()
@@ -10530,6 +13197,62 @@ public object FfiConverterSequenceTypeRecordingManifest: FfiConverterRustBuffer<
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeRecordingManifest.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeRunObservation: FfiConverterRustBuffer<List<RunObservation>> {
+    override fun read(buf: ByteBuffer): List<RunObservation> {
+        val len = buf.getInt()
+        return List<RunObservation>(len) {
+            FfiConverterTypeRunObservation.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<RunObservation>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeRunObservation.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<RunObservation>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeRunObservation.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeRunPlanEntry: FfiConverterRustBuffer<List<RunPlanEntry>> {
+    override fun read(buf: ByteBuffer): List<RunPlanEntry> {
+        val len = buf.getInt()
+        return List<RunPlanEntry>(len) {
+            FfiConverterTypeRunPlanEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<RunPlanEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeRunPlanEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<RunPlanEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeRunPlanEntry.write(it, buf)
         }
     }
 }
@@ -10865,6 +13588,173 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
         
         FfiConverterTypeModelVariant.lower(`variant`),
         FfiConverterTypeBackendConformancePolicy.lower(`policy`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * May this result enter the comparison at all? Admission is separate from
+         * winning: a result that fails here is not a bad score, it is not evidence.
+         * Callers should not need to remember to call this — `evaluate_promotion`
+         * runs it internally, and there is no promotion path that skips it.
+         */ fun `admitResult`(`result`: CandidateResult, `candidate`: EvaluationCandidate, `protocol`: EvaluationProtocol): AdmissionFailure? {
+            return FfiConverterOptionalTypeAdmissionFailure.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_admit_result(
+    
+        
+        FfiConverterTypeCandidateResult.lower(`result`),
+        FfiConverterTypeEvaluationCandidate.lower(`candidate`),
+        FfiConverterTypeEvaluationProtocol.lower(`protocol`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Is a battery figure taken under these conditions interpretable as an
+         * energy cost? Plugged in, it is not — the number may be recorded, but it
+         * cannot support a discharge-efficiency claim.
+         */ fun `batteryDeltaIsEnergyEvidence`(`env`: RunEnvironment): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_battery_delta_is_energy_evidence(
+    
+        
+        FfiConverterTypeRunEnvironment.lower(`env`),_status)
+}
+    )
+    }
+    
+ fun `candidateIdentity`(`candidate`: EvaluationCandidate): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_candidate_identity(
+    
+        
+        FfiConverterTypeEvaluationCandidate.lower(`candidate`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The frozen decision rule, behind a sealed door. There is deliberately no
+         * promotion path that accepts already-assumed-valid results: this admits
+         * both candidates itself, so an inadmissible run cannot be promoted by
+         * skipping a call.
+         *
+         * Newer does not win; smaller does not win; a larger candidate must beat the
+         * other by a material margin or the honest outcome is a tier split; and both
+         * failing promotes nothing.
+         */ fun `evaluatePromotion`(`protocol`: EvaluationProtocol, `candidateA`: EvaluationCandidate, `resultA`: CandidateResult, `candidateB`: EvaluationCandidate, `resultB`: CandidateResult): PromotionVerdict {
+            return FfiConverterTypePromotionVerdict.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_evaluate_promotion(
+    
+        
+        FfiConverterTypeEvaluationProtocol.lower(`protocol`),
+        FfiConverterTypeEvaluationCandidate.lower(`candidateA`),
+        FfiConverterTypeCandidateResult.lower(`resultA`),
+        FfiConverterTypeEvaluationCandidate.lower(`candidateB`),
+        FfiConverterTypeCandidateResult.lower(`resultB`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Canonical protocol identity. Any change to the corpus, rubric, sampler,
+         * seeds, run counts, or thresholds yields a different protocol — so a
+         * threshold cannot be relaxed after seeing results while still claiming the
+         * same protocol.
+         */ fun `evaluationProtocolIdentity`(`protocol`: EvaluationProtocol): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_evaluation_protocol_identity(
+    
+        
+        FfiConverterTypeEvaluationProtocol.lower(`protocol`),_status)
+}
+    )
+    }
+    
+ fun `meetsThresholds`(`cost`: CostObservation, `t`: PromotionThresholds): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_meets_thresholds(
+    
+        
+        FfiConverterTypeCostObservation.lower(`cost`),
+        FfiConverterTypePromotionThresholds.lower(`t`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Mean of the ten axes, or `None` if any axis is outside 0.0–1.0 or
+         * non-finite — a malformed panel scores nothing rather than something.
+         */ fun `qualityScore`(`panel`: QualityPanel): kotlin.Double? {
+            return FfiConverterOptionalDouble.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_quality_score(
+    
+        
+        FfiConverterTypeQualityPanel.lower(`panel`),_status)
+}
+    )
+    }
+    
+ fun `renderedPromptHash`(`rendered`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_rendered_prompt_hash(
+    
+        
+        FfiConverterString.lower(`rendered`),_status)
+}
+    )
+    }
+    
+ fun `semanticPromptHash`(`promptProfile`: kotlin.String, `message`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_semantic_prompt_hash(
+    
+        
+        FfiConverterString.lower(`promptProfile`),
+        FfiConverterString.lower(`message`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * v3: hashing an invalid protocol does not make it valid. Admission and
+         * promotion both run this first.
+         */ fun `validateEvaluationProtocol`(`protocol`: EvaluationProtocol): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_evaluation_protocol(
+    
+        
+        FfiConverterTypeEvaluationProtocol.lower(`protocol`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Does the environment support the cold claim it makes?
+         */ fun `validateRunEnvironment`(`env`: RunEnvironment): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_run_environment(
+    
+        
+        FfiConverterTypeRunEnvironment.lower(`env`),_status)
 }
     )
     }

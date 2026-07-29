@@ -2164,6 +2164,207 @@ public func FfiConverterTypeBackendObservation_lower(_ value: BackendObservation
 
 
 /**
+ * A benchmark prompt carries TWO identities. The semantic input must be
+ * identical across models; the rendered bytes may legitimately differ
+ * because official chat templates differ — and that difference has to be
+ * visible in provenance rather than silently averaged away.
+ */
+public struct BenchmarkPrompt: Equatable, Hashable {
+    public var promptId: String
+    public var promptProfile: String
+    /**
+     * Hash of the semantic message — same for every candidate.
+     */
+    public var semanticPromptHash: String
+    /**
+     * Hash of the exact bytes this candidate's template rendered.
+     */
+    public var renderedPromptHash: String
+    /**
+     * Token ids the runtime actually fed the model, hashed.
+     */
+    public var inputTokenIdsHash: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(promptId: String, promptProfile: String, 
+        /**
+         * Hash of the semantic message — same for every candidate.
+         */semanticPromptHash: String, 
+        /**
+         * Hash of the exact bytes this candidate's template rendered.
+         */renderedPromptHash: String, 
+        /**
+         * Token ids the runtime actually fed the model, hashed.
+         */inputTokenIdsHash: String) {
+        self.promptId = promptId
+        self.promptProfile = promptProfile
+        self.semanticPromptHash = semanticPromptHash
+        self.renderedPromptHash = renderedPromptHash
+        self.inputTokenIdsHash = inputTokenIdsHash
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BenchmarkPrompt: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BenchmarkPrompt {
+        return
+            try BenchmarkPrompt(
+                promptId: FfiConverterString.read(from: &buf), 
+                promptProfile: FfiConverterString.read(from: &buf), 
+                semanticPromptHash: FfiConverterString.read(from: &buf), 
+                renderedPromptHash: FfiConverterString.read(from: &buf), 
+                inputTokenIdsHash: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BenchmarkPrompt, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.promptId, into: &buf)
+        FfiConverterString.write(value.promptProfile, into: &buf)
+        FfiConverterString.write(value.semanticPromptHash, into: &buf)
+        FfiConverterString.write(value.renderedPromptHash, into: &buf)
+        FfiConverterString.write(value.inputTokenIdsHash, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBenchmarkPrompt_lift(_ buf: RustBuffer) throws -> BenchmarkPrompt {
+    return try FfiConverterTypeBenchmarkPrompt.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBenchmarkPrompt_lower(_ value: BenchmarkPrompt) -> RustBuffer {
+    return FfiConverterTypeBenchmarkPrompt.lower(value)
+}
+
+
+/**
+ * One candidate's complete result under one frozen protocol.
+ */
+public struct CandidateResult: Equatable, Hashable {
+    public var candidateId: String
+    public var candidateIdentity: String
+    public var protocolIdentity: String
+    public var device: String
+    public var osVersion: String
+    public var runtimeIdentity: String
+    /**
+     * Every prompt actually run, with both prompt identities.
+     */
+    public var prompts: [BenchmarkPrompt]
+    public var cost: CostObservation
+    public var quality: QualityPanel
+    /**
+     * v2: why this run is or is not a usable measurement.
+     */
+    public var disposition: RunDisposition
+    /**
+     * v3: one entry per planned run, as observed.
+     */
+    public var observations: [RunObservation]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(candidateId: String, candidateIdentity: String, protocolIdentity: String, device: String, osVersion: String, runtimeIdentity: String, 
+        /**
+         * Every prompt actually run, with both prompt identities.
+         */prompts: [BenchmarkPrompt], cost: CostObservation, quality: QualityPanel, 
+        /**
+         * v2: why this run is or is not a usable measurement.
+         */disposition: RunDisposition, 
+        /**
+         * v3: one entry per planned run, as observed.
+         */observations: [RunObservation]) {
+        self.candidateId = candidateId
+        self.candidateIdentity = candidateIdentity
+        self.protocolIdentity = protocolIdentity
+        self.device = device
+        self.osVersion = osVersion
+        self.runtimeIdentity = runtimeIdentity
+        self.prompts = prompts
+        self.cost = cost
+        self.quality = quality
+        self.disposition = disposition
+        self.observations = observations
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CandidateResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCandidateResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CandidateResult {
+        return
+            try CandidateResult(
+                candidateId: FfiConverterString.read(from: &buf), 
+                candidateIdentity: FfiConverterString.read(from: &buf), 
+                protocolIdentity: FfiConverterString.read(from: &buf), 
+                device: FfiConverterString.read(from: &buf), 
+                osVersion: FfiConverterString.read(from: &buf), 
+                runtimeIdentity: FfiConverterString.read(from: &buf), 
+                prompts: FfiConverterSequenceTypeBenchmarkPrompt.read(from: &buf), 
+                cost: FfiConverterTypeCostObservation.read(from: &buf), 
+                quality: FfiConverterTypeQualityPanel.read(from: &buf), 
+                disposition: FfiConverterTypeRunDisposition.read(from: &buf), 
+                observations: FfiConverterSequenceTypeRunObservation.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CandidateResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.candidateId, into: &buf)
+        FfiConverterString.write(value.candidateIdentity, into: &buf)
+        FfiConverterString.write(value.protocolIdentity, into: &buf)
+        FfiConverterString.write(value.device, into: &buf)
+        FfiConverterString.write(value.osVersion, into: &buf)
+        FfiConverterString.write(value.runtimeIdentity, into: &buf)
+        FfiConverterSequenceTypeBenchmarkPrompt.write(value.prompts, into: &buf)
+        FfiConverterTypeCostObservation.write(value.cost, into: &buf)
+        FfiConverterTypeQualityPanel.write(value.quality, into: &buf)
+        FfiConverterTypeRunDisposition.write(value.disposition, into: &buf)
+        FfiConverterSequenceTypeRunObservation.write(value.observations, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCandidateResult_lift(_ buf: RustBuffer) throws -> CandidateResult {
+    return try FfiConverterTypeCandidateResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCandidateResult_lower(_ value: CandidateResult) -> RustBuffer {
+    return FfiConverterTypeCandidateResult.lower(value)
+}
+
+
+/**
  * Build identity the shell supplies once per recording.
  */
 public struct CaptureBuildIdentity: Equatable, Hashable {
@@ -2522,6 +2723,259 @@ public func FfiConverterTypeChannelSnapshot_lower(_ value: ChannelSnapshot) -> R
 }
 
 
+/**
+ * The reproducible conversion record. Every field is required for a
+ * `DerivedByConversion` artifact — an unreproducible artifact is not
+ * evidence.
+ */
+public struct ConversionRecord: Equatable, Hashable {
+    /**
+     * Exact upstream source revision the weights came from.
+     */
+    public var sourceRepo: String
+    public var sourceRevision: String
+    /**
+     * One pinned llama.cpp commit does both conversion and quantization.
+     */
+    public var conversionCommit: String
+    public var quantizerCommit: String
+    public var conversionCommand: String
+    public var quantizeCommand: String
+    /**
+     * The unquantized GGUF produced before quantization — hashed so the
+     * chain is auditable end to end, not just at its final link.
+     */
+    public var intermediateSha256Hex: String
+    public var outputSha256Hex: String
+    public var quantization: String
+    /**
+     * `None` means no importance matrix was used. Never invent a calibration
+     * corpus to fill this field.
+     */
+    public var importanceMatrix: String?
+    public var calibrationDataset: String?
+    /**
+     * Requantizing an already-quantized file degrades quality; the pipeline
+     * must refuse it.
+     */
+    public var allowRequantize: Bool
+    public var pureQuantization: Bool
+    public var sourcePrecision: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Exact upstream source revision the weights came from.
+         */sourceRepo: String, sourceRevision: String, 
+        /**
+         * One pinned llama.cpp commit does both conversion and quantization.
+         */conversionCommit: String, quantizerCommit: String, conversionCommand: String, quantizeCommand: String, 
+        /**
+         * The unquantized GGUF produced before quantization — hashed so the
+         * chain is auditable end to end, not just at its final link.
+         */intermediateSha256Hex: String, outputSha256Hex: String, quantization: String, 
+        /**
+         * `None` means no importance matrix was used. Never invent a calibration
+         * corpus to fill this field.
+         */importanceMatrix: String?, calibrationDataset: String?, 
+        /**
+         * Requantizing an already-quantized file degrades quality; the pipeline
+         * must refuse it.
+         */allowRequantize: Bool, pureQuantization: Bool, sourcePrecision: String) {
+        self.sourceRepo = sourceRepo
+        self.sourceRevision = sourceRevision
+        self.conversionCommit = conversionCommit
+        self.quantizerCommit = quantizerCommit
+        self.conversionCommand = conversionCommand
+        self.quantizeCommand = quantizeCommand
+        self.intermediateSha256Hex = intermediateSha256Hex
+        self.outputSha256Hex = outputSha256Hex
+        self.quantization = quantization
+        self.importanceMatrix = importanceMatrix
+        self.calibrationDataset = calibrationDataset
+        self.allowRequantize = allowRequantize
+        self.pureQuantization = pureQuantization
+        self.sourcePrecision = sourcePrecision
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ConversionRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConversionRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConversionRecord {
+        return
+            try ConversionRecord(
+                sourceRepo: FfiConverterString.read(from: &buf), 
+                sourceRevision: FfiConverterString.read(from: &buf), 
+                conversionCommit: FfiConverterString.read(from: &buf), 
+                quantizerCommit: FfiConverterString.read(from: &buf), 
+                conversionCommand: FfiConverterString.read(from: &buf), 
+                quantizeCommand: FfiConverterString.read(from: &buf), 
+                intermediateSha256Hex: FfiConverterString.read(from: &buf), 
+                outputSha256Hex: FfiConverterString.read(from: &buf), 
+                quantization: FfiConverterString.read(from: &buf), 
+                importanceMatrix: FfiConverterOptionString.read(from: &buf), 
+                calibrationDataset: FfiConverterOptionString.read(from: &buf), 
+                allowRequantize: FfiConverterBool.read(from: &buf), 
+                pureQuantization: FfiConverterBool.read(from: &buf), 
+                sourcePrecision: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ConversionRecord, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.sourceRepo, into: &buf)
+        FfiConverterString.write(value.sourceRevision, into: &buf)
+        FfiConverterString.write(value.conversionCommit, into: &buf)
+        FfiConverterString.write(value.quantizerCommit, into: &buf)
+        FfiConverterString.write(value.conversionCommand, into: &buf)
+        FfiConverterString.write(value.quantizeCommand, into: &buf)
+        FfiConverterString.write(value.intermediateSha256Hex, into: &buf)
+        FfiConverterString.write(value.outputSha256Hex, into: &buf)
+        FfiConverterString.write(value.quantization, into: &buf)
+        FfiConverterOptionString.write(value.importanceMatrix, into: &buf)
+        FfiConverterOptionString.write(value.calibrationDataset, into: &buf)
+        FfiConverterBool.write(value.allowRequantize, into: &buf)
+        FfiConverterBool.write(value.pureQuantization, into: &buf)
+        FfiConverterString.write(value.sourcePrecision, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConversionRecord_lift(_ buf: RustBuffer) throws -> ConversionRecord {
+    return try FfiConverterTypeConversionRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConversionRecord_lower(_ value: ConversionRecord) -> RustBuffer {
+    return FfiConverterTypeConversionRecord.lower(value)
+}
+
+
+/**
+ * Measurements only the device can make. Rust receives these; it never
+ * reads a battery or a thermal sensor itself.
+ */
+public struct CostObservation: Equatable, Hashable {
+    public var coldLoadMs: UInt64
+    public var warmLoadMs: UInt64
+    public var timeToFirstTokenMs: UInt64
+    public var promptTokensPerSecond: Double
+    public var generationTokensPerSecond: Double
+    public var peakRssMb: UInt64
+    public var modelMemoryMb: UInt64
+    public var cancellationLatencyMs: UInt64
+    public var installedBytes: UInt64
+    public var batteryDropTenthsPercent: UInt32
+    public var peakTemperatureCelsiusTenths: UInt32
+    /**
+     * True when the device throttled during the run — such a run is not a
+     * representative measurement and cannot promote anything.
+     */
+    public var thermallyThrottled: Bool
+    public var backgroundForegroundRecovered: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(coldLoadMs: UInt64, warmLoadMs: UInt64, timeToFirstTokenMs: UInt64, promptTokensPerSecond: Double, generationTokensPerSecond: Double, peakRssMb: UInt64, modelMemoryMb: UInt64, cancellationLatencyMs: UInt64, installedBytes: UInt64, batteryDropTenthsPercent: UInt32, peakTemperatureCelsiusTenths: UInt32, 
+        /**
+         * True when the device throttled during the run — such a run is not a
+         * representative measurement and cannot promote anything.
+         */thermallyThrottled: Bool, backgroundForegroundRecovered: Bool) {
+        self.coldLoadMs = coldLoadMs
+        self.warmLoadMs = warmLoadMs
+        self.timeToFirstTokenMs = timeToFirstTokenMs
+        self.promptTokensPerSecond = promptTokensPerSecond
+        self.generationTokensPerSecond = generationTokensPerSecond
+        self.peakRssMb = peakRssMb
+        self.modelMemoryMb = modelMemoryMb
+        self.cancellationLatencyMs = cancellationLatencyMs
+        self.installedBytes = installedBytes
+        self.batteryDropTenthsPercent = batteryDropTenthsPercent
+        self.peakTemperatureCelsiusTenths = peakTemperatureCelsiusTenths
+        self.thermallyThrottled = thermallyThrottled
+        self.backgroundForegroundRecovered = backgroundForegroundRecovered
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CostObservation: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCostObservation: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CostObservation {
+        return
+            try CostObservation(
+                coldLoadMs: FfiConverterUInt64.read(from: &buf), 
+                warmLoadMs: FfiConverterUInt64.read(from: &buf), 
+                timeToFirstTokenMs: FfiConverterUInt64.read(from: &buf), 
+                promptTokensPerSecond: FfiConverterDouble.read(from: &buf), 
+                generationTokensPerSecond: FfiConverterDouble.read(from: &buf), 
+                peakRssMb: FfiConverterUInt64.read(from: &buf), 
+                modelMemoryMb: FfiConverterUInt64.read(from: &buf), 
+                cancellationLatencyMs: FfiConverterUInt64.read(from: &buf), 
+                installedBytes: FfiConverterUInt64.read(from: &buf), 
+                batteryDropTenthsPercent: FfiConverterUInt32.read(from: &buf), 
+                peakTemperatureCelsiusTenths: FfiConverterUInt32.read(from: &buf), 
+                thermallyThrottled: FfiConverterBool.read(from: &buf), 
+                backgroundForegroundRecovered: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CostObservation, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.coldLoadMs, into: &buf)
+        FfiConverterUInt64.write(value.warmLoadMs, into: &buf)
+        FfiConverterUInt64.write(value.timeToFirstTokenMs, into: &buf)
+        FfiConverterDouble.write(value.promptTokensPerSecond, into: &buf)
+        FfiConverterDouble.write(value.generationTokensPerSecond, into: &buf)
+        FfiConverterUInt64.write(value.peakRssMb, into: &buf)
+        FfiConverterUInt64.write(value.modelMemoryMb, into: &buf)
+        FfiConverterUInt64.write(value.cancellationLatencyMs, into: &buf)
+        FfiConverterUInt64.write(value.installedBytes, into: &buf)
+        FfiConverterUInt32.write(value.batteryDropTenthsPercent, into: &buf)
+        FfiConverterUInt32.write(value.peakTemperatureCelsiusTenths, into: &buf)
+        FfiConverterBool.write(value.thermallyThrottled, into: &buf)
+        FfiConverterBool.write(value.backgroundForegroundRecovered, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCostObservation_lift(_ buf: RustBuffer) throws -> CostObservation {
+    return try FfiConverterTypeCostObservation.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCostObservation_lower(_ value: CostObservation) -> RustBuffer {
+    return FfiConverterTypeCostObservation.lower(value)
+}
+
+
 public struct DeviceRequirements: Equatable, Hashable {
     public var minimumRamMb: UInt32
     public var deviceClass: String
@@ -2713,6 +3167,264 @@ public func FfiConverterTypeEmbeddingContract_lower(_ value: EmbeddingContract) 
 }
 
 
+public struct EvaluationCandidate: Equatable, Hashable {
+    public var candidateId: String
+    public var modelFamily: String
+    public var modelRevision: String
+    public var quantization: String
+    public var variantId: String
+    public var role: CandidateRole
+    public var provenance: ArtifactProvenance
+    public var artifactSha256Hex: String
+    public var tokenizerIdentity: String
+    public var chatTemplateIdentity: String
+    /**
+     * Qwen3 defaults to thinking mode; a non-thinking comparison must prove
+     * it is off rather than trust a runtime flag.
+     */
+    public var thinkingModeDisabled: Bool
+    /**
+     * Present exactly when `provenance` is `DerivedByConversion`.
+     */
+    public var conversion: ConversionRecord?
+    /**
+     * v3: declared in advance, so a harness cannot render something else
+     * and still be admitted.
+     */
+    public var promptBindings: [PromptBinding]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(candidateId: String, modelFamily: String, modelRevision: String, quantization: String, variantId: String, role: CandidateRole, provenance: ArtifactProvenance, artifactSha256Hex: String, tokenizerIdentity: String, chatTemplateIdentity: String, 
+        /**
+         * Qwen3 defaults to thinking mode; a non-thinking comparison must prove
+         * it is off rather than trust a runtime flag.
+         */thinkingModeDisabled: Bool, 
+        /**
+         * Present exactly when `provenance` is `DerivedByConversion`.
+         */conversion: ConversionRecord?, 
+        /**
+         * v3: declared in advance, so a harness cannot render something else
+         * and still be admitted.
+         */promptBindings: [PromptBinding]) {
+        self.candidateId = candidateId
+        self.modelFamily = modelFamily
+        self.modelRevision = modelRevision
+        self.quantization = quantization
+        self.variantId = variantId
+        self.role = role
+        self.provenance = provenance
+        self.artifactSha256Hex = artifactSha256Hex
+        self.tokenizerIdentity = tokenizerIdentity
+        self.chatTemplateIdentity = chatTemplateIdentity
+        self.thinkingModeDisabled = thinkingModeDisabled
+        self.conversion = conversion
+        self.promptBindings = promptBindings
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EvaluationCandidate: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEvaluationCandidate: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EvaluationCandidate {
+        return
+            try EvaluationCandidate(
+                candidateId: FfiConverterString.read(from: &buf), 
+                modelFamily: FfiConverterString.read(from: &buf), 
+                modelRevision: FfiConverterString.read(from: &buf), 
+                quantization: FfiConverterString.read(from: &buf), 
+                variantId: FfiConverterString.read(from: &buf), 
+                role: FfiConverterTypeCandidateRole.read(from: &buf), 
+                provenance: FfiConverterTypeArtifactProvenance.read(from: &buf), 
+                artifactSha256Hex: FfiConverterString.read(from: &buf), 
+                tokenizerIdentity: FfiConverterString.read(from: &buf), 
+                chatTemplateIdentity: FfiConverterString.read(from: &buf), 
+                thinkingModeDisabled: FfiConverterBool.read(from: &buf), 
+                conversion: FfiConverterOptionTypeConversionRecord.read(from: &buf), 
+                promptBindings: FfiConverterSequenceTypePromptBinding.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EvaluationCandidate, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.candidateId, into: &buf)
+        FfiConverterString.write(value.modelFamily, into: &buf)
+        FfiConverterString.write(value.modelRevision, into: &buf)
+        FfiConverterString.write(value.quantization, into: &buf)
+        FfiConverterString.write(value.variantId, into: &buf)
+        FfiConverterTypeCandidateRole.write(value.role, into: &buf)
+        FfiConverterTypeArtifactProvenance.write(value.provenance, into: &buf)
+        FfiConverterString.write(value.artifactSha256Hex, into: &buf)
+        FfiConverterString.write(value.tokenizerIdentity, into: &buf)
+        FfiConverterString.write(value.chatTemplateIdentity, into: &buf)
+        FfiConverterBool.write(value.thinkingModeDisabled, into: &buf)
+        FfiConverterOptionTypeConversionRecord.write(value.conversion, into: &buf)
+        FfiConverterSequenceTypePromptBinding.write(value.promptBindings, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEvaluationCandidate_lift(_ buf: RustBuffer) throws -> EvaluationCandidate {
+    return try FfiConverterTypeEvaluationCandidate.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEvaluationCandidate_lower(_ value: EvaluationCandidate) -> RustBuffer {
+    return FfiConverterTypeEvaluationCandidate.lower(value)
+}
+
+
+public struct EvaluationProtocol: Equatable, Hashable {
+    public var protocolVersion: UInt32
+    public var corpusId: String
+    /**
+     * Digest of the committed sanitized corpus file.
+     */
+    public var corpusSha256Hex: String
+    public var promptCount: UInt32
+    public var qualityRubricId: String
+    public var sampler: SamplerConfig
+    /**
+     * Frozen seeds; multiple, so one lucky sample cannot decide anything.
+     */
+    public var seeds: [UInt64]
+    public var warmupRuns: UInt32
+    public var timedRuns: UInt32
+    public var sustainedSeconds: UInt32
+    public var perRunTimeoutMs: UInt64
+    public var thresholds: PromotionThresholds
+    /**
+     * v2: the conditions a measurement is taken under. Absent in v1, which
+     * is why v1 could not support an honest battery or cold-load claim.
+     */
+    public var environment: RunEnvironment
+    /**
+     * v3: the frozen semantic corpus every candidate shares.
+     */
+    public var expectedPrompts: [ExpectedPrompt]
+    /**
+     * v3: the exact run schedule, not merely the alternating property.
+     */
+    public var runPlan: [RunPlanEntry]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(protocolVersion: UInt32, corpusId: String, 
+        /**
+         * Digest of the committed sanitized corpus file.
+         */corpusSha256Hex: String, promptCount: UInt32, qualityRubricId: String, sampler: SamplerConfig, 
+        /**
+         * Frozen seeds; multiple, so one lucky sample cannot decide anything.
+         */seeds: [UInt64], warmupRuns: UInt32, timedRuns: UInt32, sustainedSeconds: UInt32, perRunTimeoutMs: UInt64, thresholds: PromotionThresholds, 
+        /**
+         * v2: the conditions a measurement is taken under. Absent in v1, which
+         * is why v1 could not support an honest battery or cold-load claim.
+         */environment: RunEnvironment, 
+        /**
+         * v3: the frozen semantic corpus every candidate shares.
+         */expectedPrompts: [ExpectedPrompt], 
+        /**
+         * v3: the exact run schedule, not merely the alternating property.
+         */runPlan: [RunPlanEntry]) {
+        self.protocolVersion = protocolVersion
+        self.corpusId = corpusId
+        self.corpusSha256Hex = corpusSha256Hex
+        self.promptCount = promptCount
+        self.qualityRubricId = qualityRubricId
+        self.sampler = sampler
+        self.seeds = seeds
+        self.warmupRuns = warmupRuns
+        self.timedRuns = timedRuns
+        self.sustainedSeconds = sustainedSeconds
+        self.perRunTimeoutMs = perRunTimeoutMs
+        self.thresholds = thresholds
+        self.environment = environment
+        self.expectedPrompts = expectedPrompts
+        self.runPlan = runPlan
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EvaluationProtocol: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEvaluationProtocol: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EvaluationProtocol {
+        return
+            try EvaluationProtocol(
+                protocolVersion: FfiConverterUInt32.read(from: &buf), 
+                corpusId: FfiConverterString.read(from: &buf), 
+                corpusSha256Hex: FfiConverterString.read(from: &buf), 
+                promptCount: FfiConverterUInt32.read(from: &buf), 
+                qualityRubricId: FfiConverterString.read(from: &buf), 
+                sampler: FfiConverterTypeSamplerConfig.read(from: &buf), 
+                seeds: FfiConverterSequenceUInt64.read(from: &buf), 
+                warmupRuns: FfiConverterUInt32.read(from: &buf), 
+                timedRuns: FfiConverterUInt32.read(from: &buf), 
+                sustainedSeconds: FfiConverterUInt32.read(from: &buf), 
+                perRunTimeoutMs: FfiConverterUInt64.read(from: &buf), 
+                thresholds: FfiConverterTypePromotionThresholds.read(from: &buf), 
+                environment: FfiConverterTypeRunEnvironment.read(from: &buf), 
+                expectedPrompts: FfiConverterSequenceTypeExpectedPrompt.read(from: &buf), 
+                runPlan: FfiConverterSequenceTypeRunPlanEntry.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EvaluationProtocol, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.protocolVersion, into: &buf)
+        FfiConverterString.write(value.corpusId, into: &buf)
+        FfiConverterString.write(value.corpusSha256Hex, into: &buf)
+        FfiConverterUInt32.write(value.promptCount, into: &buf)
+        FfiConverterString.write(value.qualityRubricId, into: &buf)
+        FfiConverterTypeSamplerConfig.write(value.sampler, into: &buf)
+        FfiConverterSequenceUInt64.write(value.seeds, into: &buf)
+        FfiConverterUInt32.write(value.warmupRuns, into: &buf)
+        FfiConverterUInt32.write(value.timedRuns, into: &buf)
+        FfiConverterUInt32.write(value.sustainedSeconds, into: &buf)
+        FfiConverterUInt64.write(value.perRunTimeoutMs, into: &buf)
+        FfiConverterTypePromotionThresholds.write(value.thresholds, into: &buf)
+        FfiConverterTypeRunEnvironment.write(value.environment, into: &buf)
+        FfiConverterSequenceTypeExpectedPrompt.write(value.expectedPrompts, into: &buf)
+        FfiConverterSequenceTypeRunPlanEntry.write(value.runPlan, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEvaluationProtocol_lift(_ buf: RustBuffer) throws -> EvaluationProtocol {
+    return try FfiConverterTypeEvaluationProtocol.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEvaluationProtocol_lower(_ value: EvaluationProtocol) -> RustBuffer {
+    return FfiConverterTypeEvaluationProtocol.lower(value)
+}
+
+
 /**
  * A detected span: *where* it is, plus *what* it is and under which frozen
  * detector parameters. Shifting must move the range and nothing else.
@@ -2772,6 +3484,63 @@ public func FfiConverterTypeEventSpan_lift(_ buf: RustBuffer) throws -> EventSpa
 #endif
 public func FfiConverterTypeEventSpan_lower(_ value: EventSpan) -> RustBuffer {
     return FfiConverterTypeEventSpan.lower(value)
+}
+
+
+/**
+ * A frozen corpus entry: the semantic input every candidate shares.
+ */
+public struct ExpectedPrompt: Equatable, Hashable {
+    public var promptId: String
+    public var semanticPromptHash: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(promptId: String, semanticPromptHash: String) {
+        self.promptId = promptId
+        self.semanticPromptHash = semanticPromptHash
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ExpectedPrompt: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeExpectedPrompt: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ExpectedPrompt {
+        return
+            try ExpectedPrompt(
+                promptId: FfiConverterString.read(from: &buf), 
+                semanticPromptHash: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ExpectedPrompt, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.promptId, into: &buf)
+        FfiConverterString.write(value.semanticPromptHash, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeExpectedPrompt_lift(_ buf: RustBuffer) throws -> ExpectedPrompt {
+    return try FfiConverterTypeExpectedPrompt.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeExpectedPrompt_lower(_ value: ExpectedPrompt) -> RustBuffer {
+    return FfiConverterTypeExpectedPrompt.lower(value)
 }
 
 
@@ -3660,6 +4429,181 @@ public func FfiConverterTypePresentation_lower(_ value: Presentation) -> RustBuf
 }
 
 
+/**
+ * The ceilings a candidate must meet to be promotable. Frozen before any
+ * candidate runs.
+ */
+public struct PromotionThresholds: Equatable, Hashable {
+    public var maxColdLoadMs: UInt64
+    public var maxTimeToFirstTokenMs: UInt64
+    public var minGenerationTokensPerSecond: Double
+    public var maxPeakRssMb: UInt64
+    public var maxInstalledBytes: UInt64
+    public var maxCancellationLatencyMs: UInt64
+    /**
+     * v3: battery only gates promotion when the run was actually on
+     * battery. Plugged in, the figure is telemetry and cannot pass or fail
+     * a candidate.
+     */
+    public var batteryPolicy: BatteryEvidencePolicy
+    /**
+     * Abort rather than record a thermally-throttled number as if it were
+     * representative.
+     */
+    public var thermalCutoffCelsiusTenths: UInt32
+    /**
+     * A candidate must beat the other's quality panel by at least this
+     * margin to justify being larger.
+     */
+    public var materialQualityMargin: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(maxColdLoadMs: UInt64, maxTimeToFirstTokenMs: UInt64, minGenerationTokensPerSecond: Double, maxPeakRssMb: UInt64, maxInstalledBytes: UInt64, maxCancellationLatencyMs: UInt64, 
+        /**
+         * v3: battery only gates promotion when the run was actually on
+         * battery. Plugged in, the figure is telemetry and cannot pass or fail
+         * a candidate.
+         */batteryPolicy: BatteryEvidencePolicy, 
+        /**
+         * Abort rather than record a thermally-throttled number as if it were
+         * representative.
+         */thermalCutoffCelsiusTenths: UInt32, 
+        /**
+         * A candidate must beat the other's quality panel by at least this
+         * margin to justify being larger.
+         */materialQualityMargin: Double) {
+        self.maxColdLoadMs = maxColdLoadMs
+        self.maxTimeToFirstTokenMs = maxTimeToFirstTokenMs
+        self.minGenerationTokensPerSecond = minGenerationTokensPerSecond
+        self.maxPeakRssMb = maxPeakRssMb
+        self.maxInstalledBytes = maxInstalledBytes
+        self.maxCancellationLatencyMs = maxCancellationLatencyMs
+        self.batteryPolicy = batteryPolicy
+        self.thermalCutoffCelsiusTenths = thermalCutoffCelsiusTenths
+        self.materialQualityMargin = materialQualityMargin
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PromotionThresholds: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePromotionThresholds: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PromotionThresholds {
+        return
+            try PromotionThresholds(
+                maxColdLoadMs: FfiConverterUInt64.read(from: &buf), 
+                maxTimeToFirstTokenMs: FfiConverterUInt64.read(from: &buf), 
+                minGenerationTokensPerSecond: FfiConverterDouble.read(from: &buf), 
+                maxPeakRssMb: FfiConverterUInt64.read(from: &buf), 
+                maxInstalledBytes: FfiConverterUInt64.read(from: &buf), 
+                maxCancellationLatencyMs: FfiConverterUInt64.read(from: &buf), 
+                batteryPolicy: FfiConverterTypeBatteryEvidencePolicy.read(from: &buf), 
+                thermalCutoffCelsiusTenths: FfiConverterUInt32.read(from: &buf), 
+                materialQualityMargin: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PromotionThresholds, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.maxColdLoadMs, into: &buf)
+        FfiConverterUInt64.write(value.maxTimeToFirstTokenMs, into: &buf)
+        FfiConverterDouble.write(value.minGenerationTokensPerSecond, into: &buf)
+        FfiConverterUInt64.write(value.maxPeakRssMb, into: &buf)
+        FfiConverterUInt64.write(value.maxInstalledBytes, into: &buf)
+        FfiConverterUInt64.write(value.maxCancellationLatencyMs, into: &buf)
+        FfiConverterTypeBatteryEvidencePolicy.write(value.batteryPolicy, into: &buf)
+        FfiConverterUInt32.write(value.thermalCutoffCelsiusTenths, into: &buf)
+        FfiConverterDouble.write(value.materialQualityMargin, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePromotionThresholds_lift(_ buf: RustBuffer) throws -> PromotionThresholds {
+    return try FfiConverterTypePromotionThresholds.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePromotionThresholds_lower(_ value: PromotionThresholds) -> RustBuffer {
+    return FfiConverterTypePromotionThresholds.lower(value)
+}
+
+
+/**
+ * The candidate-specific rendering of one frozen prompt. Rendered bytes and
+ * token ids legitimately differ per template — but they are declared in
+ * advance, so the harness cannot silently render something else.
+ */
+public struct PromptBinding: Equatable, Hashable {
+    public var promptId: String
+    public var renderedPromptHash: String
+    public var inputTokenIdsHash: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(promptId: String, renderedPromptHash: String, inputTokenIdsHash: String) {
+        self.promptId = promptId
+        self.renderedPromptHash = renderedPromptHash
+        self.inputTokenIdsHash = inputTokenIdsHash
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PromptBinding: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePromptBinding: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PromptBinding {
+        return
+            try PromptBinding(
+                promptId: FfiConverterString.read(from: &buf), 
+                renderedPromptHash: FfiConverterString.read(from: &buf), 
+                inputTokenIdsHash: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PromptBinding, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.promptId, into: &buf)
+        FfiConverterString.write(value.renderedPromptHash, into: &buf)
+        FfiConverterString.write(value.inputTokenIdsHash, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePromptBinding_lift(_ buf: RustBuffer) throws -> PromptBinding {
+    return try FfiConverterTypePromptBinding.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePromptBinding_lower(_ value: PromptBinding) -> RustBuffer {
+    return FfiConverterTypePromptBinding.lower(value)
+}
+
+
 public struct ProviderAvailability: Equatable, Hashable {
     public var providerId: String
     public var credentialState: CredentialState
@@ -3843,6 +4787,114 @@ public func FfiConverterTypeProviderDescriptor_lift(_ buf: RustBuffer) throws ->
 #endif
 public func FfiConverterTypeProviderDescriptor_lower(_ value: ProviderDescriptor) -> RustBuffer {
     return FfiConverterTypeProviderDescriptor.lower(value)
+}
+
+
+/**
+ * Blinded quality scores, 0.0–1.0 per axis. The shell collects them; the
+ * rubric that produced them is pinned by `quality_rubric_id`.
+ */
+public struct QualityPanel: Equatable, Hashable {
+    public var instructionAdherence: Double
+    public var requiredOutputStructure: Double
+    /**
+     * Higher is better: 1.0 means nothing was invented.
+     */
+    public var avoidsUnsupportedInvention: Double
+    public var appropriateUncertainty: Double
+    /**
+     * Higher is better: 1.0 means no false refusals.
+     */
+    public var avoidsFalseRefusal: Double
+    public var substantivePositionRetention: Double
+    /**
+     * Higher is better: 1.0 means no degenerate repetition.
+     */
+    public var avoidsRepetition: Double
+    public var truncationBehavior: Double
+    public var languagePreservation: Double
+    public var promptProfileFidelity: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(instructionAdherence: Double, requiredOutputStructure: Double, 
+        /**
+         * Higher is better: 1.0 means nothing was invented.
+         */avoidsUnsupportedInvention: Double, appropriateUncertainty: Double, 
+        /**
+         * Higher is better: 1.0 means no false refusals.
+         */avoidsFalseRefusal: Double, substantivePositionRetention: Double, 
+        /**
+         * Higher is better: 1.0 means no degenerate repetition.
+         */avoidsRepetition: Double, truncationBehavior: Double, languagePreservation: Double, promptProfileFidelity: Double) {
+        self.instructionAdherence = instructionAdherence
+        self.requiredOutputStructure = requiredOutputStructure
+        self.avoidsUnsupportedInvention = avoidsUnsupportedInvention
+        self.appropriateUncertainty = appropriateUncertainty
+        self.avoidsFalseRefusal = avoidsFalseRefusal
+        self.substantivePositionRetention = substantivePositionRetention
+        self.avoidsRepetition = avoidsRepetition
+        self.truncationBehavior = truncationBehavior
+        self.languagePreservation = languagePreservation
+        self.promptProfileFidelity = promptProfileFidelity
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension QualityPanel: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeQualityPanel: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QualityPanel {
+        return
+            try QualityPanel(
+                instructionAdherence: FfiConverterDouble.read(from: &buf), 
+                requiredOutputStructure: FfiConverterDouble.read(from: &buf), 
+                avoidsUnsupportedInvention: FfiConverterDouble.read(from: &buf), 
+                appropriateUncertainty: FfiConverterDouble.read(from: &buf), 
+                avoidsFalseRefusal: FfiConverterDouble.read(from: &buf), 
+                substantivePositionRetention: FfiConverterDouble.read(from: &buf), 
+                avoidsRepetition: FfiConverterDouble.read(from: &buf), 
+                truncationBehavior: FfiConverterDouble.read(from: &buf), 
+                languagePreservation: FfiConverterDouble.read(from: &buf), 
+                promptProfileFidelity: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: QualityPanel, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.instructionAdherence, into: &buf)
+        FfiConverterDouble.write(value.requiredOutputStructure, into: &buf)
+        FfiConverterDouble.write(value.avoidsUnsupportedInvention, into: &buf)
+        FfiConverterDouble.write(value.appropriateUncertainty, into: &buf)
+        FfiConverterDouble.write(value.avoidsFalseRefusal, into: &buf)
+        FfiConverterDouble.write(value.substantivePositionRetention, into: &buf)
+        FfiConverterDouble.write(value.avoidsRepetition, into: &buf)
+        FfiConverterDouble.write(value.truncationBehavior, into: &buf)
+        FfiConverterDouble.write(value.languagePreservation, into: &buf)
+        FfiConverterDouble.write(value.promptProfileFidelity, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualityPanel_lift(_ buf: RustBuffer) throws -> QualityPanel {
+    return try FfiConverterTypeQualityPanel.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualityPanel_lower(_ value: QualityPanel) -> RustBuffer {
+    return FfiConverterTypeQualityPanel.lower(value)
 }
 
 
@@ -4156,6 +5208,336 @@ public func FfiConverterTypeResolvedProviderIdentity_lift(_ buf: RustBuffer) thr
 #endif
 public func FfiConverterTypeResolvedProviderIdentity_lower(_ value: ResolvedProviderIdentity) -> RustBuffer {
     return FfiConverterTypeResolvedProviderIdentity.lower(value)
+}
+
+
+/**
+ * The conditions every timed run must be taken under.
+ */
+public struct RunEnvironment: Equatable, Hashable {
+    public var coldDefinition: ColdDefinition
+    public var warmDefinition: WarmDefinition
+    public var chargingState: ChargingState
+    public var cooldownExit: CooldownExit
+    public var cooldownMinimumSeconds: UInt32
+    /**
+     * A run may not START above this temperature.
+     */
+    public var thermalStartCeilingCelsiusTenths: UInt32
+    public var screenOn: Bool
+    public var screenBrightnessPercent: UInt32
+    /**
+     * Airplane mode proves local execution and removes radio power noise.
+     */
+    public var airplaneMode: Bool
+    /**
+     * Process restarted between candidates so neither inherits the other's
+     * warmed state.
+     */
+    public var restartProcessBetweenCandidates: Bool
+    /**
+     * Pack integrity re-verified between candidates.
+     */
+    public var recheckPackIntegrityBetweenCandidates: Bool
+    /**
+     * Candidate order alternates rather than running all of A then all of B,
+     * so ordering and accumulated heat do not bias one candidate.
+     */
+    public var alternatingCandidateOrder: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(coldDefinition: ColdDefinition, warmDefinition: WarmDefinition, chargingState: ChargingState, cooldownExit: CooldownExit, cooldownMinimumSeconds: UInt32, 
+        /**
+         * A run may not START above this temperature.
+         */thermalStartCeilingCelsiusTenths: UInt32, screenOn: Bool, screenBrightnessPercent: UInt32, 
+        /**
+         * Airplane mode proves local execution and removes radio power noise.
+         */airplaneMode: Bool, 
+        /**
+         * Process restarted between candidates so neither inherits the other's
+         * warmed state.
+         */restartProcessBetweenCandidates: Bool, 
+        /**
+         * Pack integrity re-verified between candidates.
+         */recheckPackIntegrityBetweenCandidates: Bool, 
+        /**
+         * Candidate order alternates rather than running all of A then all of B,
+         * so ordering and accumulated heat do not bias one candidate.
+         */alternatingCandidateOrder: Bool) {
+        self.coldDefinition = coldDefinition
+        self.warmDefinition = warmDefinition
+        self.chargingState = chargingState
+        self.cooldownExit = cooldownExit
+        self.cooldownMinimumSeconds = cooldownMinimumSeconds
+        self.thermalStartCeilingCelsiusTenths = thermalStartCeilingCelsiusTenths
+        self.screenOn = screenOn
+        self.screenBrightnessPercent = screenBrightnessPercent
+        self.airplaneMode = airplaneMode
+        self.restartProcessBetweenCandidates = restartProcessBetweenCandidates
+        self.recheckPackIntegrityBetweenCandidates = recheckPackIntegrityBetweenCandidates
+        self.alternatingCandidateOrder = alternatingCandidateOrder
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RunEnvironment: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRunEnvironment: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RunEnvironment {
+        return
+            try RunEnvironment(
+                coldDefinition: FfiConverterTypeColdDefinition.read(from: &buf), 
+                warmDefinition: FfiConverterTypeWarmDefinition.read(from: &buf), 
+                chargingState: FfiConverterTypeChargingState.read(from: &buf), 
+                cooldownExit: FfiConverterTypeCooldownExit.read(from: &buf), 
+                cooldownMinimumSeconds: FfiConverterUInt32.read(from: &buf), 
+                thermalStartCeilingCelsiusTenths: FfiConverterUInt32.read(from: &buf), 
+                screenOn: FfiConverterBool.read(from: &buf), 
+                screenBrightnessPercent: FfiConverterUInt32.read(from: &buf), 
+                airplaneMode: FfiConverterBool.read(from: &buf), 
+                restartProcessBetweenCandidates: FfiConverterBool.read(from: &buf), 
+                recheckPackIntegrityBetweenCandidates: FfiConverterBool.read(from: &buf), 
+                alternatingCandidateOrder: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RunEnvironment, into buf: inout [UInt8]) {
+        FfiConverterTypeColdDefinition.write(value.coldDefinition, into: &buf)
+        FfiConverterTypeWarmDefinition.write(value.warmDefinition, into: &buf)
+        FfiConverterTypeChargingState.write(value.chargingState, into: &buf)
+        FfiConverterTypeCooldownExit.write(value.cooldownExit, into: &buf)
+        FfiConverterUInt32.write(value.cooldownMinimumSeconds, into: &buf)
+        FfiConverterUInt32.write(value.thermalStartCeilingCelsiusTenths, into: &buf)
+        FfiConverterBool.write(value.screenOn, into: &buf)
+        FfiConverterUInt32.write(value.screenBrightnessPercent, into: &buf)
+        FfiConverterBool.write(value.airplaneMode, into: &buf)
+        FfiConverterBool.write(value.restartProcessBetweenCandidates, into: &buf)
+        FfiConverterBool.write(value.recheckPackIntegrityBetweenCandidates, into: &buf)
+        FfiConverterBool.write(value.alternatingCandidateOrder, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunEnvironment_lift(_ buf: RustBuffer) throws -> RunEnvironment {
+    return try FfiConverterTypeRunEnvironment.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunEnvironment_lower(_ value: RunEnvironment) -> RustBuffer {
+    return FfiConverterTypeRunEnvironment.lower(value)
+}
+
+
+public struct RunObservation: Equatable, Hashable {
+    public var runId: String
+    public var candidateId: String
+    public var seed: UInt64
+    public var mode: RunMode
+    public var sequenceIndex: UInt32
+    public var startedMonotonicMs: UInt64
+    public var endedMonotonicMs: UInt64
+    public var observedChargingState: ChargingState
+    public var observedScreenOn: Bool
+    public var observedBrightnessPercent: UInt32
+    public var observedAirplaneMode: Bool
+    public var processInstanceId: String
+    /**
+     * Digest proving the pack was re-verified before this run.
+     */
+    public var packIntegrityReceipt: String
+    public var coldEvidence: ColdEvidence
+    public var startTemperatureCelsiusTenths: UInt32
+    public var cooldownDurationMs: UInt64
+    public var cooldownExitTemperatureCelsiusTenths: UInt32
+    public var thermalSensorIdentity: String
+    public var throttlingDetectorIdentity: String
+    public var disposition: RunDisposition
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(runId: String, candidateId: String, seed: UInt64, mode: RunMode, sequenceIndex: UInt32, startedMonotonicMs: UInt64, endedMonotonicMs: UInt64, observedChargingState: ChargingState, observedScreenOn: Bool, observedBrightnessPercent: UInt32, observedAirplaneMode: Bool, processInstanceId: String, 
+        /**
+         * Digest proving the pack was re-verified before this run.
+         */packIntegrityReceipt: String, coldEvidence: ColdEvidence, startTemperatureCelsiusTenths: UInt32, cooldownDurationMs: UInt64, cooldownExitTemperatureCelsiusTenths: UInt32, thermalSensorIdentity: String, throttlingDetectorIdentity: String, disposition: RunDisposition) {
+        self.runId = runId
+        self.candidateId = candidateId
+        self.seed = seed
+        self.mode = mode
+        self.sequenceIndex = sequenceIndex
+        self.startedMonotonicMs = startedMonotonicMs
+        self.endedMonotonicMs = endedMonotonicMs
+        self.observedChargingState = observedChargingState
+        self.observedScreenOn = observedScreenOn
+        self.observedBrightnessPercent = observedBrightnessPercent
+        self.observedAirplaneMode = observedAirplaneMode
+        self.processInstanceId = processInstanceId
+        self.packIntegrityReceipt = packIntegrityReceipt
+        self.coldEvidence = coldEvidence
+        self.startTemperatureCelsiusTenths = startTemperatureCelsiusTenths
+        self.cooldownDurationMs = cooldownDurationMs
+        self.cooldownExitTemperatureCelsiusTenths = cooldownExitTemperatureCelsiusTenths
+        self.thermalSensorIdentity = thermalSensorIdentity
+        self.throttlingDetectorIdentity = throttlingDetectorIdentity
+        self.disposition = disposition
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RunObservation: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRunObservation: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RunObservation {
+        return
+            try RunObservation(
+                runId: FfiConverterString.read(from: &buf), 
+                candidateId: FfiConverterString.read(from: &buf), 
+                seed: FfiConverterUInt64.read(from: &buf), 
+                mode: FfiConverterTypeRunMode.read(from: &buf), 
+                sequenceIndex: FfiConverterUInt32.read(from: &buf), 
+                startedMonotonicMs: FfiConverterUInt64.read(from: &buf), 
+                endedMonotonicMs: FfiConverterUInt64.read(from: &buf), 
+                observedChargingState: FfiConverterTypeChargingState.read(from: &buf), 
+                observedScreenOn: FfiConverterBool.read(from: &buf), 
+                observedBrightnessPercent: FfiConverterUInt32.read(from: &buf), 
+                observedAirplaneMode: FfiConverterBool.read(from: &buf), 
+                processInstanceId: FfiConverterString.read(from: &buf), 
+                packIntegrityReceipt: FfiConverterString.read(from: &buf), 
+                coldEvidence: FfiConverterTypeColdEvidence.read(from: &buf), 
+                startTemperatureCelsiusTenths: FfiConverterUInt32.read(from: &buf), 
+                cooldownDurationMs: FfiConverterUInt64.read(from: &buf), 
+                cooldownExitTemperatureCelsiusTenths: FfiConverterUInt32.read(from: &buf), 
+                thermalSensorIdentity: FfiConverterString.read(from: &buf), 
+                throttlingDetectorIdentity: FfiConverterString.read(from: &buf), 
+                disposition: FfiConverterTypeRunDisposition.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RunObservation, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.runId, into: &buf)
+        FfiConverterString.write(value.candidateId, into: &buf)
+        FfiConverterUInt64.write(value.seed, into: &buf)
+        FfiConverterTypeRunMode.write(value.mode, into: &buf)
+        FfiConverterUInt32.write(value.sequenceIndex, into: &buf)
+        FfiConverterUInt64.write(value.startedMonotonicMs, into: &buf)
+        FfiConverterUInt64.write(value.endedMonotonicMs, into: &buf)
+        FfiConverterTypeChargingState.write(value.observedChargingState, into: &buf)
+        FfiConverterBool.write(value.observedScreenOn, into: &buf)
+        FfiConverterUInt32.write(value.observedBrightnessPercent, into: &buf)
+        FfiConverterBool.write(value.observedAirplaneMode, into: &buf)
+        FfiConverterString.write(value.processInstanceId, into: &buf)
+        FfiConverterString.write(value.packIntegrityReceipt, into: &buf)
+        FfiConverterTypeColdEvidence.write(value.coldEvidence, into: &buf)
+        FfiConverterUInt32.write(value.startTemperatureCelsiusTenths, into: &buf)
+        FfiConverterUInt64.write(value.cooldownDurationMs, into: &buf)
+        FfiConverterUInt32.write(value.cooldownExitTemperatureCelsiusTenths, into: &buf)
+        FfiConverterString.write(value.thermalSensorIdentity, into: &buf)
+        FfiConverterString.write(value.throttlingDetectorIdentity, into: &buf)
+        FfiConverterTypeRunDisposition.write(value.disposition, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunObservation_lift(_ buf: RustBuffer) throws -> RunObservation {
+    return try FfiConverterTypeRunObservation.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunObservation_lower(_ value: RunObservation) -> RustBuffer {
+    return FfiConverterTypeRunObservation.lower(value)
+}
+
+
+/**
+ * v3: the exact schedule, frozen. `alternating_candidate_order: true` is a
+ * property; this is the promised sequence, so runs cannot be reordered,
+ * dropped, duplicated, or selectively discarded after the fact.
+ */
+public struct RunPlanEntry: Equatable, Hashable {
+    public var index: UInt32
+    public var candidateId: String
+    public var mode: RunMode
+    public var seed: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(index: UInt32, candidateId: String, mode: RunMode, seed: UInt64) {
+        self.index = index
+        self.candidateId = candidateId
+        self.mode = mode
+        self.seed = seed
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RunPlanEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRunPlanEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RunPlanEntry {
+        return
+            try RunPlanEntry(
+                index: FfiConverterUInt32.read(from: &buf), 
+                candidateId: FfiConverterString.read(from: &buf), 
+                mode: FfiConverterTypeRunMode.read(from: &buf), 
+                seed: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RunPlanEntry, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.index, into: &buf)
+        FfiConverterString.write(value.candidateId, into: &buf)
+        FfiConverterTypeRunMode.write(value.mode, into: &buf)
+        FfiConverterUInt64.write(value.seed, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunPlanEntry_lift(_ buf: RustBuffer) throws -> RunPlanEntry {
+    return try FfiConverterTypeRunPlanEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunPlanEntry_lower(_ value: RunPlanEntry) -> RustBuffer {
+    return FfiConverterTypeRunPlanEntry.lower(value)
 }
 
 
@@ -4602,6 +5984,86 @@ public func FfiConverterTypeSampleWindow_lower(_ value: SampleWindow) -> RustBuf
 }
 
 
+public struct SamplerConfig: Equatable, Hashable {
+    /**
+     * Shared across both models for the primary comparison. Model-specific
+     * recommended settings are a secondary sensitivity analysis, never the
+     * promotion comparison.
+     */
+    public var temperature: Double
+    public var topP: Double
+    public var topK: UInt32
+    public var repeatPenalty: Double
+    public var maxOutputTokens: UInt32
+    public var contextCap: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Shared across both models for the primary comparison. Model-specific
+         * recommended settings are a secondary sensitivity analysis, never the
+         * promotion comparison.
+         */temperature: Double, topP: Double, topK: UInt32, repeatPenalty: Double, maxOutputTokens: UInt32, contextCap: UInt32) {
+        self.temperature = temperature
+        self.topP = topP
+        self.topK = topK
+        self.repeatPenalty = repeatPenalty
+        self.maxOutputTokens = maxOutputTokens
+        self.contextCap = contextCap
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SamplerConfig: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSamplerConfig: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SamplerConfig {
+        return
+            try SamplerConfig(
+                temperature: FfiConverterDouble.read(from: &buf), 
+                topP: FfiConverterDouble.read(from: &buf), 
+                topK: FfiConverterUInt32.read(from: &buf), 
+                repeatPenalty: FfiConverterDouble.read(from: &buf), 
+                maxOutputTokens: FfiConverterUInt32.read(from: &buf), 
+                contextCap: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SamplerConfig, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.temperature, into: &buf)
+        FfiConverterDouble.write(value.topP, into: &buf)
+        FfiConverterUInt32.write(value.topK, into: &buf)
+        FfiConverterDouble.write(value.repeatPenalty, into: &buf)
+        FfiConverterUInt32.write(value.maxOutputTokens, into: &buf)
+        FfiConverterUInt32.write(value.contextCap, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSamplerConfig_lift(_ buf: RustBuffer) throws -> SamplerConfig {
+    return try FfiConverterTypeSamplerConfig.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSamplerConfig_lower(_ value: SamplerConfig) -> RustBuffer {
+    return FfiConverterTypeSamplerConfig.lower(value)
+}
+
+
 /**
  * Stream metadata: everything freshness- and retry-related, per generation.
  */
@@ -5038,6 +6500,316 @@ public func FfiConverterTypeActiveIntegrityFailure_lower(_ value: ActiveIntegrit
 
 
 
+
+public enum AdmissionFailure: Equatable, Hashable {
+    
+    case protocolMismatch
+    case protocolInvalid(reason: String
+    )
+    case candidateIdentityMismatch
+    case resultCandidateMismatch
+    case promptCountMismatch
+    case duplicatePromptId(promptId: String
+    )
+    case unknownPromptId(promptId: String
+    )
+    case renderedPromptMismatch(promptId: String
+    )
+    case inputTokenMismatch(promptId: String
+    )
+    case runLedgerMismatch(reason: String
+    )
+    case coldEvidenceMissing(runId: String
+    )
+    case environmentDeviation(reason: String
+    )
+    case missingConversionRecord
+    case unexpectedConversionRecord
+    case requantizationNotAllowed
+    case thinkingModeNotDisabled
+    case tokenizerIdentityMismatch
+    case chatTemplateIdentityMismatch
+    case semanticPromptMismatch
+    case malformedQualityPanel
+    case thermallyThrottled
+    case disqualified(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AdmissionFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAdmissionFailure: FfiConverterRustBuffer {
+    typealias SwiftType = AdmissionFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AdmissionFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .protocolMismatch
+        
+        case 2: return .protocolInvalid(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .candidateIdentityMismatch
+        
+        case 4: return .resultCandidateMismatch
+        
+        case 5: return .promptCountMismatch
+        
+        case 6: return .duplicatePromptId(promptId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .unknownPromptId(promptId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 8: return .renderedPromptMismatch(promptId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 9: return .inputTokenMismatch(promptId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 10: return .runLedgerMismatch(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 11: return .coldEvidenceMissing(runId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 12: return .environmentDeviation(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 13: return .missingConversionRecord
+        
+        case 14: return .unexpectedConversionRecord
+        
+        case 15: return .requantizationNotAllowed
+        
+        case 16: return .thinkingModeNotDisabled
+        
+        case 17: return .tokenizerIdentityMismatch
+        
+        case 18: return .chatTemplateIdentityMismatch
+        
+        case 19: return .semanticPromptMismatch
+        
+        case 20: return .malformedQualityPanel
+        
+        case 21: return .thermallyThrottled
+        
+        case 22: return .disqualified(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AdmissionFailure, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .protocolMismatch:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .protocolInvalid(reason):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(reason, into: &buf)
+            
+        
+        case .candidateIdentityMismatch:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .resultCandidateMismatch:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .promptCountMismatch:
+            writeInt(&buf, Int32(5))
+        
+        
+        case let .duplicatePromptId(promptId):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(promptId, into: &buf)
+            
+        
+        case let .unknownPromptId(promptId):
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(promptId, into: &buf)
+            
+        
+        case let .renderedPromptMismatch(promptId):
+            writeInt(&buf, Int32(8))
+            FfiConverterString.write(promptId, into: &buf)
+            
+        
+        case let .inputTokenMismatch(promptId):
+            writeInt(&buf, Int32(9))
+            FfiConverterString.write(promptId, into: &buf)
+            
+        
+        case let .runLedgerMismatch(reason):
+            writeInt(&buf, Int32(10))
+            FfiConverterString.write(reason, into: &buf)
+            
+        
+        case let .coldEvidenceMissing(runId):
+            writeInt(&buf, Int32(11))
+            FfiConverterString.write(runId, into: &buf)
+            
+        
+        case let .environmentDeviation(reason):
+            writeInt(&buf, Int32(12))
+            FfiConverterString.write(reason, into: &buf)
+            
+        
+        case .missingConversionRecord:
+            writeInt(&buf, Int32(13))
+        
+        
+        case .unexpectedConversionRecord:
+            writeInt(&buf, Int32(14))
+        
+        
+        case .requantizationNotAllowed:
+            writeInt(&buf, Int32(15))
+        
+        
+        case .thinkingModeNotDisabled:
+            writeInt(&buf, Int32(16))
+        
+        
+        case .tokenizerIdentityMismatch:
+            writeInt(&buf, Int32(17))
+        
+        
+        case .chatTemplateIdentityMismatch:
+            writeInt(&buf, Int32(18))
+        
+        
+        case .semanticPromptMismatch:
+            writeInt(&buf, Int32(19))
+        
+        
+        case .malformedQualityPanel:
+            writeInt(&buf, Int32(20))
+        
+        
+        case .thermallyThrottled:
+            writeInt(&buf, Int32(21))
+        
+        
+        case let .disqualified(reason):
+            writeInt(&buf, Int32(22))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAdmissionFailure_lift(_ buf: RustBuffer) throws -> AdmissionFailure {
+    return try FfiConverterTypeAdmissionFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAdmissionFailure_lower(_ value: AdmissionFailure) -> RustBuffer {
+    return FfiConverterTypeAdmissionFailure.lower(value)
+}
+
+
+
+/**
+ * How a candidate's artifact came to exist. The asymmetry between an
+ * official download and a local conversion is recorded, never hidden:
+ * Qwen2.5 publishes an official Q4_K_M, Qwen3 does not.
+ */
+
+public enum ArtifactProvenance: Equatable, Hashable {
+    
+    /**
+     * Downloaded from the model owner's own repository, unmodified.
+     */
+    case officialUpstream
+    /**
+     * Quantized locally from pinned official source weights.
+     */
+    case derivedByConversion
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ArtifactProvenance: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeArtifactProvenance: FfiConverterRustBuffer {
+    typealias SwiftType = ArtifactProvenance
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ArtifactProvenance {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .officialUpstream
+        
+        case 2: return .derivedByConversion
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ArtifactProvenance, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .officialUpstream:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .derivedByConversion:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeArtifactProvenance_lift(_ buf: RustBuffer) throws -> ArtifactProvenance {
+    return try FfiConverterTypeArtifactProvenance.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeArtifactProvenance_lower(_ value: ArtifactProvenance) -> RustBuffer {
+    return FfiConverterTypeArtifactProvenance.lower(value)
+}
+
+
+
 /**
  * The provider-specific readiness contract's observed status. A single
  * boolean cannot distinguish not-checked, checking, and failed — this can.
@@ -5220,6 +6992,80 @@ public func FfiConverterTypeBackendRequirement_lower(_ value: BackendRequirement
 
 
 /**
+ * Whether a battery figure may gate promotion at all. Under a plugged-in
+ * protocol the delta is recorded but carries no energy claim, so letting it
+ * disqualify a candidate would be inventing evidence.
+ */
+
+public enum BatteryEvidencePolicy: Equatable, Hashable {
+    
+    case telemetryOnlyPluggedIn
+    case onBattery(maxDropTenthsPercent: UInt32
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension BatteryEvidencePolicy: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBatteryEvidencePolicy: FfiConverterRustBuffer {
+    typealias SwiftType = BatteryEvidencePolicy
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BatteryEvidencePolicy {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .telemetryOnlyPluggedIn
+        
+        case 2: return .onBattery(maxDropTenthsPercent: try FfiConverterUInt32.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: BatteryEvidencePolicy, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .telemetryOnlyPluggedIn:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .onBattery(maxDropTenthsPercent):
+            writeInt(&buf, Int32(2))
+            FfiConverterUInt32.write(maxDropTenthsPercent, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBatteryEvidencePolicy_lift(_ buf: RustBuffer) throws -> BatteryEvidencePolicy {
+    return try FfiConverterTypeBatteryEvidencePolicy.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBatteryEvidencePolicy_lower(_ value: BatteryEvidencePolicy) -> RustBuffer {
+    return FfiConverterTypeBatteryEvidencePolicy.lower(value)
+}
+
+
+
+/**
  * Where the bridge sits relative to the device. Recorded so a replay can
  * never be mistaken for an on-device capture.
  */
@@ -5285,6 +7131,83 @@ public func FfiConverterTypeBridgeLocality_lift(_ buf: RustBuffer) throws -> Bri
 #endif
 public func FfiConverterTypeBridgeLocality_lower(_ value: BridgeLocality) -> RustBuffer {
     return FfiConverterTypeBridgeLocality.lower(value)
+}
+
+
+
+/**
+ * What a variant is for. Controls exist to make the conversion asymmetry
+ * measurable rather than invisible.
+ */
+
+public enum CandidateRole: Equatable, Hashable {
+    
+    /**
+     * One of the two Q4_K_M variants the mobile decision rests on.
+     */
+    case primaryMobile
+    /**
+     * An official artifact held alongside its primary to expose what the
+     * conversion or the quantization step changed.
+     */
+    case control
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CandidateRole: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCandidateRole: FfiConverterRustBuffer {
+    typealias SwiftType = CandidateRole
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CandidateRole {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .primaryMobile
+        
+        case 2: return .control
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CandidateRole, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .primaryMobile:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .control:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCandidateRole_lift(_ buf: RustBuffer) throws -> CandidateRole {
+    return try FfiConverterTypeCandidateRole.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCandidateRole_lower(_ value: CandidateRole) -> RustBuffer {
+    return FfiConverterTypeCandidateRole.lower(value)
 }
 
 
@@ -5466,6 +7389,76 @@ public func FfiConverterTypeChannelPermutationError_lower(_ value: ChannelPermut
 
 
 
+public enum ChargingState: Equatable, Hashable {
+    
+    /**
+     * Latency, throughput, memory, temperature and throttling remain
+     * interpretable; battery delta does NOT become a discharge-cost claim.
+     */
+    case pluggedIn
+    case onBattery
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ChargingState: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeChargingState: FfiConverterRustBuffer {
+    typealias SwiftType = ChargingState
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ChargingState {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .pluggedIn
+        
+        case 2: return .onBattery
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ChargingState, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .pluggedIn:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .onBattery:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeChargingState_lift(_ buf: RustBuffer) throws -> ChargingState {
+    return try FfiConverterTypeChargingState.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeChargingState_lower(_ value: ChargingState) -> RustBuffer {
+    return FfiConverterTypeChargingState.lower(value)
+}
+
+
+
+
 public enum ClientMode: Equatable, Hashable {
     
     case mock
@@ -5527,6 +7520,162 @@ public func FfiConverterTypeClientMode_lift(_ buf: RustBuffer) throws -> ClientM
 #endif
 public func FfiConverterTypeClientMode_lower(_ value: ClientMode) -> RustBuffer {
     return FfiConverterTypeClientMode.lower(value)
+}
+
+
+
+/**
+ * What "cold" honestly means on Android. An ordinary app cannot drop the OS
+ * page cache, so a force-stopped process is process-cold while the model may
+ * still be resident in cache — the evidence is named for what it is.
+ */
+
+public enum ColdDefinition: Equatable, Hashable {
+    
+    /**
+     * Process and context destroyed; OS page-cache state unknown and NOT
+     * claimed to be cold. This is what Android actually permits.
+     */
+    case processColdPageCacheUnknown
+    /**
+     * Page cache demonstrably evicted (e.g. by an external, privileged step).
+     * Only usable when that step is actually performed and recorded.
+     */
+    case filesystemCacheCold
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ColdDefinition: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeColdDefinition: FfiConverterRustBuffer {
+    typealias SwiftType = ColdDefinition
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ColdDefinition {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .processColdPageCacheUnknown
+        
+        case 2: return .filesystemCacheCold
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ColdDefinition, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .processColdPageCacheUnknown:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .filesystemCacheCold:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeColdDefinition_lift(_ buf: RustBuffer) throws -> ColdDefinition {
+    return try FfiConverterTypeColdDefinition.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeColdDefinition_lower(_ value: ColdDefinition) -> RustBuffer {
+    return FfiConverterTypeColdDefinition.lower(value)
+}
+
+
+
+/**
+ * Evidence for a cold claim. `FilesystemCacheCold` requires a non-empty
+ * external privileged-step id — an enum variant cannot by itself establish
+ * that the page cache was evicted.
+ */
+
+public enum ColdEvidence: Equatable, Hashable {
+    
+    case processCold(processInstanceId: String
+    )
+    case filesystemCacheCold(externalStepEvidenceId: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ColdEvidence: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeColdEvidence: FfiConverterRustBuffer {
+    typealias SwiftType = ColdEvidence
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ColdEvidence {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .processCold(processInstanceId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .filesystemCacheCold(externalStepEvidenceId: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ColdEvidence, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .processCold(processInstanceId):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(processInstanceId, into: &buf)
+            
+        
+        case let .filesystemCacheCold(externalStepEvidenceId):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(externalStepEvidenceId, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeColdEvidence_lift(_ buf: RustBuffer) throws -> ColdEvidence {
+    return try FfiConverterTypeColdEvidence.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeColdEvidence_lower(_ value: ColdEvidence) -> RustBuffer {
+    return FfiConverterTypeColdEvidence.lower(value)
 }
 
 
@@ -5764,6 +7913,83 @@ public func FfiConverterTypeConformanceVerdict_lift(_ buf: RustBuffer) throws ->
 #endif
 public func FfiConverterTypeConformanceVerdict_lower(_ value: ConformanceVerdict) -> RustBuffer {
     return FfiConverterTypeConformanceVerdict.lower(value)
+}
+
+
+
+/**
+ * How a cooldown ends. Elapsed time alone does not prove a device returned
+ * to its starting thermal state.
+ */
+
+public enum CooldownExit: Equatable, Hashable {
+    
+    /**
+     * Wait until the device reports at or below the start ceiling AND a
+     * minimum time has passed.
+     */
+    case temperatureAtOrBelowStartCeiling
+    /**
+     * Elapsed time only — weaker, and recorded as such.
+     */
+    case elapsedTimeOnly
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CooldownExit: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCooldownExit: FfiConverterRustBuffer {
+    typealias SwiftType = CooldownExit
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CooldownExit {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .temperatureAtOrBelowStartCeiling
+        
+        case 2: return .elapsedTimeOnly
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CooldownExit, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .temperatureAtOrBelowStartCeiling:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .elapsedTimeOnly:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCooldownExit_lift(_ buf: RustBuffer) throws -> CooldownExit {
+    return try FfiConverterTypeCooldownExit.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCooldownExit_lower(_ value: CooldownExit) -> RustBuffer {
+    return FfiConverterTypeCooldownExit.lower(value)
 }
 
 
@@ -6597,6 +8823,102 @@ public func FfiConverterTypeOperationKind_lift(_ buf: RustBuffer) throws -> Oper
 #endif
 public func FfiConverterTypeOperationKind_lower(_ value: OperationKind) -> RustBuffer {
     return FfiConverterTypeOperationKind.lower(value)
+}
+
+
+
+
+public enum PromotionVerdict: Equatable, Hashable {
+    
+    /**
+     * One candidate is promotable as the mobile default.
+     */
+    case promote(candidateId: String, qualityScore: Double, margin: Double
+    )
+    /**
+     * Both are admissible and both pass, but neither is materially better —
+     * a split (Basic / Enhanced) is the honest outcome.
+     */
+    case splitTiers(basicCandidateId: String, enhancedCandidateId: String
+    )
+    /**
+     * Nothing is promoted. This is a legitimate result, not a failure to
+     * decide.
+     */
+    case promoteNothing(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PromotionVerdict: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePromotionVerdict: FfiConverterRustBuffer {
+    typealias SwiftType = PromotionVerdict
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PromotionVerdict {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .promote(candidateId: try FfiConverterString.read(from: &buf), qualityScore: try FfiConverterDouble.read(from: &buf), margin: try FfiConverterDouble.read(from: &buf)
+        )
+        
+        case 2: return .splitTiers(basicCandidateId: try FfiConverterString.read(from: &buf), enhancedCandidateId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .promoteNothing(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PromotionVerdict, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .promote(candidateId,qualityScore,margin):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(candidateId, into: &buf)
+            FfiConverterDouble.write(qualityScore, into: &buf)
+            FfiConverterDouble.write(margin, into: &buf)
+            
+        
+        case let .splitTiers(basicCandidateId,enhancedCandidateId):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(basicCandidateId, into: &buf)
+            FfiConverterString.write(enhancedCandidateId, into: &buf)
+            
+        
+        case let .promoteNothing(reason):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePromotionVerdict_lift(_ buf: RustBuffer) throws -> PromotionVerdict {
+    return try FfiConverterTypePromotionVerdict.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePromotionVerdict_lower(_ value: PromotionVerdict) -> RustBuffer {
+    return FfiConverterTypePromotionVerdict.lower(value)
 }
 
 
@@ -7608,6 +9930,199 @@ public func FfiConverterTypeRestoreResult_lower(_ value: RestoreResult) -> RustB
 
 
 
+/**
+ * Why a run is not a usable measurement. Kept distinct from a low score:
+ * an inadmissible run is not evidence, and must never be averaged in.
+ */
+
+public enum RunDisposition: Equatable, Hashable {
+    
+    case admissible
+    case interrupted(reason: String
+    )
+    case thermallyThrottled
+    case cancelledByOperator
+    /**
+     * The continuation exposed private stepwise deliberation. Retained
+     * locally for inspection; never scored as a poor answer.
+     */
+    case inadmissibleReasoningLeakage(detector: String
+    )
+    case promptParityMismatch
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension RunDisposition: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRunDisposition: FfiConverterRustBuffer {
+    typealias SwiftType = RunDisposition
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RunDisposition {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .admissible
+        
+        case 2: return .interrupted(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .thermallyThrottled
+        
+        case 4: return .cancelledByOperator
+        
+        case 5: return .inadmissibleReasoningLeakage(detector: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 6: return .promptParityMismatch
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: RunDisposition, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .admissible:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .interrupted(reason):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(reason, into: &buf)
+            
+        
+        case .thermallyThrottled:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .cancelledByOperator:
+            writeInt(&buf, Int32(4))
+        
+        
+        case let .inadmissibleReasoningLeakage(detector):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(detector, into: &buf)
+            
+        
+        case .promptParityMismatch:
+            writeInt(&buf, Int32(6))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunDisposition_lift(_ buf: RustBuffer) throws -> RunDisposition {
+    return try FfiConverterTypeRunDisposition.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunDisposition_lower(_ value: RunDisposition) -> RustBuffer {
+    return FfiConverterTypeRunDisposition.lower(value)
+}
+
+
+
+/**
+ * v3: one timed run, as OBSERVED. The protocol says what conditions were
+ * required; this says what actually happened, so a run taken under other
+ * conditions cannot simply carry the protocol hash.
+ */
+
+public enum RunMode: Equatable, Hashable {
+    
+    case cold
+    case warm
+    case sustained
+    case cancellation
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension RunMode: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRunMode: FfiConverterRustBuffer {
+    typealias SwiftType = RunMode
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RunMode {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .cold
+        
+        case 2: return .warm
+        
+        case 3: return .sustained
+        
+        case 4: return .cancellation
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: RunMode, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .cold:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .warm:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .sustained:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .cancellation:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunMode_lift(_ buf: RustBuffer) throws -> RunMode {
+    return try FfiConverterTypeRunMode.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunMode_lower(_ value: RunMode) -> RustBuffer {
+    return FfiConverterTypeRunMode.lower(value)
+}
+
+
+
 
 public enum RuntimeSelection: Equatable, Hashable {
     
@@ -8174,6 +10689,82 @@ public func FfiConverterTypeSupportStatus_lower(_ value: SupportStatus) -> RustB
 }
 
 
+
+/**
+ * What "warm" reuses. Naming it prevents two candidates being measured under
+ * different amounts of retained state.
+ */
+
+public enum WarmDefinition: Equatable, Hashable {
+    
+    /**
+     * Same process, model file already loaded, native context recreated.
+     */
+    case contextRecreatedModelResident
+    /**
+     * Same process and the native context is reused as-is.
+     */
+    case contextReused
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension WarmDefinition: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeWarmDefinition: FfiConverterRustBuffer {
+    typealias SwiftType = WarmDefinition
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> WarmDefinition {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .contextRecreatedModelResident
+        
+        case 2: return .contextReused
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: WarmDefinition, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .contextRecreatedModelResident:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .contextReused:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWarmDefinition_lift(_ buf: RustBuffer) throws -> WarmDefinition {
+    return try FfiConverterTypeWarmDefinition.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWarmDefinition_lower(_ value: WarmDefinition) -> RustBuffer {
+    return FfiConverterTypeWarmDefinition.lower(value)
+}
+
+
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
@@ -8265,6 +10856,30 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeConversionRecord: FfiConverterRustBuffer {
+    typealias SwiftType = ConversionRecord?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeConversionRecord.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeConversionRecord.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -8417,6 +11032,30 @@ fileprivate struct FfiConverterOptionTypeActiveIntegrityFailure: FfiConverterRus
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeAdmissionFailure: FfiConverterRustBuffer {
+    typealias SwiftType = AdmissionFailure?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeAdmissionFailure.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeAdmissionFailure.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeProviderTransport: FfiConverterRustBuffer {
     typealias SwiftType = ProviderTransport?
 
@@ -8514,6 +11153,31 @@ fileprivate struct FfiConverterSequenceUInt32: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceUInt64: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt64]
+
+    public static func write(_ value: [UInt64], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterUInt64.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UInt64] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UInt64]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterUInt64.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceDouble: FfiConverterRustBuffer {
     typealias SwiftType = [Double]
 
@@ -8581,6 +11245,56 @@ fileprivate struct FfiConverterSequenceTypeAudioTransition: FfiConverterRustBuff
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeAudioTransition.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeBenchmarkPrompt: FfiConverterRustBuffer {
+    typealias SwiftType = [BenchmarkPrompt]
+
+    public static func write(_ value: [BenchmarkPrompt], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeBenchmarkPrompt.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [BenchmarkPrompt] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [BenchmarkPrompt]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeBenchmarkPrompt.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeExpectedPrompt: FfiConverterRustBuffer {
+    typealias SwiftType = [ExpectedPrompt]
+
+    public static func write(_ value: [ExpectedPrompt], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeExpectedPrompt.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ExpectedPrompt] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ExpectedPrompt]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeExpectedPrompt.read(from: &buf))
         }
         return seq
     }
@@ -8739,6 +11453,31 @@ fileprivate struct FfiConverterSequenceTypeObservedArtifact: FfiConverterRustBuf
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypePromptBinding: FfiConverterRustBuffer {
+    typealias SwiftType = [PromptBinding]
+
+    public static func write(_ value: [PromptBinding], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePromptBinding.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PromptBinding] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PromptBinding]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePromptBinding.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeProviderAvailability: FfiConverterRustBuffer {
     typealias SwiftType = [ProviderAvailability]
 
@@ -8806,6 +11545,56 @@ fileprivate struct FfiConverterSequenceTypeRecordingManifest: FfiConverterRustBu
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeRecordingManifest.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeRunObservation: FfiConverterRustBuffer {
+    typealias SwiftType = [RunObservation]
+
+    public static func write(_ value: [RunObservation], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeRunObservation.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [RunObservation] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [RunObservation]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeRunObservation.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeRunPlanEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [RunPlanEntry]
+
+    public static func write(_ value: [RunPlanEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeRunPlanEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [RunPlanEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [RunPlanEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeRunPlanEntry.read(from: &buf))
         }
         return seq
     }
@@ -9087,6 +11876,140 @@ public func variantBindsToContract(variant: ModelVariant, policy: BackendConform
     uniffi_neuralcompose_mobile_core_fn_func_variant_binds_to_contract(
         FfiConverterTypeModelVariant_lower(variant),
         FfiConverterTypeBackendConformancePolicy_lower(policy),uniffiCallStatus
+    )
+})
+}
+/**
+ * May this result enter the comparison at all? Admission is separate from
+ * winning: a result that fails here is not a bad score, it is not evidence.
+ * Callers should not need to remember to call this — `evaluate_promotion`
+ * runs it internally, and there is no promotion path that skips it.
+ */
+public func admitResult(result: CandidateResult, candidate: EvaluationCandidate, `protocol`: EvaluationProtocol) -> AdmissionFailure?  {
+    return try!  FfiConverterOptionTypeAdmissionFailure.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_admit_result(
+        FfiConverterTypeCandidateResult_lower(result),
+        FfiConverterTypeEvaluationCandidate_lower(candidate),
+        FfiConverterTypeEvaluationProtocol_lower(`protocol`),uniffiCallStatus
+    )
+})
+}
+/**
+ * Is a battery figure taken under these conditions interpretable as an
+ * energy cost? Plugged in, it is not — the number may be recorded, but it
+ * cannot support a discharge-efficiency claim.
+ */
+public func batteryDeltaIsEnergyEvidence(env: RunEnvironment) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_battery_delta_is_energy_evidence(
+        FfiConverterTypeRunEnvironment_lower(env),uniffiCallStatus
+    )
+})
+}
+public func candidateIdentity(candidate: EvaluationCandidate) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_candidate_identity(
+        FfiConverterTypeEvaluationCandidate_lower(candidate),uniffiCallStatus
+    )
+})
+}
+/**
+ * The frozen decision rule, behind a sealed door. There is deliberately no
+ * promotion path that accepts already-assumed-valid results: this admits
+ * both candidates itself, so an inadmissible run cannot be promoted by
+ * skipping a call.
+ *
+ * Newer does not win; smaller does not win; a larger candidate must beat the
+ * other by a material margin or the honest outcome is a tier split; and both
+ * failing promotes nothing.
+ */
+public func evaluatePromotion(`protocol`: EvaluationProtocol, candidateA: EvaluationCandidate, resultA: CandidateResult, candidateB: EvaluationCandidate, resultB: CandidateResult) -> PromotionVerdict  {
+    return try!  FfiConverterTypePromotionVerdict_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_evaluate_promotion(
+        FfiConverterTypeEvaluationProtocol_lower(`protocol`),
+        FfiConverterTypeEvaluationCandidate_lower(candidateA),
+        FfiConverterTypeCandidateResult_lower(resultA),
+        FfiConverterTypeEvaluationCandidate_lower(candidateB),
+        FfiConverterTypeCandidateResult_lower(resultB),uniffiCallStatus
+    )
+})
+}
+/**
+ * Canonical protocol identity. Any change to the corpus, rubric, sampler,
+ * seeds, run counts, or thresholds yields a different protocol — so a
+ * threshold cannot be relaxed after seeing results while still claiming the
+ * same protocol.
+ */
+public func evaluationProtocolIdentity(`protocol`: EvaluationProtocol) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_evaluation_protocol_identity(
+        FfiConverterTypeEvaluationProtocol_lower(`protocol`),uniffiCallStatus
+    )
+})
+}
+public func meetsThresholds(cost: CostObservation, t: PromotionThresholds) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_meets_thresholds(
+        FfiConverterTypeCostObservation_lower(cost),
+        FfiConverterTypePromotionThresholds_lower(t),uniffiCallStatus
+    )
+})
+}
+/**
+ * Mean of the ten axes, or `None` if any axis is outside 0.0–1.0 or
+ * non-finite — a malformed panel scores nothing rather than something.
+ */
+public func qualityScore(panel: QualityPanel) -> Double?  {
+    return try!  FfiConverterOptionDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_quality_score(
+        FfiConverterTypeQualityPanel_lower(panel),uniffiCallStatus
+    )
+})
+}
+public func renderedPromptHash(rendered: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_rendered_prompt_hash(
+        FfiConverterString.lower(rendered),uniffiCallStatus
+    )
+})
+}
+public func semanticPromptHash(promptProfile: String, message: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_semantic_prompt_hash(
+        FfiConverterString.lower(promptProfile),
+        FfiConverterString.lower(message),uniffiCallStatus
+    )
+})
+}
+/**
+ * v3: hashing an invalid protocol does not make it valid. Admission and
+ * promotion both run this first.
+ */
+public func validateEvaluationProtocol(`protocol`: EvaluationProtocol) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_validate_evaluation_protocol(
+        FfiConverterTypeEvaluationProtocol_lower(`protocol`),uniffiCallStatus
+    )
+})
+}
+/**
+ * Does the environment support the cold claim it makes?
+ */
+public func validateRunEnvironment(env: RunEnvironment) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_validate_run_environment(
+        FfiConverterTypeRunEnvironment_lower(env),uniffiCallStatus
     )
 })
 }
@@ -9506,6 +12429,39 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_variant_binds_to_contract() != 55408) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_admit_result() != 42920) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_battery_delta_is_energy_evidence() != 32916) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_candidate_identity() != 36234) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion() != 42781) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_evaluation_protocol_identity() != 15982) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_meets_thresholds() != 62939) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_quality_score() != 35980) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_rendered_prompt_hash() != 63373) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_semantic_prompt_hash() != 50945) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_evaluation_protocol() != 17041) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_run_environment() != 53649) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest() != 27683) {

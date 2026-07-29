@@ -93,6 +93,9 @@ pub struct EvaluationCandidate {
     pub thinking_mode_disabled: bool,
     /// Present exactly when `provenance` is `DerivedByConversion`.
     pub conversion: Option<ConversionRecord>,
+    /// v3: declared in advance, so a harness cannot render something else
+    /// and still be admitted.
+    pub prompt_bindings: Vec<PromptBinding>,
 }
 
 // ---------- prompts: semantic vs rendered ----------
@@ -151,6 +154,102 @@ pub fn rendered_prompt_hash(rendered: String) -> String {
     )
 }
 
+/// Whether a battery figure may gate promotion at all. Under a plugged-in
+/// protocol the delta is recorded but carries no energy claim, so letting it
+/// disqualify a candidate would be inventing evidence.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum BatteryEvidencePolicy {
+    TelemetryOnlyPluggedIn,
+    OnBattery { max_drop_tenths_percent: u32 },
+}
+
+/// v3: one timed run, as OBSERVED. The protocol says what conditions were
+/// required; this says what actually happened, so a run taken under other
+/// conditions cannot simply carry the protocol hash.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum RunMode {
+    Cold,
+    Warm,
+    Sustained,
+    Cancellation,
+}
+
+/// Evidence for a cold claim. `FilesystemCacheCold` requires a non-empty
+/// external privileged-step id — an enum variant cannot by itself establish
+/// that the page cache was evicted.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum ColdEvidence {
+    ProcessCold { process_instance_id: String },
+    FilesystemCacheCold { external_step_evidence_id: String },
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct RunObservation {
+    pub run_id: String,
+    pub candidate_id: String,
+    pub seed: u64,
+    pub mode: RunMode,
+    pub sequence_index: u32,
+    pub started_monotonic_ms: u64,
+    pub ended_monotonic_ms: u64,
+    pub observed_charging_state: ChargingState,
+    pub observed_screen_on: bool,
+    pub observed_brightness_percent: u32,
+    pub observed_airplane_mode: bool,
+    pub process_instance_id: String,
+    /// Digest proving the pack was re-verified before this run.
+    pub pack_integrity_receipt: String,
+    pub cold_evidence: ColdEvidence,
+    pub start_temperature_celsius_tenths: u32,
+    pub cooldown_duration_ms: u64,
+    pub cooldown_exit_temperature_celsius_tenths: u32,
+    pub thermal_sensor_identity: String,
+    pub throttling_detector_identity: String,
+    pub disposition: RunDisposition,
+}
+
+/// v3: the exact schedule, frozen. `alternating_candidate_order: true` is a
+/// property; this is the promised sequence, so runs cannot be reordered,
+/// dropped, duplicated, or selectively discarded after the fact.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct RunPlanEntry {
+    pub index: u32,
+    pub candidate_id: String,
+    pub mode: RunMode,
+    pub seed: u64,
+}
+
+/// A frozen corpus entry: the semantic input every candidate shares.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct ExpectedPrompt {
+    pub prompt_id: String,
+    pub semantic_prompt_hash: String,
+}
+
+/// The candidate-specific rendering of one frozen prompt. Rendered bytes and
+/// token ids legitimately differ per template — but they are declared in
+/// advance, so the harness cannot silently render something else.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct PromptBinding {
+    pub prompt_id: String,
+    pub rendered_prompt_hash: String,
+    pub input_token_ids_hash: String,
+}
+
 // ---------- the frozen protocol ----------
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -180,9 +279,10 @@ pub struct PromotionThresholds {
     pub max_peak_rss_mb: u64,
     pub max_installed_bytes: u64,
     pub max_cancellation_latency_ms: u64,
-    /// Battery drop across the sustained run, in tenths of a percent, so the
-    /// contract stays integral.
-    pub max_battery_drop_tenths_percent: u32,
+    /// v3: battery only gates promotion when the run was actually on
+    /// battery. Plugged in, the figure is telemetry and cannot pass or fail
+    /// a candidate.
+    pub battery_policy: BatteryEvidencePolicy,
     /// Abort rather than record a thermally-throttled number as if it were
     /// representative.
     pub thermal_cutoff_celsius_tenths: u32,
@@ -212,6 +312,10 @@ pub struct EvaluationProtocol {
     /// v2: the conditions a measurement is taken under. Absent in v1, which
     /// is why v1 could not support an honest battery or cold-load claim.
     pub environment: RunEnvironment,
+    /// v3: the frozen semantic corpus every candidate shares.
+    pub expected_prompts: Vec<ExpectedPrompt>,
+    /// v3: the exact run schedule, not merely the alternating property.
+    pub run_plan: Vec<RunPlanEntry>,
 }
 
 /// Canonical protocol identity. Any change to the corpus, rubric, sampler,
@@ -480,6 +584,97 @@ pub struct CandidateResult {
     pub quality: QualityPanel,
     /// v2: why this run is or is not a usable measurement.
     pub disposition: RunDisposition,
+    /// v3: one entry per planned run, as observed.
+    pub observations: Vec<RunObservation>,
+}
+
+/// v3: hashing an invalid protocol does not make it valid. Admission and
+/// promotion both run this first.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn validate_evaluation_protocol(protocol: EvaluationProtocol) -> Vec<String> {
+    let mut e = validate_run_environment(protocol.environment.clone());
+    let mut bad = |m: &str| e.push(m.to_string());
+    if protocol.protocol_version != 3 {
+        bad("unsupported protocolVersion (v3 expected)");
+    }
+    if protocol.corpus_id.trim().is_empty() || protocol.quality_rubric_id.trim().is_empty() {
+        bad("corpusId and qualityRubricId must be non-empty");
+    }
+    if protocol.seeds.is_empty() {
+        bad("at least one seed required");
+    }
+    let mut seen = std::collections::HashSet::new();
+    if protocol.seeds.iter().any(|s| !seen.insert(*s)) {
+        bad("duplicate seeds");
+    }
+    if protocol.prompt_count == 0 || protocol.expected_prompts.is_empty() {
+        bad("a corpus with no prompts measures nothing");
+    }
+    if protocol.expected_prompts.len() as u32 != protocol.prompt_count {
+        bad("promptCount disagrees with the frozen corpus");
+    }
+    if protocol.run_plan.is_empty() {
+        bad("run plan must be frozen, not merely 'alternating'");
+    }
+    for (i, entry) in protocol.run_plan.iter().enumerate() {
+        if entry.index as usize != i {
+            bad("run plan indices must be dense and ordered");
+            break;
+        }
+    }
+    if protocol.timed_runs == 0
+        || protocol.sustained_seconds == 0
+        || protocol.per_run_timeout_ms == 0
+    {
+        bad("zero run count, duration or timeout");
+    }
+    let sp = &protocol.sampler;
+    for (name, v) in [
+        ("temperature", sp.temperature),
+        ("topP", sp.top_p),
+        ("repeatPenalty", sp.repeat_penalty),
+    ] {
+        if !v.is_finite() || v < 0.0 {
+            bad(&format!("{name} must be finite and non-negative"));
+        }
+    }
+    if sp.top_p > 1.0 {
+        bad("topP must be within 0..=1");
+    }
+    if sp.max_output_tokens == 0 || sp.context_cap == 0 {
+        bad("zero context or output cap");
+    }
+    let t = &protocol.thresholds;
+    if !t.material_quality_margin.is_finite() || t.material_quality_margin < 0.0 {
+        bad("materialQualityMargin must be finite and non-negative");
+    }
+    if !t.min_generation_tokens_per_second.is_finite() {
+        bad("minGenerationTokensPerSecond must be finite");
+    }
+    if t.max_cold_load_ms == 0 || t.max_peak_rss_mb == 0 || t.max_installed_bytes == 0 {
+        bad("a zero ceiling can never be met");
+    }
+    let env = &protocol.environment;
+    if env.screen_brightness_percent > 100 {
+        bad("brightness above 100%");
+    }
+    if !env.screen_on && env.screen_brightness_percent > 0 {
+        bad("screen off but a nonzero brightness claimed");
+    }
+    // A plugged-in protocol may not carry an on-battery gate, and vice versa.
+    match (&env.charging_state, &t.battery_policy) {
+        (ChargingState::PluggedIn, BatteryEvidencePolicy::OnBattery { .. }) => {
+            bad("plugged-in protocol cannot gate on battery discharge")
+        }
+        (ChargingState::OnBattery, BatteryEvidencePolicy::TelemetryOnlyPluggedIn) => {
+            bad("on-battery protocol declares a plugged-in battery policy")
+        }
+        _ => {}
+    }
+    if env.thermal_start_ceiling_celsius_tenths >= t.thermal_cutoff_celsius_tenths {
+        bad("thermal start ceiling is at or above the abort cutoff");
+    }
+    e
 }
 
 // ---------- admission and promotion ----------
@@ -488,6 +683,17 @@ pub struct CandidateResult {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum AdmissionFailure {
     ProtocolMismatch,
+    ProtocolInvalid { reason: String },
+    CandidateIdentityMismatch,
+    ResultCandidateMismatch,
+    PromptCountMismatch,
+    DuplicatePromptId { prompt_id: String },
+    UnknownPromptId { prompt_id: String },
+    RenderedPromptMismatch { prompt_id: String },
+    InputTokenMismatch { prompt_id: String },
+    RunLedgerMismatch { reason: String },
+    ColdEvidenceMissing { run_id: String },
+    EnvironmentDeviation { reason: String },
     MissingConversionRecord,
     UnexpectedConversionRecord,
     RequantizationNotAllowed,
@@ -502,19 +708,34 @@ pub enum AdmissionFailure {
 
 /// May this result enter the comparison at all? Admission is separate from
 /// winning: a result that fails here is not a bad score, it is not evidence.
+/// Callers should not need to remember to call this — `evaluate_promotion`
+/// runs it internally, and there is no promotion path that skips it.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn admit_result(
     result: CandidateResult,
     candidate: EvaluationCandidate,
-    protocol_identity: String,
+    protocol: EvaluationProtocol,
 ) -> Option<AdmissionFailure> {
+    let protocol_errs = validate_evaluation_protocol(protocol.clone());
+    if !protocol_errs.is_empty() {
+        return Some(AdmissionFailure::ProtocolInvalid {
+            reason: protocol_errs.join("; "),
+        });
+    }
     if result.disposition != RunDisposition::Admissible {
         return Some(AdmissionFailure::Disqualified {
             reason: format!("{:?}", result.disposition),
         });
     }
-    if result.protocol_identity != protocol_identity {
+    if result.protocol_identity != evaluation_protocol_identity(protocol.clone()) {
         return Some(AdmissionFailure::ProtocolMismatch);
+    }
+    // The result must actually belong to this candidate.
+    if result.candidate_id != candidate.candidate_id {
+        return Some(AdmissionFailure::ResultCandidateMismatch);
+    }
+    if result.candidate_identity != candidate_identity(candidate.clone()) {
+        return Some(AdmissionFailure::CandidateIdentityMismatch);
     }
     match (candidate.provenance, &candidate.conversion) {
         (ArtifactProvenance::DerivedByConversion, None) => {
@@ -531,6 +752,142 @@ pub fn admit_result(
     if !candidate.thinking_mode_disabled {
         return Some(AdmissionFailure::ThinkingModeNotDisabled);
     }
+
+    // Prompt parity: exactly the frozen corpus, once each, rendered and
+    // tokenized as this candidate declared in advance.
+    if result.prompts.len() != protocol.expected_prompts.len() {
+        return Some(AdmissionFailure::PromptCountMismatch);
+    }
+    let mut seen = std::collections::HashSet::new();
+    for p in &result.prompts {
+        if !seen.insert(p.prompt_id.clone()) {
+            return Some(AdmissionFailure::DuplicatePromptId {
+                prompt_id: p.prompt_id.clone(),
+            });
+        }
+        let expected = match protocol
+            .expected_prompts
+            .iter()
+            .find(|e| e.prompt_id == p.prompt_id)
+        {
+            None => {
+                return Some(AdmissionFailure::UnknownPromptId {
+                    prompt_id: p.prompt_id.clone(),
+                })
+            }
+            Some(e) => e,
+        };
+        if p.semantic_prompt_hash != expected.semantic_prompt_hash {
+            return Some(AdmissionFailure::SemanticPromptMismatch);
+        }
+        let binding = match candidate
+            .prompt_bindings
+            .iter()
+            .find(|b| b.prompt_id == p.prompt_id)
+        {
+            None => {
+                return Some(AdmissionFailure::UnknownPromptId {
+                    prompt_id: p.prompt_id.clone(),
+                })
+            }
+            Some(b) => b,
+        };
+        if p.rendered_prompt_hash != binding.rendered_prompt_hash {
+            return Some(AdmissionFailure::RenderedPromptMismatch {
+                prompt_id: p.prompt_id.clone(),
+            });
+        }
+        if p.input_token_ids_hash != binding.input_token_ids_hash {
+            return Some(AdmissionFailure::InputTokenMismatch {
+                prompt_id: p.prompt_id.clone(),
+            });
+        }
+    }
+
+    // Run ledger: one observation per planned run for this candidate, in
+    // order. Missing, duplicated, reordered or discarded runs cannot yield a
+    // verdict.
+    let planned: Vec<&RunPlanEntry> = protocol
+        .run_plan
+        .iter()
+        .filter(|e| e.candidate_id == candidate.candidate_id)
+        .collect();
+    if result.observations.len() != planned.len() {
+        return Some(AdmissionFailure::RunLedgerMismatch {
+            reason: format!(
+                "expected {} runs, ledger has {}",
+                planned.len(),
+                result.observations.len()
+            ),
+        });
+    }
+    for (entry, obs) in planned.iter().zip(result.observations.iter()) {
+        if obs.sequence_index != entry.index || obs.mode != entry.mode || obs.seed != entry.seed {
+            return Some(AdmissionFailure::RunLedgerMismatch {
+                reason: format!("run {} does not match the frozen plan", entry.index),
+            });
+        }
+        if obs.candidate_id != candidate.candidate_id {
+            return Some(AdmissionFailure::RunLedgerMismatch {
+                reason: format!("run {} belongs to another candidate", entry.index),
+            });
+        }
+        if obs.disposition != RunDisposition::Admissible {
+            return Some(AdmissionFailure::Disqualified {
+                reason: format!("run {}: {:?}", entry.index, obs.disposition),
+            });
+        }
+        if obs.pack_integrity_receipt.trim().is_empty() {
+            return Some(AdmissionFailure::RunLedgerMismatch {
+                reason: format!("run {} has no pack-integrity receipt", entry.index),
+            });
+        }
+        // A cold CLAIM needs cold EVIDENCE.
+        match (&protocol.environment.cold_definition, &obs.cold_evidence) {
+            (
+                ColdDefinition::FilesystemCacheCold,
+                ColdEvidence::FilesystemCacheCold {
+                    external_step_evidence_id,
+                },
+            ) if external_step_evidence_id.trim().is_empty() => {
+                return Some(AdmissionFailure::ColdEvidenceMissing {
+                    run_id: obs.run_id.clone(),
+                })
+            }
+            (ColdDefinition::FilesystemCacheCold, ColdEvidence::ProcessCold { .. }) => {
+                return Some(AdmissionFailure::ColdEvidenceMissing {
+                    run_id: obs.run_id.clone(),
+                })
+            }
+            _ => {}
+        }
+        // The observed conditions must be the frozen ones.
+        let env = &protocol.environment;
+        let deviation = if obs.observed_charging_state != env.charging_state {
+            Some("charging state")
+        } else if obs.observed_airplane_mode != env.airplane_mode {
+            Some("airplane mode")
+        } else if obs.observed_screen_on != env.screen_on {
+            Some("screen state")
+        } else if obs.start_temperature_celsius_tenths > env.thermal_start_ceiling_celsius_tenths {
+            Some("start temperature above the ceiling")
+        } else if env.cooldown_exit == CooldownExit::TemperatureAtOrBelowStartCeiling
+            && obs.cooldown_exit_temperature_celsius_tenths
+                > env.thermal_start_ceiling_celsius_tenths
+        {
+            Some("cooldown did not reach the start ceiling")
+        } else if obs.cooldown_duration_ms < env.cooldown_minimum_seconds as u64 * 1000 {
+            Some("cooldown shorter than the frozen minimum")
+        } else {
+            None
+        };
+        if let Some(reason) = deviation {
+            return Some(AdmissionFailure::EnvironmentDeviation {
+                reason: format!("run {}: {reason}", entry.index),
+            });
+        }
+    }
+
     if result.cost.thermally_throttled {
         return Some(AdmissionFailure::ThermallyThrottled);
     }
@@ -540,7 +897,6 @@ pub fn admit_result(
     None
 }
 
-/// Does a result meet every frozen ceiling?
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn meets_thresholds(cost: CostObservation, t: PromotionThresholds) -> Vec<String> {
     let mut failures = Vec::new();
@@ -567,10 +923,17 @@ pub fn meets_thresholds(cost: CostObservation, t: PromotionThresholds) -> Vec<St
         cost.cancellation_latency_ms <= t.max_cancellation_latency_ms,
         "cancellationLatencyMs",
     );
-    check(
-        cost.battery_drop_tenths_percent <= t.max_battery_drop_tenths_percent,
-        "batteryDrop",
-    );
+    // Only a genuine on-battery run may gate on battery. Plugged in, the
+    // figure is telemetry — using it to pass or fail would invent evidence.
+    if let BatteryEvidencePolicy::OnBattery {
+        max_drop_tenths_percent,
+    } = t.battery_policy
+    {
+        check(
+            cost.battery_drop_tenths_percent <= max_drop_tenths_percent,
+            "batteryDrop",
+        );
+    }
     check(
         cost.peak_temperature_celsius_tenths <= t.thermal_cutoff_celsius_tenths,
         "peakTemperature",
@@ -603,60 +966,80 @@ pub enum PromotionVerdict {
     PromoteNothing { reason: String },
 }
 
-/// The frozen decision rule. Newer does not win; smaller does not win; a
-/// larger candidate must *earn* its size by a material margin. Both failing
-/// promotes nothing.
+/// The frozen decision rule, behind a sealed door. There is deliberately no
+/// promotion path that accepts already-assumed-valid results: this admits
+/// both candidates itself, so an inadmissible run cannot be promoted by
+/// skipping a call.
+///
+/// Newer does not win; smaller does not win; a larger candidate must beat the
+/// other by a material margin or the honest outcome is a tier split; and both
+/// failing promotes nothing.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn evaluate_promotion(
-    a: CandidateResult,
-    b: CandidateResult,
-    thresholds: PromotionThresholds,
+    protocol: EvaluationProtocol,
+    candidate_a: EvaluationCandidate,
+    result_a: CandidateResult,
+    candidate_b: EvaluationCandidate,
+    result_b: CandidateResult,
 ) -> PromotionVerdict {
-    let nothing = |reason: &str| PromotionVerdict::PromoteNothing {
-        reason: reason.to_string(),
-    };
-    let (sa, sb) = match (quality_score(a.quality), quality_score(b.quality)) {
+    let nothing = |reason: String| PromotionVerdict::PromoteNothing { reason };
+
+    let protocol_errs = validate_evaluation_protocol(protocol.clone());
+    if !protocol_errs.is_empty() {
+        return nothing(format!("protocol invalid: {}", protocol_errs.join("; ")));
+    }
+    if let Some(f) = admit_result(result_a.clone(), candidate_a.clone(), protocol.clone()) {
+        return nothing(format!("candidate A inadmissible: {f:?}"));
+    }
+    if let Some(f) = admit_result(result_b.clone(), candidate_b.clone(), protocol.clone()) {
+        return nothing(format!("candidate B inadmissible: {f:?}"));
+    }
+
+    let (sa, sb) = match (
+        quality_score(result_a.quality),
+        quality_score(result_b.quality),
+    ) {
         (Some(x), Some(y)) => (x, y),
-        _ => return nothing("a quality panel was malformed"),
+        _ => return nothing("a quality panel was malformed".into()),
     };
-    let fa = meets_thresholds(a.cost.clone(), thresholds.clone());
-    let fb = meets_thresholds(b.cost.clone(), thresholds.clone());
+    let thresholds = protocol.thresholds.clone();
+    let fa = meets_thresholds(result_a.cost.clone(), thresholds.clone());
+    let fb = meets_thresholds(result_b.cost.clone(), thresholds.clone());
 
     match (fa.is_empty(), fb.is_empty()) {
-        (false, false) => nothing("neither candidate met the frozen ceilings"),
+        (false, false) => nothing("neither candidate met the frozen ceilings".into()),
         (true, false) => PromotionVerdict::Promote {
-            candidate_id: a.candidate_id,
+            candidate_id: result_a.candidate_id,
             quality_score: sa,
             margin: sa - sb,
         },
         (false, true) => PromotionVerdict::Promote {
-            candidate_id: b.candidate_id,
+            candidate_id: result_b.candidate_id,
             quality_score: sb,
             margin: sb - sa,
         },
         (true, true) => {
             let margin = (sa - sb).abs();
             if margin < thresholds.material_quality_margin {
-                // Neither materially better: cheaper is not a winner, it is a
-                // tier. Larger installed size becomes Enhanced.
-                let (basic, enhanced) = if a.cost.installed_bytes <= b.cost.installed_bytes {
-                    (a.candidate_id, b.candidate_id)
-                } else {
-                    (b.candidate_id, a.candidate_id)
-                };
+                let (basic, enhanced) =
+                    if result_a.cost.installed_bytes <= result_b.cost.installed_bytes {
+                        (result_a.candidate_id, result_b.candidate_id)
+                    } else {
+                        (result_b.candidate_id, result_a.candidate_id)
+                    };
                 PromotionVerdict::SplitTiers {
                     basic_candidate_id: basic,
                     enhanced_candidate_id: enhanced,
                 }
             } else if sa > sb {
                 PromotionVerdict::Promote {
-                    candidate_id: a.candidate_id,
+                    candidate_id: result_a.candidate_id,
                     quality_score: sa,
                     margin,
                 }
             } else {
                 PromotionVerdict::Promote {
-                    candidate_id: b.candidate_id,
+                    candidate_id: result_b.candidate_id,
                     quality_score: sb,
                     margin,
                 }
