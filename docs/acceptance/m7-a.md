@@ -56,3 +56,39 @@ dual-direction schemaInvalid assertions in the golden test.
 Evidence: Rust 86 tests both feature sets; clippy/fmt/drift clean; Swift
 sim 4/4 and Kotlin JVM 4/4 incl. publish-before-verify rejection, invalid-
 restore surfacing, and unknown-provider transport nil/null.
+
+## Round-2 review addendum (2026-07-29)
+
+Five trust-boundary findings resolved:
+1. Sealed restoration — constructor accepts only raw inputs (persisted
+   record + fresh observed inventory + trusted catalog + accepted policy
+   versions); RestoreResult is output-only with no injection point; on-disk
+   bytes verified against the record (missing/modified/extra/duplicate/
+   malformed each rejected with visible failures); pack_id must match the
+   installer target (TargetPackMismatch). Tests:
+   restore_rejects_missing_or_modified_on_disk_bytes,
+   restore_resolves_against_trusted_catalog_only (extended), Swift/Kotlin
+   m7aContractsThroughBindings (tampered-restore + polarity).
+2. Removal usability — usable=false during Removing and after failed
+   removal; acknowledge never reactivates; revalidate_active with exact
+   bytes restores usability, mismatches surface specific
+   ActiveIntegrityFailure variants in ModelPackSnapshot. Tests:
+   removal_and_failed_removal_report_unusable_until_revalidated,
+   Swift/Kotlin m7aRemovalIntegrityThroughBindings.
+3. Ambiguous trusted catalog — duplicate (pack_id, pack_version) rejected
+   before lookup in both vector orders. Test:
+   ambiguous_trusted_catalog_rejected_in_both_orders.
+4. Transport/locality matrix — is_valid_transport_locality pins the full
+   ADR matrix both polarities; impossible pairs resolve transport=None,
+   locality=Unresolved, caps=false, InconsistentConfiguration, egress=true.
+   Test: impossible_transport_locality_pairs_fail_closed.
+5. Policy-version registry — CURRENT_VERIFICATION_POLICY_VERSION=1 single
+   authority; 0/2/u32::MAX rejected at verify (UnsupportedVerificationPolicy
+   operation failure, no receipt, no publish) and at restore (both-set
+   membership); 1 accepted end-to-end. Test:
+   verification_policy_registry_rejects_zero_and_future_versions.
+
+Evidence: 91 Rust tests green on default features, uniffi feature set
+green, clippy -D warnings + fmt clean on both feature sets, fixture drift
+clean, Swift 5/5 on iPhone 17 simulator, Kotlin 5/5 JVM through regenerated
+bindings (dylib + XCFramework + Swift bindings rebuilt together).

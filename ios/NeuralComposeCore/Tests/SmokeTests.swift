@@ -124,16 +124,8 @@ final class SmokeTests: XCTestCase {
             embedding: nil)
     }
 
-    func testM7aContractsThroughBindings() throws {
-        let entry = makeEntry()
-        XCTAssertTrue(validateCatalogEntry(entry: entry).isEmpty)
-        let inst = ModelPackInstaller(
-            entry: entry, supportedAbis: ["abi"], verificationPolicyVersion: 1, restored: nil)
-        XCTAssertTrue(inst.onQueued())
-        XCTAssertTrue(inst.onDownloadComplete())
-        // Verification bypass negative path.
-        XCTAssertFalse(inst.onPublished(installedAtMs: 1), "publish before verify must fail")
-        let observed = [
+    private func observedOk() -> [ObservedArtifact] {
+        [
             ObservedArtifact(
                 relativePath: "m.gguf", byteSize: 10,
                 sha256Hex: String(repeating: "aa", count: 32)),
@@ -141,16 +133,54 @@ final class SmokeTests: XCTestCase {
                 relativePath: "t.json", byteSize: 5,
                 sha256Hex: String(repeating: "bb", count: 32)),
         ]
-        XCTAssertTrue(inst.verify(observed: observed))
+    }
+
+    private func freshInstaller(_ entry: ModelPackCatalogEntry) -> ModelPackInstaller {
+        ModelPackInstaller(
+            entry: entry, supportedAbis: ["abi"], verificationPolicyVersion: 1,
+            persistedRecord: nil, observedInventory: [], trustedCatalog: [],
+            acceptedPolicyVersions: [1])
+    }
+
+    func testM7aContractsThroughBindings() throws {
+        let entry = makeEntry()
+        XCTAssertTrue(validateCatalogEntry(entry: entry).isEmpty)
+        let inst = freshInstaller(entry)
+        XCTAssertTrue(inst.onQueued())
+        XCTAssertTrue(inst.onDownloadComplete())
+        // Verification bypass negative path.
+        XCTAssertFalse(inst.onPublished(installedAtMs: 1), "publish before verify must fail")
+        XCTAssertTrue(inst.verify(observed: observedOk()))
         XCTAssertTrue(inst.onPublished(installedAtMs: 2))
         let rec = inst.activeInstallation()!
         XCTAssertEqual(rec.verifiedInventoryDigest.count, 64)
-        // Invalid restore surfaces RestoreFailure; does not activate.
+        // Sealed restoration: a shell cannot inject a RestoreResult — the
+        // constructor takes only raw inputs. Tampered on-disk bytes are
+        // rejected visibly and never activate.
+        var tampered = observedOk()
+        tampered[0] = ObservedArtifact(
+            relativePath: "m.gguf", byteSize: 10,
+            sha256Hex: String(repeating: "99", count: 32))
         let rej = ModelPackInstaller(
             entry: entry, supportedAbis: ["abi"], verificationPolicyVersion: 1,
-            restored: .rejected(failure: .trustedCatalogEntryMissing))
+            persistedRecord: rec, observedInventory: tampered,
+            trustedCatalog: [entry], acceptedPolicyVersions: [1])
         XCTAssertFalse(rej.snapshot().hasUsableActiveInstallation)
-        XCTAssertEqual(rej.snapshot().restoreFailure, .trustedCatalogEntryMissing)
+        XCTAssertEqual(
+            rej.snapshot().restoreFailure, .onDiskInventoryMismatch(relativePath: "m.gguf"))
+        // Missing trusted entry is equally visible.
+        let noTrust = ModelPackInstaller(
+            entry: entry, supportedAbis: ["abi"], verificationPolicyVersion: 1,
+            persistedRecord: rec, observedInventory: observedOk(),
+            trustedCatalog: [], acceptedPolicyVersions: [1])
+        XCTAssertEqual(noTrust.snapshot().restoreFailure, .trustedCatalogEntryMissing)
+        XCTAssertFalse(noTrust.snapshot().hasUsableActiveInstallation)
+        // Polarity: exact bytes + trusted entry restore as usable.
+        let good = ModelPackInstaller(
+            entry: entry, supportedAbis: ["abi"], verificationPolicyVersion: 1,
+            persistedRecord: rec, observedInventory: observedOk(),
+            trustedCatalog: [entry], acceptedPolicyVersions: [1])
+        XCTAssertTrue(good.snapshot().hasUsableActiveInstallation)
         // Unknown provider: transport must be absent.
         let id = resolveProviderIdentity(
             requestedProviderId: "nope", requestedModelId: "m", resolvedModelId: "m",
@@ -158,6 +188,31 @@ final class SmokeTests: XCTestCase {
             promptProfile: nil, promptHash: nil)
         XCTAssertNil(id.transport)
         XCTAssertEqual(id.locality, .unresolved)
+    }
+
+    func testM7aRemovalIntegrityThroughBindings() throws {
+        // Publish a valid pack, then prove dismissing a removal error can
+        // never reactivate it — only fresh exact revalidation can.
+        let entry = makeEntry()
+        let inst = freshInstaller(entry)
+        XCTAssertTrue(inst.onQueued())
+        XCTAssertTrue(inst.onDownloadComplete())
+        XCTAssertTrue(inst.verify(observed: observedOk()))
+        XCTAssertTrue(inst.onPublished(installedAtMs: 1))
+        XCTAssertTrue(inst.snapshot().hasUsableActiveInstallation)
+
+        XCTAssertTrue(inst.onRemovalStarted())
+        XCTAssertFalse(
+            inst.snapshot().hasUsableActiveInstallation, "not usable while removing")
+        XCTAssertTrue(inst.onRemovalFailed(reason: "fs busy"))
+        XCTAssertFalse(inst.snapshot().hasUsableActiveInstallation)
+        XCTAssertTrue(inst.acknowledgeOperationFailure())
+        XCTAssertFalse(
+            inst.snapshot().hasUsableActiveInstallation,
+            "acknowledging must not reactivate")
+        XCTAssertTrue(inst.revalidateActive(observed: observedOk()))
+        XCTAssertTrue(inst.snapshot().hasUsableActiveInstallation)
+        XCTAssertNil(inst.snapshot().activeIntegrityFailure)
     }
 
     func testConfigResolutionNoSilentMockFallback() throws {

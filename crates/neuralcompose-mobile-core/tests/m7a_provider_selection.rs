@@ -372,3 +372,90 @@ fn aliases_are_provider_scoped_and_validated() {
         "polarity: valid set validates"
     );
 }
+
+// ---- Round-2 amendments ----
+
+// ROUND-2 BLOCKER: an impossible transport/locality pairing is a false
+// privacy claim and must fail closed — never Ready, never non-egress.
+#[test]
+fn impossible_transport_locality_pairs_fail_closed() {
+    use ProviderLocality::*;
+    use ProviderTransport::*;
+    // The complete allowed matrix, both polarities.
+    let allowed = [
+        (OnDeviceModelPack, OnDevice),
+        (SystemModel, OnDevice),
+        (HttpEndpoint, LocalNetwork),
+        (HttpEndpoint, RemoteEndpoint),
+        (HttpEndpoint, Cloud),
+        (BrokeredCloud, Cloud),
+    ];
+    for t in [OnDeviceModelPack, SystemModel, HttpEndpoint, BrokeredCloud] {
+        for l in [OnDevice, LocalNetwork, RemoteEndpoint, Cloud, Unresolved] {
+            let expect = allowed.contains(&(t, l));
+            assert_eq!(
+                is_valid_transport_locality(t, l),
+                expect,
+                "matrix disagreement at {t:?}/{l:?}"
+            );
+        }
+    }
+    // A BrokeredCloud descriptor claiming OnDevice must not become Ready or
+    // present as local — even with valid credentials and a Verified probe.
+    let mut lying = cloud_desc();
+    lying.locality = ProviderLocality::OnDevice;
+    let id = resolve_provider_identity(
+        "neuralcompose-openai".into(),
+        "m".into(),
+        "m".into(),
+        None,
+        vec![lying],
+        vec![ProviderAvailability {
+            provider_id: "neuralcompose-openai".into(),
+            credential_state: CredentialState::Available,
+            probe: AvailabilityProbe::Verified,
+        }],
+        None,
+        None,
+    );
+    assert!(matches!(
+        id.readiness,
+        ProviderReadiness::Unavailable {
+            reason: ProviderFailure::InconsistentConfiguration { .. }
+        }
+    ));
+    assert_eq!(id.transport, None, "impossible claim is never repeated");
+    assert_eq!(id.locality, ProviderLocality::Unresolved);
+    assert!(presents_as_possible_egress(id.locality));
+    assert!(!id.capabilities.generation);
+    // Descriptor-declared Unresolved locality is also rejected.
+    let mut vague = local_desc();
+    vague.locality = ProviderLocality::Unresolved;
+    let id2 = resolve_provider_identity(
+        "local-qwen".into(),
+        "m".into(),
+        "m".into(),
+        None,
+        vec![vague],
+        vec![],
+        None,
+        None,
+    );
+    assert!(matches!(
+        id2.readiness,
+        ProviderReadiness::Unavailable {
+            reason: ProviderFailure::InconsistentConfiguration { .. }
+        }
+    ));
+    // Polarity: the valid pairs still resolve normally.
+    let ok = resolve(
+        "local-qwen",
+        vec![ProviderAvailability {
+            provider_id: "local-qwen".into(),
+            credential_state: CredentialState::NotRequired,
+            probe: AvailabilityProbe::Verified,
+        }],
+    );
+    assert_eq!(ok.readiness, ProviderReadiness::Ready);
+    assert_eq!(ok.locality, ProviderLocality::OnDevice);
+}

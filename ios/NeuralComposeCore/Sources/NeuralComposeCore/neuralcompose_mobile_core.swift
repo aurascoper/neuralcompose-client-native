@@ -1020,8 +1020,17 @@ public protocol ModelPackInstallerProtocol: AnyObject, Sendable {
      */
     func onRemovalConfirmed()  -> Bool
     
+    /**
+     * Integrity is now uncertain: acknowledging this failure clears the
+     * operation state but does NOT restore usability — only a fresh exact
+     * `revalidate_active` can.
+     */
     func onRemovalFailed(reason: String)  -> Bool
     
+    /**
+     * The record is retained during removal, but the pack is NOT usable —
+     * files may be disappearing while the platform works.
+     */
     func onRemovalStarted()  -> Bool
     
     /**
@@ -1029,6 +1038,14 @@ public protocol ModelPackInstallerProtocol: AnyObject, Sendable {
      * the active installation stays independently observable.
      */
     func phase()  -> ModelPackPhase
+    
+    /**
+     * Fresh integrity revalidation of the retained active installation
+     * against on-disk observations. Exact match (well-formed, no missing/
+     * modified/extra/duplicate) restores usability; any mismatch leaves
+     * the pack unusable with the specific reason visible.
+     */
+    func revalidateActive(observed: [ObservedArtifact])  -> Bool
     
     func snapshot()  -> ModelPackSnapshot
     
@@ -1080,11 +1097,15 @@ open class ModelPackInstaller: ModelPackInstallerProtocol, @unchecked Sendable {
         return try! rustCall { uniffi_neuralcompose_mobile_core_fn_clone_modelpackinstaller(self.handle, $0) }
     }
     /**
-     * `restored` comes from `restore_installed_record` — Restored's record
-     * becomes the active installation; a Rejected failure is surfaced
-     * visibly in the snapshot (the shell preserves/quarantines the record).
+     * SEALED restoration: the constructor accepts only raw untrusted
+     * inputs (persisted record + fresh on-disk observations + trusted
+     * catalog) and runs `restore_installed_record` internally against
+     * `entry.pack_id`. No constructor or state-changing method accepts a
+     * `RestoreResult` — a shell-constructed `.restored` has no injection
+     * point. A rejected restore is surfaced visibly in the snapshot while
+     * the shell preserves/quarantines the persisted record.
      */
-public convenience init(entry: ModelPackCatalogEntry, supportedAbis: [String], verificationPolicyVersion: UInt32, restored: RestoreResult?) {
+public convenience init(entry: ModelPackCatalogEntry, supportedAbis: [String], verificationPolicyVersion: UInt32, persistedRecord: InstalledModelPack?, observedInventory: [ObservedArtifact], trustedCatalog: [ModelPackCatalogEntry], acceptedPolicyVersions: [UInt32]) {
     let handle =
         try! rustCall() {
         uniffiCallStatus in
@@ -1092,7 +1113,10 @@ public convenience init(entry: ModelPackCatalogEntry, supportedAbis: [String], v
         FfiConverterTypeModelPackCatalogEntry_lower(entry),
         FfiConverterSequenceString.lower(supportedAbis),
         FfiConverterUInt32.lower(verificationPolicyVersion),
-        FfiConverterOptionTypeRestoreResult.lower(restored),uniffiCallStatus
+        FfiConverterOptionTypeInstalledModelPack.lower(persistedRecord),
+        FfiConverterSequenceTypeObservedArtifact.lower(observedInventory),
+        FfiConverterSequenceTypeModelPackCatalogEntry.lower(trustedCatalog),
+        FfiConverterSequenceUInt32.lower(acceptedPolicyVersions),uniffiCallStatus
     )
 }
     self.init(unsafeFromHandle: handle)
@@ -1198,6 +1222,11 @@ open func onRemovalConfirmed() -> Bool  {
 })
 }
     
+    /**
+     * Integrity is now uncertain: acknowledging this failure clears the
+     * operation state but does NOT restore usability — only a fresh exact
+     * `revalidate_active` can.
+     */
 open func onRemovalFailed(reason: String) -> Bool  {
     return try!  FfiConverterBool.lift(try! rustCall() {
         uniffiCallStatus in
@@ -1208,6 +1237,10 @@ open func onRemovalFailed(reason: String) -> Bool  {
 })
 }
     
+    /**
+     * The record is retained during removal, but the pack is NOT usable —
+     * files may be disappearing while the platform works.
+     */
 open func onRemovalStarted() -> Bool  {
     return try!  FfiConverterBool.lift(try! rustCall() {
         uniffiCallStatus in
@@ -1226,6 +1259,22 @@ open func phase() -> ModelPackPhase  {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_phase(
             self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Fresh integrity revalidation of the retained active installation
+     * against on-disk observations. Exact match (well-formed, no missing/
+     * modified/extra/duplicate) restores usability; any mismatch leaves
+     * the pack unusable with the specific reason visible.
+     */
+open func revalidateActive(observed: [ObservedArtifact]) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_revalidate_active(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceTypeObservedArtifact.lower(observed),uniffiCallStatus
     )
 })
 }
@@ -2313,9 +2362,16 @@ public struct ModelPackSnapshot: Equatable, Hashable {
     public var activeInstallation: InstalledModelPack?
     /**
      * Provider availability for local inference derives from THIS,
-     * never from `operation_phase == Ready`.
+     * never from `operation_phase == Ready`. False whenever integrity is
+     * uncertain: removal in progress, failed removal (even after the
+     * failure is acknowledged), or a failed revalidation — only a fresh
+     * exact revalidation restores usability.
      */
     public var hasUsableActiveInstallation: Bool
+    /**
+     * Why the retained active installation is not usable, when known.
+     */
+    public var activeIntegrityFailure: ActiveIntegrityFailure?
     public var operationFailure: OperationFailure?
     public var restoreFailure: RestoreFailure?
 
@@ -2324,11 +2380,18 @@ public struct ModelPackSnapshot: Equatable, Hashable {
     public init(operationPhase: ModelPackPhase, activeInstallation: InstalledModelPack?, 
         /**
          * Provider availability for local inference derives from THIS,
-         * never from `operation_phase == Ready`.
-         */hasUsableActiveInstallation: Bool, operationFailure: OperationFailure?, restoreFailure: RestoreFailure?) {
+         * never from `operation_phase == Ready`. False whenever integrity is
+         * uncertain: removal in progress, failed removal (even after the
+         * failure is acknowledged), or a failed revalidation — only a fresh
+         * exact revalidation restores usability.
+         */hasUsableActiveInstallation: Bool, 
+        /**
+         * Why the retained active installation is not usable, when known.
+         */activeIntegrityFailure: ActiveIntegrityFailure?, operationFailure: OperationFailure?, restoreFailure: RestoreFailure?) {
         self.operationPhase = operationPhase
         self.activeInstallation = activeInstallation
         self.hasUsableActiveInstallation = hasUsableActiveInstallation
+        self.activeIntegrityFailure = activeIntegrityFailure
         self.operationFailure = operationFailure
         self.restoreFailure = restoreFailure
     }
@@ -2352,6 +2415,7 @@ public struct FfiConverterTypeModelPackSnapshot: FfiConverterRustBuffer {
                 operationPhase: FfiConverterTypeModelPackPhase.read(from: &buf), 
                 activeInstallation: FfiConverterOptionTypeInstalledModelPack.read(from: &buf), 
                 hasUsableActiveInstallation: FfiConverterBool.read(from: &buf), 
+                activeIntegrityFailure: FfiConverterOptionTypeActiveIntegrityFailure.read(from: &buf), 
                 operationFailure: FfiConverterOptionTypeOperationFailure.read(from: &buf), 
                 restoreFailure: FfiConverterOptionTypeRestoreFailure.read(from: &buf)
         )
@@ -2361,6 +2425,7 @@ public struct FfiConverterTypeModelPackSnapshot: FfiConverterRustBuffer {
         FfiConverterTypeModelPackPhase.write(value.operationPhase, into: &buf)
         FfiConverterOptionTypeInstalledModelPack.write(value.activeInstallation, into: &buf)
         FfiConverterBool.write(value.hasUsableActiveInstallation, into: &buf)
+        FfiConverterOptionTypeActiveIntegrityFailure.write(value.activeIntegrityFailure, into: &buf)
         FfiConverterOptionTypeOperationFailure.write(value.operationFailure, into: &buf)
         FfiConverterOptionTypeRestoreFailure.write(value.restoreFailure, into: &buf)
     }
@@ -3221,6 +3286,123 @@ public func FfiConverterTypeVerifiedArtifact_lower(_ value: VerifiedArtifact) ->
 
 
 /**
+ * Why a retained active installation is currently NOT usable. Distinct
+ * evidence class from RestoreFailure: restoration happens at construction,
+ * integrity revalidation happens later against the active record.
+ */
+
+public enum ActiveIntegrityFailure: Equatable, Hashable {
+    
+    case missingArtifact(relativePath: String
+    )
+    case duplicateObservedPath(relativePath: String
+    )
+    case undeclaredArtifact(relativePath: String
+    )
+    case sizeMismatch(relativePath: String
+    )
+    case digestMismatch(relativePath: String
+    )
+    case malformedObservation(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ActiveIntegrityFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeActiveIntegrityFailure: FfiConverterRustBuffer {
+    typealias SwiftType = ActiveIntegrityFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ActiveIntegrityFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .missingArtifact(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .duplicateObservedPath(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .undeclaredArtifact(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .sizeMismatch(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .digestMismatch(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 6: return .malformedObservation(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ActiveIntegrityFailure, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .missingArtifact(relativePath):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .duplicateObservedPath(relativePath):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .undeclaredArtifact(relativePath):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .sizeMismatch(relativePath):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .digestMismatch(relativePath):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .malformedObservation(reason):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeActiveIntegrityFailure_lift(_ buf: RustBuffer) throws -> ActiveIntegrityFailure {
+    return try FfiConverterTypeActiveIntegrityFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeActiveIntegrityFailure_lower(_ value: ActiveIntegrityFailure) -> RustBuffer {
+    return FfiConverterTypeActiveIntegrityFailure.lower(value)
+}
+
+
+
+/**
  * The provider-specific readiness contract's observed status. A single
  * boolean cannot distinguish not-checked, checking, and failed — this can.
  */
@@ -3752,6 +3934,8 @@ public enum ModelPackFailure: Equatable, Hashable {
     case schemaInvalid(reason: String
     )
     case runtimeAbiIncompatible
+    case unsupportedVerificationPolicy(version: UInt32
+    )
     case removalFailed(reason: String
     )
 
@@ -3798,7 +3982,10 @@ public struct FfiConverterTypeModelPackFailure: FfiConverterRustBuffer {
         
         case 8: return .runtimeAbiIncompatible
         
-        case 9: return .removalFailed(reason: try FfiConverterString.read(from: &buf)
+        case 9: return .unsupportedVerificationPolicy(version: try FfiConverterUInt32.read(from: &buf)
+        )
+        
+        case 10: return .removalFailed(reason: try FfiConverterString.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -3848,8 +4035,13 @@ public struct FfiConverterTypeModelPackFailure: FfiConverterRustBuffer {
             writeInt(&buf, Int32(8))
         
         
-        case let .removalFailed(reason):
+        case let .unsupportedVerificationPolicy(version):
             writeInt(&buf, Int32(9))
+            FfiConverterUInt32.write(version, into: &buf)
+            
+        
+        case let .removalFailed(reason):
+            writeInt(&buf, Int32(10))
             FfiConverterString.write(reason, into: &buf)
             
         }
@@ -4668,8 +4860,12 @@ public func FfiConverterTypeRecordingPhase_lower(_ value: RecordingPhase) -> Rus
 public enum RestoreFailure: Equatable, Hashable {
     
     case trustedCatalogEntryMissing
+    case ambiguousTrustedCatalog
+    case targetPackMismatch
     case catalogDigestMismatch
     case installedInventoryMismatch
+    case onDiskInventoryMismatch(relativePath: String
+    )
     case unsupportedRuntimeAbi
     case unsupportedVerificationPolicy
     case invalidInstalledRecord(reason: String
@@ -4697,15 +4893,22 @@ public struct FfiConverterTypeRestoreFailure: FfiConverterRustBuffer {
         
         case 1: return .trustedCatalogEntryMissing
         
-        case 2: return .catalogDigestMismatch
+        case 2: return .ambiguousTrustedCatalog
         
-        case 3: return .installedInventoryMismatch
+        case 3: return .targetPackMismatch
         
-        case 4: return .unsupportedRuntimeAbi
+        case 4: return .catalogDigestMismatch
         
-        case 5: return .unsupportedVerificationPolicy
+        case 5: return .installedInventoryMismatch
         
-        case 6: return .invalidInstalledRecord(reason: try FfiConverterString.read(from: &buf)
+        case 6: return .onDiskInventoryMismatch(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .unsupportedRuntimeAbi
+        
+        case 8: return .unsupportedVerificationPolicy
+        
+        case 9: return .invalidInstalledRecord(reason: try FfiConverterString.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -4720,24 +4923,37 @@ public struct FfiConverterTypeRestoreFailure: FfiConverterRustBuffer {
             writeInt(&buf, Int32(1))
         
         
-        case .catalogDigestMismatch:
+        case .ambiguousTrustedCatalog:
             writeInt(&buf, Int32(2))
         
         
-        case .installedInventoryMismatch:
+        case .targetPackMismatch:
             writeInt(&buf, Int32(3))
         
         
-        case .unsupportedRuntimeAbi:
+        case .catalogDigestMismatch:
             writeInt(&buf, Int32(4))
         
         
-        case .unsupportedVerificationPolicy:
+        case .installedInventoryMismatch:
             writeInt(&buf, Int32(5))
         
         
-        case let .invalidInstalledRecord(reason):
+        case let .onDiskInventoryMismatch(relativePath):
             writeInt(&buf, Int32(6))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case .unsupportedRuntimeAbi:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .unsupportedVerificationPolicy:
+            writeInt(&buf, Int32(8))
+        
+        
+        case let .invalidInstalledRecord(reason):
+            writeInt(&buf, Int32(9))
             FfiConverterString.write(reason, into: &buf)
             
         }
@@ -5239,6 +5455,30 @@ fileprivate struct FfiConverterOptionTypeOperationFailure: FfiConverterRustBuffe
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeActiveIntegrityFailure: FfiConverterRustBuffer {
+    typealias SwiftType = ActiveIntegrityFailure?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeActiveIntegrityFailure.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeActiveIntegrityFailure.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeProviderTransport: FfiConverterRustBuffer {
     typealias SwiftType = ProviderTransport?
 
@@ -5279,30 +5519,6 @@ fileprivate struct FfiConverterOptionTypeRestoreFailure: FfiConverterRustBuffer 
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeRestoreFailure.read(from: &buf)
-        default: throw UniffiInternalError.unexpectedOptionalTag
-        }
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-fileprivate struct FfiConverterOptionTypeRestoreResult: FfiConverterRustBuffer {
-    typealias SwiftType = RestoreResult?
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
-            writeInt(&buf, Int8(0))
-            return
-        }
-        writeInt(&buf, Int8(1))
-        FfiConverterTypeRestoreResult.write(value, into: &buf)
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        switch try readInt(&buf) as Int8 {
-        case 0: return nil
-        case 1: return try FfiConverterTypeRestoreResult.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -5701,19 +5917,38 @@ public func embeddingSpaceIdentity(entry: ModelPackCatalogEntry) -> String?  {
 })
 }
 /**
- * Resolve a persisted installed record against the TRUSTED catalog set.
- * The record is never compared against an update target; it must match its
- * own trusted entry exactly. Rejection is visible — callers preserve/
- * quarantine the record for diagnosis, never silently drop it.
+ * Resolve a persisted installed record against the TRUSTED catalog set
+ * AND fresh observations of the actual on-disk artifacts. The record is
+ * never compared against an update target; it must match its own trusted
+ * entry exactly, and the observed bytes must match the record exactly —
+ * deleted or modified weights never restore as usable. Rejection is
+ * visible — callers preserve/quarantine the record for diagnosis, never
+ * silently drop it. This is a pure diagnostic view of the same sealed
+ * path `ModelPackInstaller::new` runs internally; no constructor or
+ * state-changing method accepts a `RestoreResult`.
  */
-public func restoreInstalledRecord(record: InstalledModelPack, trustedCatalog: [ModelPackCatalogEntry], supportedAbis: [String], acceptedPolicyVersions: [UInt32]) -> RestoreResult  {
+public func restoreInstalledRecord(record: InstalledModelPack, observed: [ObservedArtifact], trustedCatalog: [ModelPackCatalogEntry], supportedAbis: [String], acceptedPolicyVersions: [UInt32], targetPackId: String) -> RestoreResult  {
     return try!  FfiConverterTypeRestoreResult_lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_restore_installed_record(
         FfiConverterTypeInstalledModelPack_lower(record),
+        FfiConverterSequenceTypeObservedArtifact.lower(observed),
         FfiConverterSequenceTypeModelPackCatalogEntry.lower(trustedCatalog),
         FfiConverterSequenceString.lower(supportedAbis),
-        FfiConverterSequenceUInt32.lower(acceptedPolicyVersions),uniffiCallStatus
+        FfiConverterSequenceUInt32.lower(acceptedPolicyVersions),
+        FfiConverterString.lower(targetPackId),uniffiCallStatus
+    )
+})
+}
+/**
+ * The single Rust-side authority on which verification-policy versions
+ * exist. Zero and future versions are rejected at verification AND at
+ * restoration — the JSON Schema's `>= 1` bound alone is not enforcement.
+ */
+public func supportedVerificationPolicyVersions() -> [UInt32]  {
+    return try!  FfiConverterSequenceUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_supported_verification_policy_versions(uniffiCallStatus
     )
 })
 }
@@ -5762,6 +5997,29 @@ public func isSubstitution(identity: ResolvedProviderIdentity, aliases: [ModelAl
     uniffi_neuralcompose_mobile_core_fn_func_is_substitution(
         FfiConverterTypeResolvedProviderIdentity_lower(identity),
         FfiConverterSequenceTypeModelAlias.lower(aliases),uniffiCallStatus
+    )
+})
+}
+/**
+ * The allowed transport/locality matrix. A descriptor outside it is
+ * making an impossible — potentially false — privacy claim and must fail
+ * closed (e.g. BrokeredCloud+OnDevice would present a cloud runtime as
+ * local). Descriptor-declared Unresolved is not allowed either: locality
+ * is the descriptor's one privacy claim and it must commit to it.
+ *
+ * ```text
+ * OnDeviceModelPack → OnDevice
+ * SystemModel       → OnDevice
+ * HttpEndpoint      → LocalNetwork | RemoteEndpoint | Cloud
+ * BrokeredCloud     → Cloud
+ * ```
+ */
+public func isValidTransportLocality(transport: ProviderTransport, locality: ProviderLocality) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_is_valid_transport_locality(
+        FfiConverterTypeProviderTransport_lower(transport),
+        FfiConverterTypeProviderLocality_lower(locality),uniffiCallStatus
     )
 })
 }
@@ -5842,7 +6100,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_func_embedding_space_identity() != 38517) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_restore_installed_record() != 25900) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_restore_installed_record() != 19982) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_supported_verification_policy_versions() != 61319) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_validate_catalog_entry() != 52641) {
@@ -5855,6 +6116,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_is_substitution() != 3602) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_is_valid_transport_locality() != 30316) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_presents_as_possible_egress() != 5092) {
@@ -5926,13 +6190,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_confirmed() != 57952) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_failed() != 2236) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_failed() != 17084) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_started() != 28837) {
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_started() != 1939) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_phase() != 62150) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_revalidate_active() != 36487) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_snapshot() != 16702) {
@@ -5971,7 +6238,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests() != 11328) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_constructor_modelpackinstaller_new() != 3692) {
+    if (uniffi_neuralcompose_mobile_core_checksum_constructor_modelpackinstaller_new() != 43648) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new() != 40578) {

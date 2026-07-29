@@ -81,7 +81,34 @@ fn observed_ok() -> Vec<ObservedArtifact> {
 }
 
 fn installer(entry: ModelPackCatalogEntry) -> ModelPackInstaller {
-    ModelPackInstaller::new(entry, vec!["nc-gguf-v1".into()], 1, None)
+    ModelPackInstaller::new(
+        entry,
+        vec!["nc-gguf-v1".into()],
+        1,
+        None,
+        vec![],
+        vec![],
+        vec![1],
+    )
+}
+
+/// Sealed restoration through the constructor: raw persisted record +
+/// fresh observations + trusted catalog. No RestoreResult is accepted.
+fn restored_installer(
+    target: ModelPackCatalogEntry,
+    record: InstalledModelPack,
+    observed: Vec<ObservedArtifact>,
+    trusted: Vec<ModelPackCatalogEntry>,
+) -> ModelPackInstaller {
+    ModelPackInstaller::new(
+        target,
+        vec!["nc-gguf-v1".into()],
+        1,
+        Some(record),
+        observed,
+        trusted,
+        vec![1],
+    )
 }
 
 fn to_verifying(i: &ModelPackInstaller) {
@@ -163,18 +190,16 @@ fn duplicate_observed_paths_rejected_before_verification() {
 // PRIMARY BLOCKER: active vs operation independence.
 #[test]
 fn failed_update_keeps_active_version_usable() {
-    let v09 = {
-        let mut e = gen_entry();
-        e.pack_version = "0.9.0".into();
-        published_record(&e)
-    };
-    let i = ModelPackInstaller::new(
+    let mut old = gen_entry();
+    old.pack_version = "0.9.0".into();
+    let v09 = published_record(&old);
+    // Sealed restore of v0.9 (its own trusted entry retained) while the
+    // installer targets 1.0.0.
+    let i = restored_installer(
         gen_entry(), // targets 1.0.0
-        vec!["nc-gguf-v1".into()],
-        1,
-        Some(RestoreResult::Restored {
-            record: v09.clone(),
-        }),
+        v09.clone(),
+        observed_ok(),
+        vec![old.clone(), gen_entry()],
     );
     assert_eq!(
         i.phase(),
@@ -215,21 +240,37 @@ fn restore_resolves_against_trusted_catalog_only() {
     let record = published_record(&old);
     let trusted = vec![old.clone(), gen_entry()]; // retains supported installed versions
 
-    match restore_installed_record(
+    let restore = |rec: InstalledModelPack,
+                   obs: Vec<ObservedArtifact>,
+                   cat: Vec<ModelPackCatalogEntry>,
+                   accepted: Vec<u32>,
+                   target: &str| {
+        restore_installed_record(
+            rec,
+            obs,
+            cat,
+            vec!["nc-gguf-v1".into()],
+            accepted,
+            target.into(),
+        )
+    };
+    match restore(
         record.clone(),
+        observed_ok(),
         trusted.clone(),
-        vec!["nc-gguf-v1".into()],
         vec![1],
+        "local-dialogue-basic",
     ) {
         RestoreResult::Restored { record: r } => assert_eq!(r.pack_version, "0.9.0"),
         other => panic!("expected restore, got {other:?}"),
     }
     // Missing trusted entry → visible failure, not silence.
-    match restore_installed_record(
+    match restore(
         record.clone(),
+        observed_ok(),
         vec![gen_entry()],
-        vec!["nc-gguf-v1".into()],
         vec![1],
+        "local-dialogue-basic",
     ) {
         RestoreResult::Rejected { failure } => {
             assert_eq!(failure, RestoreFailure::TrustedCatalogEntryMissing)
@@ -240,11 +281,12 @@ fn restore_resolves_against_trusted_catalog_only() {
     let mut tampered = record.clone();
     tampered.catalog_entry_digest = sha(0x11);
     assert!(matches!(
-        restore_installed_record(
+        restore(
             tampered,
+            observed_ok(),
             trusted.clone(),
-            vec!["nc-gguf-v1".into()],
-            vec![1]
+            vec![1],
+            "local-dialogue-basic"
         ),
         RestoreResult::Rejected {
             failure: RestoreFailure::CatalogDigestMismatch
@@ -254,32 +296,46 @@ fn restore_resolves_against_trusted_catalog_only() {
     let mut swapped = record.clone();
     swapped.artifact_digests[0].sha256_hex = sha(0x22);
     assert!(matches!(
-        restore_installed_record(swapped, trusted.clone(), vec!["nc-gguf-v1".into()], vec![1]),
+        restore(
+            swapped,
+            observed_ok(),
+            trusted.clone(),
+            vec![1],
+            "local-dialogue-basic"
+        ),
         RestoreResult::Rejected {
             failure: RestoreFailure::InstalledInventoryMismatch
         }
     ));
-    // Unsupported policy version.
+    // Policy version outside the caller-accepted set.
     assert!(matches!(
-        restore_installed_record(
+        restore(
             record.clone(),
+            observed_ok(),
             trusted.clone(),
-            vec!["nc-gguf-v1".into()],
-            vec![2]
+            vec![2],
+            "local-dialogue-basic"
         ),
         RestoreResult::Rejected {
             failure: RestoreFailure::UnsupportedVerificationPolicy
         }
     ));
-    // Rejected restore surfaces visibly in the installer snapshot.
-    let i = ModelPackInstaller::new(
-        gen_entry(),
-        vec!["nc-gguf-v1".into()],
-        1,
-        Some(RestoreResult::Rejected {
-            failure: RestoreFailure::TrustedCatalogEntryMissing,
-        }),
-    );
+    // Record targeting a different pack than the installer's entry.
+    assert!(matches!(
+        restore(
+            record.clone(),
+            observed_ok(),
+            trusted.clone(),
+            vec![1],
+            "some-other-pack"
+        ),
+        RestoreResult::Rejected {
+            failure: RestoreFailure::TargetPackMismatch
+        }
+    ));
+    // Rejected restore surfaces visibly in the installer snapshot: sealed
+    // constructor, empty trusted catalog.
+    let i = restored_installer(gen_entry(), record.clone(), observed_ok(), vec![]);
     let snap = i.snapshot();
     assert!(!snap.has_usable_active_installation);
     assert_eq!(
@@ -287,6 +343,258 @@ fn restore_resolves_against_trusted_catalog_only() {
         Some(RestoreFailure::TrustedCatalogEntryMissing)
     );
     assert_eq!(snap.operation_phase, ModelPackPhase::NotInstalled);
+    // Observations without a persisted record are contradictory input —
+    // visible failure, no restore attempt.
+    let j = ModelPackInstaller::new(
+        gen_entry(),
+        vec!["nc-gguf-v1".into()],
+        1,
+        None,
+        observed_ok(),
+        vec![gen_entry()],
+        vec![1],
+    );
+    let jsnap = j.snapshot();
+    assert!(!jsnap.has_usable_active_installation);
+    assert!(matches!(
+        jsnap.restore_failure,
+        Some(RestoreFailure::InvalidInstalledRecord { .. })
+    ));
+}
+
+// ROUND-2 BLOCKER: restoration verifies the actual bytes, not just the
+// persisted metadata record.
+#[test]
+fn restore_rejects_missing_or_modified_on_disk_bytes() {
+    let record = published_record(&gen_entry());
+    let trusted = vec![gen_entry()];
+    let attempt = |obs: Vec<ObservedArtifact>| {
+        restore_installed_record(
+            record.clone(),
+            obs,
+            trusted.clone(),
+            vec!["nc-gguf-v1".into()],
+            vec![1],
+            "local-dialogue-basic".into(),
+        )
+    };
+    // Polarity: exact bytes restore.
+    assert!(matches!(
+        attempt(observed_ok()),
+        RestoreResult::Restored { .. }
+    ));
+    let rejected = |obs: Vec<ObservedArtifact>| {
+        matches!(
+            attempt(obs),
+            RestoreResult::Rejected {
+                failure: RestoreFailure::OnDiskInventoryMismatch { .. }
+            }
+        )
+    };
+    // Deleted weights.
+    let mut missing = observed_ok();
+    missing.remove(0);
+    assert!(rejected(missing));
+    // Modified weights bytes.
+    let mut modified = observed_ok();
+    modified[0].sha256_hex = sha(0x99);
+    assert!(rejected(modified));
+    // Wrong size.
+    let mut resized = observed_ok();
+    resized[0].byte_size = 999;
+    assert!(rejected(resized));
+    // Extra file next to the pack.
+    let mut extra = observed_ok();
+    extra.push(ObservedArtifact {
+        relative_path: "sneaky.bin".into(),
+        byte_size: 5,
+        sha256_hex: sha(0x77),
+    });
+    assert!(rejected(extra));
+    // Duplicate observed path.
+    let mut dup = observed_ok();
+    dup.push(dup[0].clone());
+    assert!(rejected(dup));
+    // Malformed observations: traversal path, uppercase sha.
+    let mut traversal = observed_ok();
+    traversal[0].relative_path = "../model.gguf".into();
+    assert!(rejected(traversal));
+    let mut upper = observed_ok();
+    upper[0].sha256_hex = upper[0].sha256_hex.to_uppercase();
+    assert!(rejected(upper));
+    // Through the sealed constructor: tampered bytes → visible failure,
+    // no usable installation.
+    let mut modified = observed_ok();
+    modified[0].sha256_hex = sha(0x99);
+    let i = restored_installer(gen_entry(), record.clone(), modified, trusted.clone());
+    let snap = i.snapshot();
+    assert!(!snap.has_usable_active_installation);
+    assert!(snap.active_installation.is_none());
+    assert!(matches!(
+        snap.restore_failure,
+        Some(RestoreFailure::OnDiskInventoryMismatch { .. })
+    ));
+}
+
+// ROUND-2 BLOCKER: duplicate trusted identities are rejected regardless of
+// catalog vector order.
+#[test]
+fn ambiguous_trusted_catalog_rejected_in_both_orders() {
+    let record = published_record(&gen_entry());
+    let genuine = gen_entry();
+    let mut impostor = gen_entry(); // same (pack_id, pack_version), different content
+    impostor.artifacts[0].sha256_hex = sha(0xee);
+    for cat in [
+        vec![genuine.clone(), impostor.clone()],
+        vec![impostor.clone(), genuine.clone()],
+    ] {
+        assert!(matches!(
+            restore_installed_record(
+                record.clone(),
+                observed_ok(),
+                cat,
+                vec!["nc-gguf-v1".into()],
+                vec![1],
+                "local-dialogue-basic".into(),
+            ),
+            RestoreResult::Rejected {
+                failure: RestoreFailure::AmbiguousTrustedCatalog
+            }
+        ));
+    }
+    // Polarity: unambiguous catalog restores.
+    assert!(matches!(
+        restore_installed_record(
+            record,
+            observed_ok(),
+            vec![genuine],
+            vec!["nc-gguf-v1".into()],
+            vec![1],
+            "local-dialogue-basic".into(),
+        ),
+        RestoreResult::Restored { .. }
+    ));
+}
+
+// ROUND-2 BLOCKER: verification-policy versions come from one Rust
+// authority; zero and future versions are rejected at verify and restore.
+#[test]
+fn verification_policy_registry_rejects_zero_and_future_versions() {
+    assert_eq!(supported_verification_policy_versions(), vec![1]);
+    for bad in [0u32, 2, u32::MAX] {
+        let i = ModelPackInstaller::new(
+            gen_entry(),
+            vec!["nc-gguf-v1".into()],
+            bad,
+            None,
+            vec![],
+            vec![],
+            vec![bad],
+        );
+        to_verifying(&i);
+        assert!(!i.verify(observed_ok()), "policy {bad} must not verify");
+        assert!(matches!(
+            i.snapshot().operation_failure.unwrap().reason,
+            ModelPackFailure::UnsupportedVerificationPolicy { version } if version == bad
+        ));
+        assert!(!i.on_published(1), "policy {bad} must not publish");
+
+        // Restore: record stamped with an unsupported policy is rejected
+        // even when the caller claims to accept it.
+        let mut record = published_record(&gen_entry());
+        record.verification_policy_version = bad;
+        assert!(matches!(
+            restore_installed_record(
+                record,
+                observed_ok(),
+                vec![gen_entry()],
+                vec!["nc-gguf-v1".into()],
+                vec![bad],
+                "local-dialogue-basic".into(),
+            ),
+            RestoreResult::Rejected {
+                failure: RestoreFailure::UnsupportedVerificationPolicy
+            }
+        ));
+    }
+    // Polarity: version 1 verifies, publishes, and restores end-to-end.
+    let record = published_record(&gen_entry());
+    assert_eq!(record.verification_policy_version, 1);
+    assert!(matches!(
+        restore_installed_record(
+            record,
+            observed_ok(),
+            vec![gen_entry()],
+            vec!["nc-gguf-v1".into()],
+            vec![1],
+            "local-dialogue-basic".into(),
+        ),
+        RestoreResult::Restored { .. }
+    ));
+}
+
+// ROUND-2 BLOCKER: a pack is not usable while being removed or after a
+// failed removal; only fresh exact revalidation restores usability.
+#[test]
+fn removal_and_failed_removal_report_unusable_until_revalidated() {
+    let i = installer(gen_entry());
+    to_verifying(&i);
+    assert!(i.verify(observed_ok()));
+    assert!(i.on_published(1));
+    assert!(i.snapshot().has_usable_active_installation);
+
+    assert!(i.on_removal_started());
+    let snap = i.snapshot();
+    assert!(snap.active_installation.is_some(), "record retained");
+    assert!(
+        !snap.has_usable_active_installation,
+        "not usable while files may be disappearing"
+    );
+
+    assert!(i.on_removal_failed("fs busy".into()));
+    assert!(!i.snapshot().has_usable_active_installation);
+    assert!(i.acknowledge_operation_failure());
+    assert!(
+        !i.snapshot().has_usable_active_installation,
+        "dismissing the error must not reactivate the pack"
+    );
+
+    // Tampered revalidation → still unusable, specific reason visible.
+    let mut bad = observed_ok();
+    bad[0].sha256_hex = sha(0x55);
+    assert!(!i.revalidate_active(bad));
+    let snap = i.snapshot();
+    assert!(!snap.has_usable_active_installation);
+    assert!(matches!(
+        snap.active_integrity_failure,
+        Some(ActiveIntegrityFailure::DigestMismatch { .. })
+    ));
+    // Other mismatch classes surface their own variants.
+    let mut short = observed_ok();
+    short.remove(1);
+    assert!(!i.revalidate_active(short));
+    assert!(matches!(
+        i.snapshot().active_integrity_failure,
+        Some(ActiveIntegrityFailure::MissingArtifact { .. })
+    ));
+    let mut extra = observed_ok();
+    extra.push(ObservedArtifact {
+        relative_path: "sneaky.bin".into(),
+        byte_size: 5,
+        sha256_hex: sha(0x66),
+    });
+    assert!(!i.revalidate_active(extra));
+    assert!(matches!(
+        i.snapshot().active_integrity_failure,
+        Some(ActiveIntegrityFailure::UndeclaredArtifact { .. })
+    ));
+
+    // Fresh exact revalidation restores usability and clears the reason.
+    assert!(i.revalidate_active(observed_ok()));
+    let snap = i.snapshot();
+    assert!(snap.has_usable_active_installation);
+    assert_eq!(snap.active_integrity_failure, None);
+    assert_eq!(snap.operation_phase, ModelPackPhase::Ready);
 }
 
 // PRIMARY BLOCKER: compatibility validation.
@@ -391,7 +699,15 @@ fn digest_size_abi_and_extras_block_ready() {
         run(c),
         ModelPackFailure::UndeclaredArtifact { .. }
     ));
-    let abi = ModelPackInstaller::new(gen_entry(), vec!["other".into()], 1, None);
+    let abi = ModelPackInstaller::new(
+        gen_entry(),
+        vec!["other".into()],
+        1,
+        None,
+        vec![],
+        vec![],
+        vec![1],
+    );
     to_verifying(&abi);
     assert!(!abi.verify(observed_ok()));
     assert!(matches!(

@@ -147,6 +147,39 @@ fn empty_caps() -> ProviderCapabilities {
     }
 }
 
+/// The allowed transport/locality matrix. A descriptor outside it is
+/// making an impossible — potentially false — privacy claim and must fail
+/// closed (e.g. BrokeredCloud+OnDevice would present a cloud runtime as
+/// local). Descriptor-declared Unresolved is not allowed either: locality
+/// is the descriptor's one privacy claim and it must commit to it.
+///
+/// ```text
+/// OnDeviceModelPack → OnDevice
+/// SystemModel       → OnDevice
+/// HttpEndpoint      → LocalNetwork | RemoteEndpoint | Cloud
+/// BrokeredCloud     → Cloud
+/// ```
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn is_valid_transport_locality(
+    transport: ProviderTransport,
+    locality: ProviderLocality,
+) -> bool {
+    matches!(
+        (transport, locality),
+        (
+            ProviderTransport::OnDeviceModelPack,
+            ProviderLocality::OnDevice
+        ) | (ProviderTransport::SystemModel, ProviderLocality::OnDevice)
+            | (
+                ProviderTransport::HttpEndpoint,
+                ProviderLocality::LocalNetwork
+                    | ProviderLocality::RemoteEndpoint
+                    | ProviderLocality::Cloud
+            )
+            | (ProviderTransport::BrokeredCloud, ProviderLocality::Cloud)
+    )
+}
+
 /// Resolve a request against configuration + shell-reported availability.
 /// NEVER substitutes a provider; fail closed on inconsistent configuration.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
@@ -184,7 +217,17 @@ pub fn resolve_provider_identity(
             inconsistent("duplicate descriptors"),
         )
     } else if let Some(d) = matching_desc.first() {
-        if matching_avail.len() > 1 {
+        if !is_valid_transport_locality(d.transport, d.locality) {
+            // An impossible pairing is untrustworthy in BOTH claims: never
+            // repeat the declared transport or locality, present as
+            // possible egress.
+            (
+                None,
+                ProviderLocality::Unresolved,
+                empty_caps(),
+                inconsistent("impossible transport/locality pairing"),
+            )
+        } else if matching_avail.len() > 1 {
             (
                 Some(d.transport),
                 d.locality,

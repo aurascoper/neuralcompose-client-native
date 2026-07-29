@@ -139,34 +139,82 @@ class Gate4Test {
         embedding = null,
     )
 
+    private fun observedOk() = listOf(
+        uniffi.neuralcompose_mobile_core.ObservedArtifact("m.gguf", 10uL, "aa".repeat(32)),
+        uniffi.neuralcompose_mobile_core.ObservedArtifact("t.json", 5uL, "bb".repeat(32)),
+    )
+
+    private fun freshInstaller(entry: uniffi.neuralcompose_mobile_core.ModelPackCatalogEntry) =
+        uniffi.neuralcompose_mobile_core.ModelPackInstaller(
+            entry, listOf("abi"), 1u, null, listOf(), listOf(), listOf(1u),
+        )
+
     @Test
     fun m7aContractsThroughBindings() {
         val entry = makeEntry()
         assertEquals(0, uniffi.neuralcompose_mobile_core.validateCatalogEntry(entry).size)
-        val inst = uniffi.neuralcompose_mobile_core.ModelPackInstaller(
-            entry, listOf("abi"), 1u, null,
-        )
+        val inst = freshInstaller(entry)
         assertEquals(true, inst.onQueued())
         assertEquals(true, inst.onDownloadComplete())
         assertEquals(false, inst.onPublished(1uL)) // bypass negative path
-        val observed = listOf(
-            uniffi.neuralcompose_mobile_core.ObservedArtifact("m.gguf", 10uL, "aa".repeat(32)),
+        assertEquals(true, inst.verify(observedOk()))
+        assertEquals(true, inst.onPublished(2uL))
+        val rec = inst.activeInstallation()!!
+        assertEquals(64, rec.verifiedInventoryDigest.length)
+        // Sealed restoration: no RestoreResult injection point exists.
+        // Tampered on-disk bytes are rejected visibly and never activate.
+        val tampered = listOf(
+            uniffi.neuralcompose_mobile_core.ObservedArtifact("m.gguf", 10uL, "99".repeat(32)),
             uniffi.neuralcompose_mobile_core.ObservedArtifact("t.json", 5uL, "bb".repeat(32)),
         )
-        assertEquals(true, inst.verify(observed))
-        assertEquals(true, inst.onPublished(2uL))
-        assertEquals(64, inst.activeInstallation()!!.verifiedInventoryDigest.length)
         val rej = uniffi.neuralcompose_mobile_core.ModelPackInstaller(
-            entry, listOf("abi"), 1u,
-            uniffi.neuralcompose_mobile_core.RestoreResult.Rejected(
-                uniffi.neuralcompose_mobile_core.RestoreFailure.TrustedCatalogEntryMissing,
-            ),
+            entry, listOf("abi"), 1u, rec, tampered, listOf(entry), listOf(1u),
         )
         assertEquals(false, rej.snapshot().hasUsableActiveInstallation)
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.RestoreFailure.OnDiskInventoryMismatch("m.gguf"),
+            rej.snapshot().restoreFailure,
+        )
+        // Missing trusted entry is equally visible.
+        val noTrust = uniffi.neuralcompose_mobile_core.ModelPackInstaller(
+            entry, listOf("abi"), 1u, rec, observedOk(), listOf(), listOf(1u),
+        )
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.RestoreFailure.TrustedCatalogEntryMissing,
+            noTrust.snapshot().restoreFailure,
+        )
+        assertEquals(false, noTrust.snapshot().hasUsableActiveInstallation)
+        // Polarity: exact bytes + trusted entry restore as usable.
+        val good = uniffi.neuralcompose_mobile_core.ModelPackInstaller(
+            entry, listOf("abi"), 1u, rec, observedOk(), listOf(entry), listOf(1u),
+        )
+        assertEquals(true, good.snapshot().hasUsableActiveInstallation)
         val id = uniffi.neuralcompose_mobile_core.resolveProviderIdentity(
             "nope", "m", "m", null, listOf(), listOf(), null, null,
         )
         assertEquals(null, id.transport)
+    }
+
+    @Test
+    fun m7aRemovalIntegrityThroughBindings() {
+        // Dismissing a removal error must never reactivate the pack; only
+        // fresh exact revalidation can.
+        val inst = freshInstaller(makeEntry())
+        assertEquals(true, inst.onQueued())
+        assertEquals(true, inst.onDownloadComplete())
+        assertEquals(true, inst.verify(observedOk()))
+        assertEquals(true, inst.onPublished(1uL))
+        assertEquals(true, inst.snapshot().hasUsableActiveInstallation)
+
+        assertEquals(true, inst.onRemovalStarted())
+        assertEquals(false, inst.snapshot().hasUsableActiveInstallation)
+        assertEquals(true, inst.onRemovalFailed("fs busy"))
+        assertEquals(false, inst.snapshot().hasUsableActiveInstallation)
+        assertEquals(true, inst.acknowledgeOperationFailure())
+        assertEquals(false, inst.snapshot().hasUsableActiveInstallation)
+        assertEquals(true, inst.revalidateActive(observedOk()))
+        assertEquals(true, inst.snapshot().hasUsableActiveInstallation)
+        assertEquals(null, inst.snapshot().activeIntegrityFailure)
     }
 
     @Test

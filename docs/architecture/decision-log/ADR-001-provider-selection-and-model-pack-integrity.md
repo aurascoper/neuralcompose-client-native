@@ -91,3 +91,54 @@ never against an update target. Installed-record restoration is exact:
 pack_id + pack_version + catalog_entry_digest, full inventory equality, ABI
 and verification-policy acceptance, and inventory-digest recomputation;
 rejected restores are preserved/quarantined with a visible RestoreFailure.
+
+## Round-2 amendments (review 2026-07-29)
+
+**Sealed restoration.** `RestoreResult` is output-only: no constructor or
+state-changing API accepts one (a shell-forged `.restored` has no injection
+point). `ModelPackInstaller::new` takes raw inputs — persisted record, fresh
+on-disk observations, trusted catalog, supported ABIs, accepted policy
+versions — and runs restoration internally against its own target pack ID.
+Restoration verifies the actual bytes, not just persisted metadata: the
+fresh observed inventory must exactly equal the record (well-formed, no
+missing/modified/extra/duplicate artifacts), so deleted or tampered weights
+never restore as usable. A record whose pack_id differs from the installer's
+target is rejected (`TargetPackMismatch`). Observations supplied without a
+record are contradictory input and surface visibly. Duplicate trusted
+`(pack_id, pack_version)` identities reject as `AmbiguousTrustedCatalog`
+before lookup, independent of catalog ordering.
+
+**Usability is an integrity axis.** `has_usable_active_installation` is not
+`active.is_some()`: a pack is unusable while removal is in progress and
+after a failed removal — acknowledging the failure clears the operation
+state but never reactivates the pack. Only a fresh exact integrity
+revalidation (`revalidate_active`) restores usability; a failed
+revalidation surfaces a specific `ActiveIntegrityFailure` in the snapshot
+(distinct evidence class from `RestoreFailure`).
+
+**Transport/locality matrix.** A descriptor's locality is its privacy
+claim and must be possible for its transport:
+
+```text
+OnDeviceModelPack → OnDevice
+SystemModel       → OnDevice
+HttpEndpoint      → LocalNetwork | RemoteEndpoint | Cloud
+BrokeredCloud     → Cloud
+```
+
+Any other pair (including descriptor-declared Unresolved) fails closed:
+transport absent, locality Unresolved, capabilities false, readiness
+`Unavailable(InconsistentConfiguration)`, presented as possible egress — an
+invalid descriptor can never claim a cloud runtime is local.
+
+**Verification-policy registry.** `CURRENT_VERIFICATION_POLICY_VERSION = 1`
+and `supported_verification_policy_versions()` are the single Rust
+authority. Unsupported versions (0, future, u32::MAX) cannot verify —
+therefore cannot mint a receipt or publish — and cannot restore; restore
+requires membership in both the Rust-supported and caller-accepted sets.
+The JSON Schema's `>= 1` bound is documentation, not the enforcement.
+
+Provider taxonomy note: Ollama local and Ollama Cloud remain separate
+providers (unauthenticated localhost API vs authenticated remote API —
+distinct privacy identities), and app-owner cloud keys stay server-side
+behind the broker.

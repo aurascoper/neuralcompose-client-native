@@ -9,8 +9,17 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 
 pub const SUPPORTED_SCHEMA_VERSION: u32 = 1;
+pub const CURRENT_VERIFICATION_POLICY_VERSION: u32 = 1;
 const VERIFICATION_DOMAIN: &str = "neuralcompose.model-pack-verification.v1";
 const EMBEDDING_DOMAIN: &str = "neuralcompose.embedding-space.v1";
+
+/// The single Rust-side authority on which verification-policy versions
+/// exist. Zero and future versions are rejected at verification AND at
+/// restoration — the JSON Schema's `>= 1` bound alone is not enforcement.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn supported_verification_policy_versions() -> Vec<u32> {
+    vec![CURRENT_VERIFICATION_POLICY_VERSION]
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -120,6 +129,7 @@ pub enum ModelPackFailure {
     DuplicateObservedPath { relative_path: String },
     SchemaInvalid { reason: String },
     RuntimeAbiIncompatible,
+    UnsupportedVerificationPolicy { version: u32 },
     RemovalFailed { reason: String },
 }
 
@@ -191,11 +201,28 @@ pub struct ObservedArtifact {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum RestoreFailure {
     TrustedCatalogEntryMissing,
+    AmbiguousTrustedCatalog,
+    TargetPackMismatch,
     CatalogDigestMismatch,
     InstalledInventoryMismatch,
+    OnDiskInventoryMismatch { relative_path: String },
     UnsupportedRuntimeAbi,
     UnsupportedVerificationPolicy,
     InvalidInstalledRecord { reason: String },
+}
+
+/// Why a retained active installation is currently NOT usable. Distinct
+/// evidence class from RestoreFailure: restoration happens at construction,
+/// integrity revalidation happens later against the active record.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum ActiveIntegrityFailure {
+    MissingArtifact { relative_path: String },
+    DuplicateObservedPath { relative_path: String },
+    UndeclaredArtifact { relative_path: String },
+    SizeMismatch { relative_path: String },
+    DigestMismatch { relative_path: String },
+    MalformedObservation { reason: String },
 }
 
 /// Independent observability of the usable installation vs the operation.
@@ -205,8 +232,13 @@ pub struct ModelPackSnapshot {
     pub operation_phase: ModelPackPhase,
     pub active_installation: Option<InstalledModelPack>,
     /// Provider availability for local inference derives from THIS,
-    /// never from `operation_phase == Ready`.
+    /// never from `operation_phase == Ready`. False whenever integrity is
+    /// uncertain: removal in progress, failed removal (even after the
+    /// failure is acknowledged), or a failed revalidation — only a fresh
+    /// exact revalidation restores usability.
     pub has_usable_active_installation: bool,
+    /// Why the retained active installation is not usable, when known.
+    pub active_integrity_failure: Option<ActiveIntegrityFailure>,
     pub operation_failure: Option<OperationFailure>,
     pub restore_failure: Option<RestoreFailure>,
 }
@@ -458,16 +490,23 @@ pub enum RestoreResult {
     Rejected { failure: RestoreFailure },
 }
 
-/// Resolve a persisted installed record against the TRUSTED catalog set.
-/// The record is never compared against an update target; it must match its
-/// own trusted entry exactly. Rejection is visible — callers preserve/
-/// quarantine the record for diagnosis, never silently drop it.
+/// Resolve a persisted installed record against the TRUSTED catalog set
+/// AND fresh observations of the actual on-disk artifacts. The record is
+/// never compared against an update target; it must match its own trusted
+/// entry exactly, and the observed bytes must match the record exactly —
+/// deleted or modified weights never restore as usable. Rejection is
+/// visible — callers preserve/quarantine the record for diagnosis, never
+/// silently drop it. This is a pure diagnostic view of the same sealed
+/// path `ModelPackInstaller::new` runs internally; no constructor or
+/// state-changing method accepts a `RestoreResult`.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn restore_installed_record(
     record: InstalledModelPack,
+    observed: Vec<ObservedArtifact>,
     trusted_catalog: Vec<ModelPackCatalogEntry>,
     supported_abis: Vec<String>,
     accepted_policy_versions: Vec<u32>,
+    target_pack_id: String,
 ) -> RestoreResult {
     for a in &record.artifact_digests {
         if !valid_sha256(&a.sha256_hex) || !valid_relative_path(&a.relative_path) {
@@ -478,16 +517,29 @@ pub fn restore_installed_record(
             };
         }
     }
-    let entry = match trusted_catalog
+    if record.pack_id != target_pack_id {
+        return RestoreResult::Rejected {
+            failure: RestoreFailure::TargetPackMismatch,
+        };
+    }
+    // Ambiguous trusted identities are rejected BEFORE lookup so the
+    // outcome can never depend on catalog vector order.
+    let matching: Vec<&ModelPackCatalogEntry> = trusted_catalog
         .iter()
-        .find(|e| e.pack_id == record.pack_id && e.pack_version == record.pack_version)
-    {
+        .filter(|e| e.pack_id == record.pack_id && e.pack_version == record.pack_version)
+        .collect();
+    if matching.len() > 1 {
+        return RestoreResult::Rejected {
+            failure: RestoreFailure::AmbiguousTrustedCatalog,
+        };
+    }
+    let entry = match matching.first() {
         None => {
             return RestoreResult::Rejected {
                 failure: RestoreFailure::TrustedCatalogEntryMissing,
             }
         }
-        Some(e) => e,
+        Some(e) => *e,
     };
     if !validate_catalog_entry(entry.clone()).is_empty() {
         return RestoreResult::Rejected {
@@ -506,7 +558,11 @@ pub fn restore_installed_record(
             failure: RestoreFailure::UnsupportedRuntimeAbi,
         };
     }
-    if !accepted_policy_versions.contains(&record.verification_policy_version) {
+    // Membership required in BOTH the Rust-supported set and the
+    // caller-accepted set.
+    if !supported_verification_policy_versions().contains(&record.verification_policy_version)
+        || !accepted_policy_versions.contains(&record.verification_policy_version)
+    {
         return RestoreResult::Rejected {
             failure: RestoreFailure::UnsupportedVerificationPolicy,
         };
@@ -543,6 +599,62 @@ pub fn restore_installed_record(
             failure: RestoreFailure::InstalledInventoryMismatch,
         };
     }
+    // Trust established — now the actual bytes. Fresh observations must
+    // equal the record's artifact set exactly: well-formed, no duplicates,
+    // no missing, no modified, no extras.
+    let mut observed_paths = std::collections::HashSet::new();
+    for o in &observed {
+        if !valid_relative_path(&o.relative_path) || !valid_sha256(&o.sha256_hex) {
+            return RestoreResult::Rejected {
+                failure: RestoreFailure::OnDiskInventoryMismatch {
+                    relative_path: o.relative_path.clone(),
+                },
+            };
+        }
+        if !observed_paths.insert(o.relative_path.clone()) {
+            return RestoreResult::Rejected {
+                failure: RestoreFailure::OnDiskInventoryMismatch {
+                    relative_path: o.relative_path.clone(),
+                },
+            };
+        }
+    }
+    for rec in &record.artifact_digests {
+        match observed
+            .iter()
+            .find(|o| o.relative_path == rec.relative_path)
+        {
+            None => {
+                return RestoreResult::Rejected {
+                    failure: RestoreFailure::OnDiskInventoryMismatch {
+                        relative_path: rec.relative_path.clone(),
+                    },
+                }
+            }
+            Some(o) => {
+                if o.byte_size != rec.byte_size || o.sha256_hex != rec.sha256_hex {
+                    return RestoreResult::Rejected {
+                        failure: RestoreFailure::OnDiskInventoryMismatch {
+                            relative_path: rec.relative_path.clone(),
+                        },
+                    };
+                }
+            }
+        }
+    }
+    for o in &observed {
+        if !record
+            .artifact_digests
+            .iter()
+            .any(|rec| rec.relative_path == o.relative_path)
+        {
+            return RestoreResult::Rejected {
+                failure: RestoreFailure::OnDiskInventoryMismatch {
+                    relative_path: o.relative_path.clone(),
+                },
+            };
+        }
+    }
     RestoreResult::Restored { record }
 }
 
@@ -560,6 +672,12 @@ enum Op {
 struct PackInner {
     op: Op,
     active: Option<InstalledModelPack>,
+    /// Integrity axis, independent of `active`: false while files may be
+    /// disappearing (Removing), after a failed removal, or after a failed
+    /// revalidation. Only publication, sealed restoration, or a fresh
+    /// exact revalidation set it true.
+    usable: bool,
+    active_integrity_failure: Option<ActiveIntegrityFailure>,
     operation_failure: Option<OperationFailure>,
     restore_failure: Option<RestoreFailure>,
     verification_receipt: Option<String>,
@@ -585,21 +703,52 @@ fn op_kind(active: bool, removing: bool) -> OperationKind {
 
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 impl ModelPackInstaller {
-    /// `restored` comes from `restore_installed_record` — Restored's record
-    /// becomes the active installation; a Rejected failure is surfaced
-    /// visibly in the snapshot (the shell preserves/quarantines the record).
+    /// SEALED restoration: the constructor accepts only raw untrusted
+    /// inputs (persisted record + fresh on-disk observations + trusted
+    /// catalog) and runs `restore_installed_record` internally against
+    /// `entry.pack_id`. No constructor or state-changing method accepts a
+    /// `RestoreResult` — a shell-constructed `.restored` has no injection
+    /// point. A rejected restore is surfaced visibly in the snapshot while
+    /// the shell preserves/quarantines the persisted record.
     #[cfg_attr(feature = "uniffi", uniffi::constructor)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         entry: ModelPackCatalogEntry,
         supported_abis: Vec<String>,
         verification_policy_version: u32,
-        restored: Option<RestoreResult>,
+        persisted_record: Option<InstalledModelPack>,
+        observed_inventory: Vec<ObservedArtifact>,
+        trusted_catalog: Vec<ModelPackCatalogEntry>,
+        accepted_policy_versions: Vec<u32>,
     ) -> Self {
-        let (active, restore_failure) = match restored {
-            Some(RestoreResult::Restored { record }) => (Some(record), None),
-            Some(RestoreResult::Rejected { failure }) => (None, Some(failure)),
-            None => (None, None),
+        let (active, restore_failure) = match persisted_record {
+            None => {
+                if observed_inventory.is_empty() {
+                    (None, None)
+                } else {
+                    // Observations without a record are contradictory
+                    // input — visible, never silently dropped.
+                    (
+                        None,
+                        Some(RestoreFailure::InvalidInstalledRecord {
+                            reason: "observed inventory supplied without a persisted record".into(),
+                        }),
+                    )
+                }
+            }
+            Some(record) => match restore_installed_record(
+                record,
+                observed_inventory,
+                trusted_catalog,
+                supported_abis.clone(),
+                accepted_policy_versions,
+                entry.pack_id.clone(),
+            ) {
+                RestoreResult::Restored { record } => (Some(record), None),
+                RestoreResult::Rejected { failure } => (None, Some(failure)),
+            },
         };
+        let usable = active.is_some();
         Self {
             entry,
             supported_abis,
@@ -607,6 +756,8 @@ impl ModelPackInstaller {
             inner: Mutex::new(PackInner {
                 op: Op::Idle,
                 active,
+                usable,
+                active_integrity_failure: None,
                 operation_failure: None,
                 restore_failure,
                 verification_receipt: None,
@@ -647,7 +798,8 @@ impl ModelPackInstaller {
         ModelPackSnapshot {
             operation_phase: phase,
             active_installation: g.active.clone(),
-            has_usable_active_installation: g.active.is_some(),
+            has_usable_active_installation: g.active.is_some() && g.usable,
+            active_integrity_failure: g.active_integrity_failure.clone(),
             operation_failure: g.operation_failure.clone(),
             restore_failure: g.restore_failure.clone(),
         }
@@ -751,6 +903,16 @@ impl ModelPackInstaller {
             g.op = Op::Idle;
             false
         };
+        // An unknown policy version can never mint a receipt — publication
+        // is therefore impossible under it.
+        if !supported_verification_policy_versions().contains(&self.verification_policy_version) {
+            return fail(
+                &mut g,
+                ModelPackFailure::UnsupportedVerificationPolicy {
+                    version: self.verification_policy_version,
+                },
+            );
+        }
         // Duplicate observed paths rejected before anything else.
         let mut seen = std::collections::HashSet::new();
         for o in &observed {
@@ -858,16 +1020,22 @@ impl ModelPackInstaller {
             catalog_entry_digest: catalog_entry_digest(self.entry.clone()),
             verified_inventory_digest: receipt,
         });
+        g.usable = true;
+        g.active_integrity_failure = None;
         g.restore_failure = None;
         g.op = Op::Idle;
         true
     }
 
+    /// The record is retained during removal, but the pack is NOT usable —
+    /// files may be disappearing while the platform works.
     pub fn on_removal_started(&self) -> bool {
         let mut g = self.inner.lock().unwrap();
         if g.op != Op::Idle || g.operation_failure.is_some() || g.active.is_none() {
             return false;
         }
+        g.usable = false;
+        g.active_integrity_failure = None;
         g.op = Op::Removing;
         true
     }
@@ -879,10 +1047,14 @@ impl ModelPackInstaller {
             return false;
         }
         g.active = None;
+        g.active_integrity_failure = None;
         g.op = Op::Idle;
         true
     }
 
+    /// Integrity is now uncertain: acknowledging this failure clears the
+    /// operation state but does NOT restore usability — only a fresh exact
+    /// `revalidate_active` can.
     pub fn on_removal_failed(&self, reason: String) -> bool {
         let mut g = self.inner.lock().unwrap();
         if g.op != Op::Removing {
@@ -893,6 +1065,95 @@ impl ModelPackInstaller {
             reason: ModelPackFailure::RemovalFailed { reason },
         });
         g.op = Op::Idle;
+        true
+    }
+
+    /// Fresh integrity revalidation of the retained active installation
+    /// against on-disk observations. Exact match (well-formed, no missing/
+    /// modified/extra/duplicate) restores usability; any mismatch leaves
+    /// the pack unusable with the specific reason visible.
+    pub fn revalidate_active(&self, observed: Vec<ObservedArtifact>) -> bool {
+        let mut g = self.inner.lock().unwrap();
+        if g.op != Op::Idle || g.operation_failure.is_some() {
+            return false;
+        }
+        let record = match &g.active {
+            None => return false,
+            Some(r) => r.clone(),
+        };
+        let fail = |g: &mut PackInner, failure: ActiveIntegrityFailure| {
+            g.usable = false;
+            g.active_integrity_failure = Some(failure);
+            false
+        };
+        let mut seen = std::collections::HashSet::new();
+        for o in &observed {
+            if !valid_relative_path(&o.relative_path) || !valid_sha256(&o.sha256_hex) {
+                return fail(
+                    &mut g,
+                    ActiveIntegrityFailure::MalformedObservation {
+                        reason: format!("malformed observation {}", o.relative_path),
+                    },
+                );
+            }
+            if !seen.insert(o.relative_path.clone()) {
+                return fail(
+                    &mut g,
+                    ActiveIntegrityFailure::DuplicateObservedPath {
+                        relative_path: o.relative_path.clone(),
+                    },
+                );
+            }
+        }
+        for rec in &record.artifact_digests {
+            match observed
+                .iter()
+                .find(|o| o.relative_path == rec.relative_path)
+            {
+                None => {
+                    return fail(
+                        &mut g,
+                        ActiveIntegrityFailure::MissingArtifact {
+                            relative_path: rec.relative_path.clone(),
+                        },
+                    )
+                }
+                Some(o) => {
+                    if o.byte_size != rec.byte_size {
+                        return fail(
+                            &mut g,
+                            ActiveIntegrityFailure::SizeMismatch {
+                                relative_path: rec.relative_path.clone(),
+                            },
+                        );
+                    }
+                    if o.sha256_hex != rec.sha256_hex {
+                        return fail(
+                            &mut g,
+                            ActiveIntegrityFailure::DigestMismatch {
+                                relative_path: rec.relative_path.clone(),
+                            },
+                        );
+                    }
+                }
+            }
+        }
+        for o in &observed {
+            if !record
+                .artifact_digests
+                .iter()
+                .any(|rec| rec.relative_path == o.relative_path)
+            {
+                return fail(
+                    &mut g,
+                    ActiveIntegrityFailure::UndeclaredArtifact {
+                        relative_path: o.relative_path.clone(),
+                    },
+                );
+            }
+        }
+        g.usable = true;
+        g.active_integrity_failure = None;
         true
     }
 }
