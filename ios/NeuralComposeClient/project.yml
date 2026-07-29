@@ -13,12 +13,25 @@ targets:
     sources: [Sources]
     dependencies:
       - package: NeuralComposeCore
+    # An explicit Info.plist, not GENERATE_INFOPLIST_FILE: NSAppTransportSecurity
+    # is nested, and no INFOPLIST_KEY_* build setting can express it. The
+    # usage descriptions move here with it or they would be lost.
+    info:
+      path: Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSMicrophoneUsageDescription: "NeuralCompose records optional voice notes for your local journal. Audio stays on this device and is never uploaded."
+        NSLocalNetworkUsageDescription: "NeuralCompose connects to your own NeuralCompose server on your local network to display EEG monitoring data."
+        # The EEG bridge is a user-supplied LAN address over plain ws://, so
+        # ATS must be relaxed for local destinations. NSAllowsLocalNetworking
+        # covers exactly RFC1918, .local and link-local — NOT the public
+        # internet, and emphatically NOT NSAllowsArbitraryLoads. A host-scoped
+        # exception was rejected: the endpoint is configurable by design, and
+        # pinning one IP would break the moment the LAN changes.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.aurascoper.neuralcomposeclient.native
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "NeuralCompose records optional voice notes for your local journal. Audio stays on this device and is never uploaded."
-        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "NeuralCompose connects to your own NeuralCompose server on your local network to display EEG monitoring data."
         CODE_SIGNING_ALLOWED: NO
         SWIFT_VERSION: "5.9"
