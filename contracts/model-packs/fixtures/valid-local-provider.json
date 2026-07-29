@@ -1,0 +1,7 @@
+{
+  "providerId": "local-qwen",
+  "transport": "onDeviceModelPack",
+  "locality": "onDevice",
+  "credentialRequirement": "notRequired",
+  "capabilities": { "generation": true, "embeddings": false, "streaming": true, "cancellation": true }
+}

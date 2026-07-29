@@ -681,9 +681,29 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_resolve_client_mode(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_embedding_space_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_restore_installed_record(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_supported_verification_policy_versions(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_catalog_entry(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_format_banner_en(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_format_label_en(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_is_substitution(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_is_valid_transport_locality(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_presents_as_possible_egress(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_resolve_provider_identity(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_model_aliases(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged(
     ): Int
@@ -709,6 +729,34 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_acknowledge_operation_failure(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_active_installation(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_complete(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_failed(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_progress(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_published(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_queued(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_confirmed(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_failed(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_started(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_phase(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_revalidate_active(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_snapshot(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_verify(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_socket_event(
@@ -728,6 +776,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_new(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_constructor_modelpackinstaller_new(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new(
     ): Int
@@ -783,6 +833,40 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_clone_modelpackinstaller(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_neuralcompose_mobile_core_fn_free_modelpackinstaller(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_neuralcompose_mobile_core_fn_constructor_modelpackinstaller_new(`entry`: RustBuffer.ByValue,`supportedAbis`: RustBuffer.ByValue,`verificationPolicyVersion`: Int,`persistedRecord`: RustBuffer.ByValue,`observedInventory`: RustBuffer.ByValue,`trustedCatalog`: RustBuffer.ByValue,`acceptedPolicyVersions`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_acknowledge_operation_failure(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_active_installation(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_download_complete(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_download_failed(`ptr`: Long,`reason`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_download_progress(`ptr`: Long,`receivedBytes`: Long,`totalBytes`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_published(`ptr`: Long,`installedAtMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_queued(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_removal_confirmed(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_removal_failed(`ptr`: Long,`reason`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_removal_started(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_phase(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_revalidate_active(`ptr`: Long,`observed`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_verify(`ptr`: Long,`observed`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_neuralcompose_mobile_core_fn_clone_streammonitor(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_neuralcompose_mobile_core_fn_free_streammonitor(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -815,9 +899,29 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_neuralcompose_mobile_core_fn_func_resolve_client_mode(`useMockRaw`: RustBuffer.ByValue,`serverRaw`: RustBuffer.ByValue,`wsRaw`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_catalog_entry_digest(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_embedding_space_identity(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_restore_installed_record(`record`: RustBuffer.ByValue,`observed`: RustBuffer.ByValue,`trustedCatalog`: RustBuffer.ByValue,`supportedAbis`: RustBuffer.ByValue,`acceptedPolicyVersions`: RustBuffer.ByValue,`targetPackId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_supported_verification_policy_versions(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_validate_catalog_entry(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_format_banner_en(`p`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_format_label_en(`p`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_is_substitution(`identity`: RustBuffer.ByValue,`aliases`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_func_is_valid_transport_locality(`transport`: RustBuffer.ByValue,`locality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_func_presents_as_possible_egress(`locality`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_func_resolve_provider_identity(`requestedProviderId`: RustBuffer.ByValue,`requestedModelId`: RustBuffer.ByValue,`resolvedModelId`: RustBuffer.ByValue,`modelDigest`: RustBuffer.ByValue,`descriptors`: RustBuffer.ByValue,`availability`: RustBuffer.ByValue,`promptProfile`: RustBuffer.ByValue,`promptHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_validate_model_aliases(`aliases`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun ffi_neuralcompose_mobile_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -950,10 +1054,40 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_resolve_client_mode() != 9781) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest() != 27683) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_embedding_space_identity() != 38517) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_restore_installed_record() != 19982) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_supported_verification_policy_versions() != 61319) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_catalog_entry() != 52641) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_format_banner_en() != 12060) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_format_label_en() != 32187) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_is_substitution() != 3602) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_is_valid_transport_locality() != 30316) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_presents_as_possible_egress() != 5092) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_resolve_provider_identity() != 64458) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_model_aliases() != 30637) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged() != 13465) {
@@ -992,6 +1126,48 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot() != 28404) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_acknowledge_operation_failure() != 33736) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_active_installation() != 46074) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_complete() != 27043) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_failed() != 53284) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_progress() != 53339) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_published() != 59859) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_queued() != 10779) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_confirmed() != 57952) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_failed() != 17084) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_started() != 1939) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_phase() != 62150) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_revalidate_active() != 36487) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_snapshot() != 16702) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_verify() != 60916) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame() != 45030) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1020,6 +1196,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests() != 11328) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_modelpackinstaller_new() != 43648) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new() != 40578) {
@@ -2039,6 +2218,559 @@ public object FfiConverterTypeAudioLifecycle: FfiConverter<AudioLifecycle, Long>
 //
 
 
+public interface ModelPackInstallerInterface {
+    
+    fun `acknowledgeOperationFailure`(): kotlin.Boolean
+    
+    fun `activeInstallation`(): InstalledModelPack?
+    
+    fun `onDownloadComplete`(): kotlin.Boolean
+    
+    fun `onDownloadFailed`(`reason`: kotlin.String): kotlin.Boolean
+    
+    fun `onDownloadProgress`(`receivedBytes`: kotlin.ULong, `totalBytes`: kotlin.ULong): kotlin.Boolean
+    
+    /**
+     * Requires the inventory-bound receipt; consumes it. The published
+     * installation becomes the active one (replacing any prior version).
+     */
+    fun `onPublished`(`installedAtMs`: kotlin.ULong): kotlin.Boolean
+    
+    /**
+     * Legal only from Idle (derived Ready/NotInstalled — updates start
+     * from Ready). A Failed operation must be acknowledged first: a failed
+     * removal and a failed update have different filesystem implications.
+     */
+    fun `onQueued`(): kotlin.Boolean
+    
+    /**
+     * NotInstalled only after the platform confirmed deletion.
+     */
+    fun `onRemovalConfirmed`(): kotlin.Boolean
+    
+    /**
+     * Integrity is now uncertain: acknowledging this failure clears the
+     * operation state but does NOT restore usability — only a fresh exact
+     * `revalidate_active` can.
+     */
+    fun `onRemovalFailed`(`reason`: kotlin.String): kotlin.Boolean
+    
+    /**
+     * The record is retained during removal, but the pack is NOT usable —
+     * files may be disappearing while the platform works.
+     */
+    fun `onRemovalStarted`(): kotlin.Boolean
+    
+    /**
+     * Derived presentation phase. Failed/op states describe the OPERATION;
+     * the active installation stays independently observable.
+     */
+    fun `phase`(): ModelPackPhase
+    
+    /**
+     * Fresh integrity revalidation of the retained active installation
+     * against on-disk observations. Exact match (well-formed, no missing/
+     * modified/extra/duplicate) restores usability; any mismatch leaves
+     * the pack unusable with the specific reason visible.
+     */
+    fun `revalidateActive`(`observed`: List<ObservedArtifact>): kotlin.Boolean
+    
+    fun `snapshot`(): ModelPackSnapshot
+    
+    /**
+     * Full verification. The receipt is cleared at the START of every
+     * attempt, set only on complete success, and bound to the exact
+     * verified inventory via the canonical VerificationMaterial digest.
+     */
+    fun `verify`(`observed`: List<ObservedArtifact>): kotlin.Boolean
+    
+    companion object
+}
+
+open class ModelPackInstaller: Disposable, AutoCloseable, ModelPackInstallerInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    /**
+     * SEALED restoration: the constructor accepts only raw untrusted
+     * inputs (persisted record + fresh on-disk observations + trusted
+     * catalog) and runs `restore_installed_record` internally against
+     * `entry.pack_id`. No constructor or state-changing method accepts a
+     * `RestoreResult` — a shell-constructed `.restored` has no injection
+     * point. A rejected restore is surfaced visibly in the snapshot while
+     * the shell preserves/quarantines the persisted record.
+     */
+    constructor(`entry`: ModelPackCatalogEntry, `supportedAbis`: List<kotlin.String>, `verificationPolicyVersion`: kotlin.UInt, `persistedRecord`: InstalledModelPack?, `observedInventory`: List<ObservedArtifact>, `trustedCatalog`: List<ModelPackCatalogEntry>, `acceptedPolicyVersions`: List<kotlin.UInt>) :
+        this(UniffiWithHandle, 
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_constructor_modelpackinstaller_new(
+    
+        
+        FfiConverterTypeModelPackCatalogEntry.lower(`entry`),
+        FfiConverterSequenceString.lower(`supportedAbis`),
+        FfiConverterUInt.lower(`verificationPolicyVersion`),
+        FfiConverterOptionalTypeInstalledModelPack.lower(`persistedRecord`),
+        FfiConverterSequenceTypeObservedArtifact.lower(`observedInventory`),
+        FfiConverterSequenceTypeModelPackCatalogEntry.lower(`trustedCatalog`),
+        FfiConverterSequenceUInt.lower(`acceptedPolicyVersions`),_status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_neuralcompose_mobile_core_fn_free_modelpackinstaller(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_neuralcompose_mobile_core_fn_clone_modelpackinstaller(handle, status)
+        }
+    }
+
+    override fun `acknowledgeOperationFailure`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_acknowledge_operation_failure(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `activeInstallation`(): InstalledModelPack? {
+            return FfiConverterOptionalTypeInstalledModelPack.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_active_installation(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `onDownloadComplete`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_download_complete(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `onDownloadFailed`(`reason`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_download_failed(
+        it,
+        
+        FfiConverterString.lower(`reason`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `onDownloadProgress`(`receivedBytes`: kotlin.ULong, `totalBytes`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_download_progress(
+        it,
+        
+        FfiConverterULong.lower(`receivedBytes`),
+        FfiConverterULong.lower(`totalBytes`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Requires the inventory-bound receipt; consumes it. The published
+     * installation becomes the active one (replacing any prior version).
+     */override fun `onPublished`(`installedAtMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_published(
+        it,
+        
+        FfiConverterULong.lower(`installedAtMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Legal only from Idle (derived Ready/NotInstalled — updates start
+     * from Ready). A Failed operation must be acknowledged first: a failed
+     * removal and a failed update have different filesystem implications.
+     */override fun `onQueued`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_queued(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * NotInstalled only after the platform confirmed deletion.
+     */override fun `onRemovalConfirmed`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_removal_confirmed(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Integrity is now uncertain: acknowledging this failure clears the
+     * operation state but does NOT restore usability — only a fresh exact
+     * `revalidate_active` can.
+     */override fun `onRemovalFailed`(`reason`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_removal_failed(
+        it,
+        
+        FfiConverterString.lower(`reason`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The record is retained during removal, but the pack is NOT usable —
+     * files may be disappearing while the platform works.
+     */override fun `onRemovalStarted`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_removal_started(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Derived presentation phase. Failed/op states describe the OPERATION;
+     * the active installation stays independently observable.
+     */override fun `phase`(): ModelPackPhase {
+            return FfiConverterTypeModelPackPhase.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_phase(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Fresh integrity revalidation of the retained active installation
+     * against on-disk observations. Exact match (well-formed, no missing/
+     * modified/extra/duplicate) restores usability; any mismatch leaves
+     * the pack unusable with the specific reason visible.
+     */override fun `revalidateActive`(`observed`: List<ObservedArtifact>): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_revalidate_active(
+        it,
+        
+        FfiConverterSequenceTypeObservedArtifact.lower(`observed`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `snapshot`(): ModelPackSnapshot {
+            return FfiConverterTypeModelPackSnapshot.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_snapshot(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Full verification. The receipt is cleared at the START of every
+     * attempt, set only on complete success, and bound to the exact
+     * verified inventory via the canonical VerificationMaterial digest.
+     */override fun `verify`(`observed`: List<ObservedArtifact>): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_verify(
+        it,
+        
+        FfiConverterSequenceTypeObservedArtifact.lower(`observed`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelPackInstaller: FfiConverter<ModelPackInstaller, Long> {
+    override fun lower(value: ModelPackInstaller): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): ModelPackInstaller {
+        return ModelPackInstaller(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): ModelPackInstaller {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: ModelPackInstaller) = 8UL
+
+    override fun write(value: ModelPackInstaller, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
 public interface StreamMonitorInterface {
     
     /**
@@ -2559,6 +3291,492 @@ public object FfiConverterTypeChannelSnapshot: FfiConverterRustBuffer<ChannelSna
 
 
 
+data class DeviceRequirements (
+    var `minimumRamMb`: kotlin.UInt
+    , 
+    var `deviceClass`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDeviceRequirements: FfiConverterRustBuffer<DeviceRequirements> {
+    override fun read(buf: ByteBuffer): DeviceRequirements {
+        return DeviceRequirements(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DeviceRequirements) = (
+            FfiConverterUInt.allocationSize(value.`minimumRamMb`) +
+            FfiConverterString.allocationSize(value.`deviceClass`)
+    )
+
+    override fun write(value: DeviceRequirements, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`minimumRamMb`, buf)
+            FfiConverterString.write(value.`deviceClass`, buf)
+    }
+}
+
+
+
+data class EmbeddingContract (
+    var `tokenizerId`: kotlin.String
+    , 
+    var `dimensions`: kotlin.UInt
+    , 
+    var `pooling`: EmbeddingPooling
+    , 
+    var `normalization`: EmbeddingNormalization
+    , 
+    var `taskInstruction`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEmbeddingContract: FfiConverterRustBuffer<EmbeddingContract> {
+    override fun read(buf: ByteBuffer): EmbeddingContract {
+        return EmbeddingContract(
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterTypeEmbeddingPooling.read(buf),
+            FfiConverterTypeEmbeddingNormalization.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: EmbeddingContract) = (
+            FfiConverterString.allocationSize(value.`tokenizerId`) +
+            FfiConverterUInt.allocationSize(value.`dimensions`) +
+            FfiConverterTypeEmbeddingPooling.allocationSize(value.`pooling`) +
+            FfiConverterTypeEmbeddingNormalization.allocationSize(value.`normalization`) +
+            FfiConverterOptionalString.allocationSize(value.`taskInstruction`)
+    )
+
+    override fun write(value: EmbeddingContract, buf: ByteBuffer) {
+            FfiConverterString.write(value.`tokenizerId`, buf)
+            FfiConverterUInt.write(value.`dimensions`, buf)
+            FfiConverterTypeEmbeddingPooling.write(value.`pooling`, buf)
+            FfiConverterTypeEmbeddingNormalization.write(value.`normalization`, buf)
+            FfiConverterOptionalString.write(value.`taskInstruction`, buf)
+    }
+}
+
+
+
+data class GenerationContract (
+    var `tokenizerId`: kotlin.String
+    , 
+    var `contextCap`: kotlin.UInt
+    , 
+    var `promptTemplateId`: kotlin.String
+    , 
+    var `compatiblePromptProfiles`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGenerationContract: FfiConverterRustBuffer<GenerationContract> {
+    override fun read(buf: ByteBuffer): GenerationContract {
+        return GenerationContract(
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: GenerationContract) = (
+            FfiConverterString.allocationSize(value.`tokenizerId`) +
+            FfiConverterUInt.allocationSize(value.`contextCap`) +
+            FfiConverterString.allocationSize(value.`promptTemplateId`) +
+            FfiConverterSequenceString.allocationSize(value.`compatiblePromptProfiles`)
+    )
+
+    override fun write(value: GenerationContract, buf: ByteBuffer) {
+            FfiConverterString.write(value.`tokenizerId`, buf)
+            FfiConverterUInt.write(value.`contextCap`, buf)
+            FfiConverterString.write(value.`promptTemplateId`, buf)
+            FfiConverterSequenceString.write(value.`compatiblePromptProfiles`, buf)
+    }
+}
+
+
+
+data class InstalledModelPack (
+    var `packId`: kotlin.String
+    , 
+    var `packVersion`: kotlin.String
+    , 
+    var `installedAtMs`: kotlin.ULong
+    , 
+    var `artifactDigests`: List<VerifiedArtifact>
+    , 
+    var `runtimeAbi`: kotlin.String
+    , 
+    var `verificationPolicyVersion`: kotlin.UInt
+    , 
+    var `catalogEntryDigest`: kotlin.String
+    , 
+    var `verifiedInventoryDigest`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeInstalledModelPack: FfiConverterRustBuffer<InstalledModelPack> {
+    override fun read(buf: ByteBuffer): InstalledModelPack {
+        return InstalledModelPack(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterSequenceTypeVerifiedArtifact.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: InstalledModelPack) = (
+            FfiConverterString.allocationSize(value.`packId`) +
+            FfiConverterString.allocationSize(value.`packVersion`) +
+            FfiConverterULong.allocationSize(value.`installedAtMs`) +
+            FfiConverterSequenceTypeVerifiedArtifact.allocationSize(value.`artifactDigests`) +
+            FfiConverterString.allocationSize(value.`runtimeAbi`) +
+            FfiConverterUInt.allocationSize(value.`verificationPolicyVersion`) +
+            FfiConverterString.allocationSize(value.`catalogEntryDigest`) +
+            FfiConverterString.allocationSize(value.`verifiedInventoryDigest`)
+    )
+
+    override fun write(value: InstalledModelPack, buf: ByteBuffer) {
+            FfiConverterString.write(value.`packId`, buf)
+            FfiConverterString.write(value.`packVersion`, buf)
+            FfiConverterULong.write(value.`installedAtMs`, buf)
+            FfiConverterSequenceTypeVerifiedArtifact.write(value.`artifactDigests`, buf)
+            FfiConverterString.write(value.`runtimeAbi`, buf)
+            FfiConverterUInt.write(value.`verificationPolicyVersion`, buf)
+            FfiConverterString.write(value.`catalogEntryDigest`, buf)
+            FfiConverterString.write(value.`verifiedInventoryDigest`, buf)
+    }
+}
+
+
+
+/**
+ * Explicitly registered, PROVIDER-SCOPED model equivalence (model names
+ * are not globally unique).
+ */
+data class ModelAlias (
+    var `providerId`: kotlin.String
+    , 
+    var `canonicalModelId`: kotlin.String
+    , 
+    var `aliasModelId`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelAlias: FfiConverterRustBuffer<ModelAlias> {
+    override fun read(buf: ByteBuffer): ModelAlias {
+        return ModelAlias(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ModelAlias) = (
+            FfiConverterString.allocationSize(value.`providerId`) +
+            FfiConverterString.allocationSize(value.`canonicalModelId`) +
+            FfiConverterString.allocationSize(value.`aliasModelId`)
+    )
+
+    override fun write(value: ModelAlias, buf: ByteBuffer) {
+            FfiConverterString.write(value.`providerId`, buf)
+            FfiConverterString.write(value.`canonicalModelId`, buf)
+            FfiConverterString.write(value.`aliasModelId`, buf)
+    }
+}
+
+
+
+data class ModelArtifact (
+    var `artifactId`: kotlin.String
+    , 
+    var `kind`: ModelArtifactKind
+    , 
+    var `relativePath`: kotlin.String
+    , 
+    var `byteSize`: kotlin.ULong
+    , 
+    var `sha256Hex`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelArtifact: FfiConverterRustBuffer<ModelArtifact> {
+    override fun read(buf: ByteBuffer): ModelArtifact {
+        return ModelArtifact(
+            FfiConverterString.read(buf),
+            FfiConverterTypeModelArtifactKind.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ModelArtifact) = (
+            FfiConverterString.allocationSize(value.`artifactId`) +
+            FfiConverterTypeModelArtifactKind.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`relativePath`) +
+            FfiConverterULong.allocationSize(value.`byteSize`) +
+            FfiConverterString.allocationSize(value.`sha256Hex`)
+    )
+
+    override fun write(value: ModelArtifact, buf: ByteBuffer) {
+            FfiConverterString.write(value.`artifactId`, buf)
+            FfiConverterTypeModelArtifactKind.write(value.`kind`, buf)
+            FfiConverterString.write(value.`relativePath`, buf)
+            FfiConverterULong.write(value.`byteSize`, buf)
+            FfiConverterString.write(value.`sha256Hex`, buf)
+    }
+}
+
+
+
+data class ModelPackCatalogEntry (
+    var `schemaVersion`: kotlin.UInt
+    , 
+    var `packId`: kotlin.String
+    , 
+    var `packVersion`: kotlin.String
+    , 
+    var `kind`: ModelPackKind
+    , 
+    var `modelFamily`: kotlin.String
+    , 
+    var `modelRevision`: kotlin.String
+    , 
+    var `quantization`: kotlin.String?
+    , 
+    var `artifactFormat`: kotlin.String
+    , 
+    var `licenseId`: kotlin.String
+    , 
+    var `sourceRepository`: kotlin.String
+    , 
+    var `runtimeAbi`: kotlin.String
+    , 
+    var `minimumCoreVersion`: kotlin.String
+    , 
+    var `artifacts`: List<ModelArtifact>
+    , 
+    var `requirements`: DeviceRequirements
+    , 
+    var `generation`: GenerationContract?
+    , 
+    var `embedding`: EmbeddingContract?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelPackCatalogEntry: FfiConverterRustBuffer<ModelPackCatalogEntry> {
+    override fun read(buf: ByteBuffer): ModelPackCatalogEntry {
+        return ModelPackCatalogEntry(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeModelPackKind.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeModelArtifact.read(buf),
+            FfiConverterTypeDeviceRequirements.read(buf),
+            FfiConverterOptionalTypeGenerationContract.read(buf),
+            FfiConverterOptionalTypeEmbeddingContract.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ModelPackCatalogEntry) = (
+            FfiConverterUInt.allocationSize(value.`schemaVersion`) +
+            FfiConverterString.allocationSize(value.`packId`) +
+            FfiConverterString.allocationSize(value.`packVersion`) +
+            FfiConverterTypeModelPackKind.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`modelFamily`) +
+            FfiConverterString.allocationSize(value.`modelRevision`) +
+            FfiConverterOptionalString.allocationSize(value.`quantization`) +
+            FfiConverterString.allocationSize(value.`artifactFormat`) +
+            FfiConverterString.allocationSize(value.`licenseId`) +
+            FfiConverterString.allocationSize(value.`sourceRepository`) +
+            FfiConverterString.allocationSize(value.`runtimeAbi`) +
+            FfiConverterString.allocationSize(value.`minimumCoreVersion`) +
+            FfiConverterSequenceTypeModelArtifact.allocationSize(value.`artifacts`) +
+            FfiConverterTypeDeviceRequirements.allocationSize(value.`requirements`) +
+            FfiConverterOptionalTypeGenerationContract.allocationSize(value.`generation`) +
+            FfiConverterOptionalTypeEmbeddingContract.allocationSize(value.`embedding`)
+    )
+
+    override fun write(value: ModelPackCatalogEntry, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`schemaVersion`, buf)
+            FfiConverterString.write(value.`packId`, buf)
+            FfiConverterString.write(value.`packVersion`, buf)
+            FfiConverterTypeModelPackKind.write(value.`kind`, buf)
+            FfiConverterString.write(value.`modelFamily`, buf)
+            FfiConverterString.write(value.`modelRevision`, buf)
+            FfiConverterOptionalString.write(value.`quantization`, buf)
+            FfiConverterString.write(value.`artifactFormat`, buf)
+            FfiConverterString.write(value.`licenseId`, buf)
+            FfiConverterString.write(value.`sourceRepository`, buf)
+            FfiConverterString.write(value.`runtimeAbi`, buf)
+            FfiConverterString.write(value.`minimumCoreVersion`, buf)
+            FfiConverterSequenceTypeModelArtifact.write(value.`artifacts`, buf)
+            FfiConverterTypeDeviceRequirements.write(value.`requirements`, buf)
+            FfiConverterOptionalTypeGenerationContract.write(value.`generation`, buf)
+            FfiConverterOptionalTypeEmbeddingContract.write(value.`embedding`, buf)
+    }
+}
+
+
+
+/**
+ * Independent observability of the usable installation vs the operation.
+ */
+data class ModelPackSnapshot (
+    var `operationPhase`: ModelPackPhase
+    , 
+    var `activeInstallation`: InstalledModelPack?
+    , 
+    /**
+     * Provider availability for local inference derives from THIS,
+     * never from `operation_phase == Ready`. False whenever integrity is
+     * uncertain: removal in progress, failed removal (even after the
+     * failure is acknowledged), or a failed revalidation — only a fresh
+     * exact revalidation restores usability.
+     */
+    var `hasUsableActiveInstallation`: kotlin.Boolean
+    , 
+    /**
+     * Why the retained active installation is not usable, when known.
+     */
+    var `activeIntegrityFailure`: ActiveIntegrityFailure?
+    , 
+    var `operationFailure`: OperationFailure?
+    , 
+    var `restoreFailure`: RestoreFailure?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelPackSnapshot: FfiConverterRustBuffer<ModelPackSnapshot> {
+    override fun read(buf: ByteBuffer): ModelPackSnapshot {
+        return ModelPackSnapshot(
+            FfiConverterTypeModelPackPhase.read(buf),
+            FfiConverterOptionalTypeInstalledModelPack.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalTypeActiveIntegrityFailure.read(buf),
+            FfiConverterOptionalTypeOperationFailure.read(buf),
+            FfiConverterOptionalTypeRestoreFailure.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ModelPackSnapshot) = (
+            FfiConverterTypeModelPackPhase.allocationSize(value.`operationPhase`) +
+            FfiConverterOptionalTypeInstalledModelPack.allocationSize(value.`activeInstallation`) +
+            FfiConverterBoolean.allocationSize(value.`hasUsableActiveInstallation`) +
+            FfiConverterOptionalTypeActiveIntegrityFailure.allocationSize(value.`activeIntegrityFailure`) +
+            FfiConverterOptionalTypeOperationFailure.allocationSize(value.`operationFailure`) +
+            FfiConverterOptionalTypeRestoreFailure.allocationSize(value.`restoreFailure`)
+    )
+
+    override fun write(value: ModelPackSnapshot, buf: ByteBuffer) {
+            FfiConverterTypeModelPackPhase.write(value.`operationPhase`, buf)
+            FfiConverterOptionalTypeInstalledModelPack.write(value.`activeInstallation`, buf)
+            FfiConverterBoolean.write(value.`hasUsableActiveInstallation`, buf)
+            FfiConverterOptionalTypeActiveIntegrityFailure.write(value.`activeIntegrityFailure`, buf)
+            FfiConverterOptionalTypeOperationFailure.write(value.`operationFailure`, buf)
+            FfiConverterOptionalTypeRestoreFailure.write(value.`restoreFailure`, buf)
+    }
+}
+
+
+
 data class MonitorConfig (
     var `keepSamples`: kotlin.UInt
     , 
@@ -2607,6 +3825,87 @@ public object FfiConverterTypeMonitorConfig: FfiConverterRustBuffer<MonitorConfi
             FfiConverterUInt.write(value.`maxReconnectAttempts`, buf)
             FfiConverterULong.write(value.`backoffBaseMs`, buf)
             FfiConverterULong.write(value.`backoffCapMs`, buf)
+    }
+}
+
+
+
+data class ObservedArtifact (
+    var `relativePath`: kotlin.String
+    , 
+    var `byteSize`: kotlin.ULong
+    , 
+    var `sha256Hex`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeObservedArtifact: FfiConverterRustBuffer<ObservedArtifact> {
+    override fun read(buf: ByteBuffer): ObservedArtifact {
+        return ObservedArtifact(
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ObservedArtifact) = (
+            FfiConverterString.allocationSize(value.`relativePath`) +
+            FfiConverterULong.allocationSize(value.`byteSize`) +
+            FfiConverterString.allocationSize(value.`sha256Hex`)
+    )
+
+    override fun write(value: ObservedArtifact, buf: ByteBuffer) {
+            FfiConverterString.write(value.`relativePath`, buf)
+            FfiConverterULong.write(value.`byteSize`, buf)
+            FfiConverterString.write(value.`sha256Hex`, buf)
+    }
+}
+
+
+
+data class OperationFailure (
+    var `operation`: OperationKind
+    , 
+    var `reason`: ModelPackFailure
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOperationFailure: FfiConverterRustBuffer<OperationFailure> {
+    override fun read(buf: ByteBuffer): OperationFailure {
+        return OperationFailure(
+            FfiConverterTypeOperationKind.read(buf),
+            FfiConverterTypeModelPackFailure.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: OperationFailure) = (
+            FfiConverterTypeOperationKind.allocationSize(value.`operation`) +
+            FfiConverterTypeModelPackFailure.allocationSize(value.`reason`)
+    )
+
+    override fun write(value: OperationFailure, buf: ByteBuffer) {
+            FfiConverterTypeOperationKind.write(value.`operation`, buf)
+            FfiConverterTypeModelPackFailure.write(value.`reason`, buf)
     }
 }
 
@@ -2669,6 +3968,150 @@ public object FfiConverterTypePresentation: FfiConverterRustBuffer<Presentation>
             FfiConverterOptionalULong.write(value.`ageS`, buf)
             FfiConverterBoolean.write(value.`showSilentBanner`, buf)
             FfiConverterBoolean.write(value.`showDisconnectedBanner`, buf)
+    }
+}
+
+
+
+data class ProviderAvailability (
+    var `providerId`: kotlin.String
+    , 
+    var `credentialState`: CredentialState
+    , 
+    var `probe`: AvailabilityProbe
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProviderAvailability: FfiConverterRustBuffer<ProviderAvailability> {
+    override fun read(buf: ByteBuffer): ProviderAvailability {
+        return ProviderAvailability(
+            FfiConverterString.read(buf),
+            FfiConverterTypeCredentialState.read(buf),
+            FfiConverterTypeAvailabilityProbe.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ProviderAvailability) = (
+            FfiConverterString.allocationSize(value.`providerId`) +
+            FfiConverterTypeCredentialState.allocationSize(value.`credentialState`) +
+            FfiConverterTypeAvailabilityProbe.allocationSize(value.`probe`)
+    )
+
+    override fun write(value: ProviderAvailability, buf: ByteBuffer) {
+            FfiConverterString.write(value.`providerId`, buf)
+            FfiConverterTypeCredentialState.write(value.`credentialState`, buf)
+            FfiConverterTypeAvailabilityProbe.write(value.`probe`, buf)
+    }
+}
+
+
+
+data class ProviderCapabilities (
+    var `generation`: kotlin.Boolean
+    , 
+    var `embeddings`: kotlin.Boolean
+    , 
+    var `streaming`: kotlin.Boolean
+    , 
+    var `cancellation`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProviderCapabilities: FfiConverterRustBuffer<ProviderCapabilities> {
+    override fun read(buf: ByteBuffer): ProviderCapabilities {
+        return ProviderCapabilities(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ProviderCapabilities) = (
+            FfiConverterBoolean.allocationSize(value.`generation`) +
+            FfiConverterBoolean.allocationSize(value.`embeddings`) +
+            FfiConverterBoolean.allocationSize(value.`streaming`) +
+            FfiConverterBoolean.allocationSize(value.`cancellation`)
+    )
+
+    override fun write(value: ProviderCapabilities, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`generation`, buf)
+            FfiConverterBoolean.write(value.`embeddings`, buf)
+            FfiConverterBoolean.write(value.`streaming`, buf)
+            FfiConverterBoolean.write(value.`cancellation`, buf)
+    }
+}
+
+
+
+data class ProviderDescriptor (
+    var `providerId`: kotlin.String
+    , 
+    var `transport`: ProviderTransport
+    , 
+    var `locality`: ProviderLocality
+    , 
+    var `credentialRequirement`: CredentialRequirement
+    , 
+    var `capabilities`: ProviderCapabilities
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProviderDescriptor: FfiConverterRustBuffer<ProviderDescriptor> {
+    override fun read(buf: ByteBuffer): ProviderDescriptor {
+        return ProviderDescriptor(
+            FfiConverterString.read(buf),
+            FfiConverterTypeProviderTransport.read(buf),
+            FfiConverterTypeProviderLocality.read(buf),
+            FfiConverterTypeCredentialRequirement.read(buf),
+            FfiConverterTypeProviderCapabilities.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ProviderDescriptor) = (
+            FfiConverterString.allocationSize(value.`providerId`) +
+            FfiConverterTypeProviderTransport.allocationSize(value.`transport`) +
+            FfiConverterTypeProviderLocality.allocationSize(value.`locality`) +
+            FfiConverterTypeCredentialRequirement.allocationSize(value.`credentialRequirement`) +
+            FfiConverterTypeProviderCapabilities.allocationSize(value.`capabilities`)
+    )
+
+    override fun write(value: ProviderDescriptor, buf: ByteBuffer) {
+            FfiConverterString.write(value.`providerId`, buf)
+            FfiConverterTypeProviderTransport.write(value.`transport`, buf)
+            FfiConverterTypeProviderLocality.write(value.`locality`, buf)
+            FfiConverterTypeCredentialRequirement.write(value.`credentialRequirement`, buf)
+            FfiConverterTypeProviderCapabilities.write(value.`capabilities`, buf)
     }
 }
 
@@ -2788,6 +4231,93 @@ public object FfiConverterTypeResolvedClientConfig: FfiConverterRustBuffer<Resol
 
 
 
+data class ResolvedProviderIdentity (
+    var `requestedProviderId`: kotlin.String
+    , 
+    var `requestedModelId`: kotlin.String
+    , 
+    var `resolvedProviderId`: kotlin.String
+    , 
+    var `resolvedModelId`: kotlin.String
+    , 
+    var `modelDigest`: kotlin.String?
+    , 
+    /**
+     * None for an unknown provider — the transport is unknowable and is
+     * never fabricated (telemetry must not contain false facts).
+     */
+    var `transport`: ProviderTransport?
+    , 
+    var `locality`: ProviderLocality
+    , 
+    var `readiness`: ProviderReadiness
+    , 
+    var `promptProfile`: kotlin.String?
+    , 
+    var `promptHash`: kotlin.String?
+    , 
+    var `capabilities`: ProviderCapabilities
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeResolvedProviderIdentity: FfiConverterRustBuffer<ResolvedProviderIdentity> {
+    override fun read(buf: ByteBuffer): ResolvedProviderIdentity {
+        return ResolvedProviderIdentity(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalTypeProviderTransport.read(buf),
+            FfiConverterTypeProviderLocality.read(buf),
+            FfiConverterTypeProviderReadiness.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeProviderCapabilities.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ResolvedProviderIdentity) = (
+            FfiConverterString.allocationSize(value.`requestedProviderId`) +
+            FfiConverterString.allocationSize(value.`requestedModelId`) +
+            FfiConverterString.allocationSize(value.`resolvedProviderId`) +
+            FfiConverterString.allocationSize(value.`resolvedModelId`) +
+            FfiConverterOptionalString.allocationSize(value.`modelDigest`) +
+            FfiConverterOptionalTypeProviderTransport.allocationSize(value.`transport`) +
+            FfiConverterTypeProviderLocality.allocationSize(value.`locality`) +
+            FfiConverterTypeProviderReadiness.allocationSize(value.`readiness`) +
+            FfiConverterOptionalString.allocationSize(value.`promptProfile`) +
+            FfiConverterOptionalString.allocationSize(value.`promptHash`) +
+            FfiConverterTypeProviderCapabilities.allocationSize(value.`capabilities`)
+    )
+
+    override fun write(value: ResolvedProviderIdentity, buf: ByteBuffer) {
+            FfiConverterString.write(value.`requestedProviderId`, buf)
+            FfiConverterString.write(value.`requestedModelId`, buf)
+            FfiConverterString.write(value.`resolvedProviderId`, buf)
+            FfiConverterString.write(value.`resolvedModelId`, buf)
+            FfiConverterOptionalString.write(value.`modelDigest`, buf)
+            FfiConverterOptionalTypeProviderTransport.write(value.`transport`, buf)
+            FfiConverterTypeProviderLocality.write(value.`locality`, buf)
+            FfiConverterTypeProviderReadiness.write(value.`readiness`, buf)
+            FfiConverterOptionalString.write(value.`promptProfile`, buf)
+            FfiConverterOptionalString.write(value.`promptHash`, buf)
+            FfiConverterTypeProviderCapabilities.write(value.`capabilities`, buf)
+    }
+}
+
+
+
 /**
  * Stream metadata: everything freshness- and retry-related, per generation.
  */
@@ -2862,6 +4392,343 @@ public object FfiConverterTypeStreamSnapshot: FfiConverterRustBuffer<StreamSnaps
 
 
 
+data class VerifiedArtifact (
+    var `artifactId`: kotlin.String
+    , 
+    var `relativePath`: kotlin.String
+    , 
+    var `byteSize`: kotlin.ULong
+    , 
+    var `sha256Hex`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeVerifiedArtifact: FfiConverterRustBuffer<VerifiedArtifact> {
+    override fun read(buf: ByteBuffer): VerifiedArtifact {
+        return VerifiedArtifact(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: VerifiedArtifact) = (
+            FfiConverterString.allocationSize(value.`artifactId`) +
+            FfiConverterString.allocationSize(value.`relativePath`) +
+            FfiConverterULong.allocationSize(value.`byteSize`) +
+            FfiConverterString.allocationSize(value.`sha256Hex`)
+    )
+
+    override fun write(value: VerifiedArtifact, buf: ByteBuffer) {
+            FfiConverterString.write(value.`artifactId`, buf)
+            FfiConverterString.write(value.`relativePath`, buf)
+            FfiConverterULong.write(value.`byteSize`, buf)
+            FfiConverterString.write(value.`sha256Hex`, buf)
+    }
+}
+
+
+
+/**
+ * Why a retained active installation is currently NOT usable. Distinct
+ * evidence class from RestoreFailure: restoration happens at construction,
+ * integrity revalidation happens later against the active record.
+ */
+sealed class ActiveIntegrityFailure {
+    
+    data class MissingArtifact(
+        val `relativePath`: kotlin.String) : ActiveIntegrityFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class DuplicateObservedPath(
+        val `relativePath`: kotlin.String) : ActiveIntegrityFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class UndeclaredArtifact(
+        val `relativePath`: kotlin.String) : ActiveIntegrityFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class SizeMismatch(
+        val `relativePath`: kotlin.String) : ActiveIntegrityFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class DigestMismatch(
+        val `relativePath`: kotlin.String) : ActiveIntegrityFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class MalformedObservation(
+        val `reason`: kotlin.String) : ActiveIntegrityFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeActiveIntegrityFailure : FfiConverterRustBuffer<ActiveIntegrityFailure>{
+    override fun read(buf: ByteBuffer): ActiveIntegrityFailure {
+        return when(buf.getInt()) {
+            1 -> ActiveIntegrityFailure.MissingArtifact(
+                FfiConverterString.read(buf),
+                )
+            2 -> ActiveIntegrityFailure.DuplicateObservedPath(
+                FfiConverterString.read(buf),
+                )
+            3 -> ActiveIntegrityFailure.UndeclaredArtifact(
+                FfiConverterString.read(buf),
+                )
+            4 -> ActiveIntegrityFailure.SizeMismatch(
+                FfiConverterString.read(buf),
+                )
+            5 -> ActiveIntegrityFailure.DigestMismatch(
+                FfiConverterString.read(buf),
+                )
+            6 -> ActiveIntegrityFailure.MalformedObservation(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ActiveIntegrityFailure): ULong = when(value) {
+        is ActiveIntegrityFailure.MissingArtifact -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`relativePath`)
+            )
+        }
+        is ActiveIntegrityFailure.DuplicateObservedPath -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`relativePath`)
+            )
+        }
+        is ActiveIntegrityFailure.UndeclaredArtifact -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`relativePath`)
+            )
+        }
+        is ActiveIntegrityFailure.SizeMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`relativePath`)
+            )
+        }
+        is ActiveIntegrityFailure.DigestMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`relativePath`)
+            )
+        }
+        is ActiveIntegrityFailure.MalformedObservation -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: ActiveIntegrityFailure, buf: ByteBuffer) {
+        when(value) {
+            is ActiveIntegrityFailure.MissingArtifact -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`relativePath`, buf)
+                Unit
+            }
+            is ActiveIntegrityFailure.DuplicateObservedPath -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`relativePath`, buf)
+                Unit
+            }
+            is ActiveIntegrityFailure.UndeclaredArtifact -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`relativePath`, buf)
+                Unit
+            }
+            is ActiveIntegrityFailure.SizeMismatch -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`relativePath`, buf)
+                Unit
+            }
+            is ActiveIntegrityFailure.DigestMismatch -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`relativePath`, buf)
+                Unit
+            }
+            is ActiveIntegrityFailure.MalformedObservation -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * The provider-specific readiness contract's observed status. A single
+ * boolean cannot distinguish not-checked, checking, and failed — this can.
+ */
+sealed class AvailabilityProbe {
+    
+    object NotChecked : AvailabilityProbe()
+    
+    
+    object Checking : AvailabilityProbe()
+    
+    
+    object Verified : AvailabilityProbe()
+    
+    
+    data class Failed(
+        val `reason`: kotlin.String) : AvailabilityProbe()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAvailabilityProbe : FfiConverterRustBuffer<AvailabilityProbe>{
+    override fun read(buf: ByteBuffer): AvailabilityProbe {
+        return when(buf.getInt()) {
+            1 -> AvailabilityProbe.NotChecked
+            2 -> AvailabilityProbe.Checking
+            3 -> AvailabilityProbe.Verified
+            4 -> AvailabilityProbe.Failed(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: AvailabilityProbe): ULong = when(value) {
+        is AvailabilityProbe.NotChecked -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AvailabilityProbe.Checking -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AvailabilityProbe.Verified -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is AvailabilityProbe.Failed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: AvailabilityProbe, buf: ByteBuffer) {
+        when(value) {
+            is AvailabilityProbe.NotChecked -> {
+                buf.putInt(1)
+                Unit
+            }
+            is AvailabilityProbe.Checking -> {
+                buf.putInt(2)
+                Unit
+            }
+            is AvailabilityProbe.Verified -> {
+                buf.putInt(3)
+                Unit
+            }
+            is AvailabilityProbe.Failed -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
 
 enum class ClientMode {
     
@@ -2888,6 +4755,991 @@ public object FfiConverterTypeClientMode: FfiConverterRustBuffer<ClientMode> {
     override fun allocationSize(value: ClientMode) = 4UL
 
     override fun write(value: ClientMode, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class CredentialRequirement {
+    
+    NOT_REQUIRED,
+    REQUIRED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCredentialRequirement: FfiConverterRustBuffer<CredentialRequirement> {
+    override fun read(buf: ByteBuffer) = try {
+        CredentialRequirement.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: CredentialRequirement) = 4UL
+
+    override fun write(value: CredentialRequirement, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * The core never sees secrets — only whether one exists where required.
+ */
+
+enum class CredentialState {
+    
+    NOT_REQUIRED,
+    MISSING,
+    AVAILABLE;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCredentialState: FfiConverterRustBuffer<CredentialState> {
+    override fun read(buf: ByteBuffer) = try {
+        CredentialState.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: CredentialState) = 4UL
+
+    override fun write(value: CredentialState, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class EmbeddingNormalization {
+    
+    NONE,
+    L2;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEmbeddingNormalization: FfiConverterRustBuffer<EmbeddingNormalization> {
+    override fun read(buf: ByteBuffer) = try {
+        EmbeddingNormalization.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: EmbeddingNormalization) = 4UL
+
+    override fun write(value: EmbeddingNormalization, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class EmbeddingPooling {
+    
+    MEAN,
+    CLS,
+    LAST_TOKEN;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeEmbeddingPooling: FfiConverterRustBuffer<EmbeddingPooling> {
+    override fun read(buf: ByteBuffer) = try {
+        EmbeddingPooling.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: EmbeddingPooling) = 4UL
+
+    override fun write(value: EmbeddingPooling, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class ModelArtifactKind {
+    
+    WEIGHTS,
+    TOKENIZER,
+    CONFIG,
+    AUXILIARY;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelArtifactKind: FfiConverterRustBuffer<ModelArtifactKind> {
+    override fun read(buf: ByteBuffer) = try {
+        ModelArtifactKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ModelArtifactKind) = 4UL
+
+    override fun write(value: ModelArtifactKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class ModelPackFailure {
+    
+    data class DownloadFailed(
+        val `reason`: kotlin.String) : ModelPackFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class SizeMismatch(
+        val `artifactId`: kotlin.String) : ModelPackFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class DigestMismatch(
+        val `artifactId`: kotlin.String) : ModelPackFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class UndeclaredArtifact(
+        val `relativePath`: kotlin.String) : ModelPackFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class MissingArtifact(
+        val `artifactId`: kotlin.String) : ModelPackFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class DuplicateObservedPath(
+        val `relativePath`: kotlin.String) : ModelPackFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class SchemaInvalid(
+        val `reason`: kotlin.String) : ModelPackFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object RuntimeAbiIncompatible : ModelPackFailure()
+    
+    
+    data class UnsupportedVerificationPolicy(
+        val `version`: kotlin.UInt) : ModelPackFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class RemovalFailed(
+        val `reason`: kotlin.String) : ModelPackFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelPackFailure : FfiConverterRustBuffer<ModelPackFailure>{
+    override fun read(buf: ByteBuffer): ModelPackFailure {
+        return when(buf.getInt()) {
+            1 -> ModelPackFailure.DownloadFailed(
+                FfiConverterString.read(buf),
+                )
+            2 -> ModelPackFailure.SizeMismatch(
+                FfiConverterString.read(buf),
+                )
+            3 -> ModelPackFailure.DigestMismatch(
+                FfiConverterString.read(buf),
+                )
+            4 -> ModelPackFailure.UndeclaredArtifact(
+                FfiConverterString.read(buf),
+                )
+            5 -> ModelPackFailure.MissingArtifact(
+                FfiConverterString.read(buf),
+                )
+            6 -> ModelPackFailure.DuplicateObservedPath(
+                FfiConverterString.read(buf),
+                )
+            7 -> ModelPackFailure.SchemaInvalid(
+                FfiConverterString.read(buf),
+                )
+            8 -> ModelPackFailure.RuntimeAbiIncompatible
+            9 -> ModelPackFailure.UnsupportedVerificationPolicy(
+                FfiConverterUInt.read(buf),
+                )
+            10 -> ModelPackFailure.RemovalFailed(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ModelPackFailure): ULong = when(value) {
+        is ModelPackFailure.DownloadFailed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+        is ModelPackFailure.SizeMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`artifactId`)
+            )
+        }
+        is ModelPackFailure.DigestMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`artifactId`)
+            )
+        }
+        is ModelPackFailure.UndeclaredArtifact -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`relativePath`)
+            )
+        }
+        is ModelPackFailure.MissingArtifact -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`artifactId`)
+            )
+        }
+        is ModelPackFailure.DuplicateObservedPath -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`relativePath`)
+            )
+        }
+        is ModelPackFailure.SchemaInvalid -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+        is ModelPackFailure.RuntimeAbiIncompatible -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ModelPackFailure.UnsupportedVerificationPolicy -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterUInt.allocationSize(value.`version`)
+            )
+        }
+        is ModelPackFailure.RemovalFailed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: ModelPackFailure, buf: ByteBuffer) {
+        when(value) {
+            is ModelPackFailure.DownloadFailed -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is ModelPackFailure.SizeMismatch -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`artifactId`, buf)
+                Unit
+            }
+            is ModelPackFailure.DigestMismatch -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`artifactId`, buf)
+                Unit
+            }
+            is ModelPackFailure.UndeclaredArtifact -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`relativePath`, buf)
+                Unit
+            }
+            is ModelPackFailure.MissingArtifact -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`artifactId`, buf)
+                Unit
+            }
+            is ModelPackFailure.DuplicateObservedPath -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`relativePath`, buf)
+                Unit
+            }
+            is ModelPackFailure.SchemaInvalid -> {
+                buf.putInt(7)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is ModelPackFailure.RuntimeAbiIncompatible -> {
+                buf.putInt(8)
+                Unit
+            }
+            is ModelPackFailure.UnsupportedVerificationPolicy -> {
+                buf.putInt(9)
+                FfiConverterUInt.write(value.`version`, buf)
+                Unit
+            }
+            is ModelPackFailure.RemovalFailed -> {
+                buf.putInt(10)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class ModelPackKind {
+    
+    GENERATION,
+    EMBEDDING;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelPackKind: FfiConverterRustBuffer<ModelPackKind> {
+    override fun read(buf: ByteBuffer) = try {
+        ModelPackKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ModelPackKind) = 4UL
+
+    override fun write(value: ModelPackKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class ModelPackPhase {
+    
+    object NotInstalled : ModelPackPhase()
+    
+    
+    object Queued : ModelPackPhase()
+    
+    
+    data class Downloading(
+        val `receivedBytes`: kotlin.ULong, 
+        val `totalBytes`: kotlin.ULong) : ModelPackPhase()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object Verifying : ModelPackPhase()
+    
+    
+    object Ready : ModelPackPhase()
+    
+    
+    data class Failed(
+        val `reason`: uniffi.neuralcompose_mobile_core.ModelPackFailure) : ModelPackPhase()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object Removing : ModelPackPhase()
+    
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelPackPhase : FfiConverterRustBuffer<ModelPackPhase>{
+    override fun read(buf: ByteBuffer): ModelPackPhase {
+        return when(buf.getInt()) {
+            1 -> ModelPackPhase.NotInstalled
+            2 -> ModelPackPhase.Queued
+            3 -> ModelPackPhase.Downloading(
+                FfiConverterULong.read(buf),
+                FfiConverterULong.read(buf),
+                )
+            4 -> ModelPackPhase.Verifying
+            5 -> ModelPackPhase.Ready
+            6 -> ModelPackPhase.Failed(
+                FfiConverterTypeModelPackFailure.read(buf),
+                )
+            7 -> ModelPackPhase.Removing
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ModelPackPhase): ULong = when(value) {
+        is ModelPackPhase.NotInstalled -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ModelPackPhase.Queued -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ModelPackPhase.Downloading -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`receivedBytes`)
+                + FfiConverterULong.allocationSize(value.`totalBytes`)
+            )
+        }
+        is ModelPackPhase.Verifying -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ModelPackPhase.Ready -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ModelPackPhase.Failed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeModelPackFailure.allocationSize(value.`reason`)
+            )
+        }
+        is ModelPackPhase.Removing -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: ModelPackPhase, buf: ByteBuffer) {
+        when(value) {
+            is ModelPackPhase.NotInstalled -> {
+                buf.putInt(1)
+                Unit
+            }
+            is ModelPackPhase.Queued -> {
+                buf.putInt(2)
+                Unit
+            }
+            is ModelPackPhase.Downloading -> {
+                buf.putInt(3)
+                FfiConverterULong.write(value.`receivedBytes`, buf)
+                FfiConverterULong.write(value.`totalBytes`, buf)
+                Unit
+            }
+            is ModelPackPhase.Verifying -> {
+                buf.putInt(4)
+                Unit
+            }
+            is ModelPackPhase.Ready -> {
+                buf.putInt(5)
+                Unit
+            }
+            is ModelPackPhase.Failed -> {
+                buf.putInt(6)
+                FfiConverterTypeModelPackFailure.write(value.`reason`, buf)
+                Unit
+            }
+            is ModelPackPhase.Removing -> {
+                buf.putInt(7)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class OperationKind {
+    
+    INSTALL,
+    UPDATE,
+    REMOVAL;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOperationKind: FfiConverterRustBuffer<OperationKind> {
+    override fun read(buf: ByteBuffer) = try {
+        OperationKind.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: OperationKind) = 4UL
+
+    override fun write(value: OperationKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class ProviderFailure {
+    
+    object UnknownProvider : ProviderFailure()
+    
+    
+    object MissingCredentials : ProviderFailure()
+    
+    
+    object LocalPackNotReady : ProviderFailure()
+    
+    
+    data class NotVerified(
+        val `reason`: kotlin.String) : ProviderFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Duplicate descriptors/availability rows, provider_id disagreement,
+     * or an inconsistent credential report — fail closed, never guess.
+     */
+    data class InconsistentConfiguration(
+        val `reason`: kotlin.String) : ProviderFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProviderFailure : FfiConverterRustBuffer<ProviderFailure>{
+    override fun read(buf: ByteBuffer): ProviderFailure {
+        return when(buf.getInt()) {
+            1 -> ProviderFailure.UnknownProvider
+            2 -> ProviderFailure.MissingCredentials
+            3 -> ProviderFailure.LocalPackNotReady
+            4 -> ProviderFailure.NotVerified(
+                FfiConverterString.read(buf),
+                )
+            5 -> ProviderFailure.InconsistentConfiguration(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ProviderFailure): ULong = when(value) {
+        is ProviderFailure.UnknownProvider -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ProviderFailure.MissingCredentials -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ProviderFailure.LocalPackNotReady -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ProviderFailure.NotVerified -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+        is ProviderFailure.InconsistentConfiguration -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: ProviderFailure, buf: ByteBuffer) {
+        when(value) {
+            is ProviderFailure.UnknownProvider -> {
+                buf.putInt(1)
+                Unit
+            }
+            is ProviderFailure.MissingCredentials -> {
+                buf.putInt(2)
+                Unit
+            }
+            is ProviderFailure.LocalPackNotReady -> {
+                buf.putInt(3)
+                Unit
+            }
+            is ProviderFailure.NotVerified -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is ProviderFailure.InconsistentConfiguration -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class ProviderLocality {
+    
+    ON_DEVICE,
+    LOCAL_NETWORK,
+    REMOTE_ENDPOINT,
+    CLOUD,
+    UNRESOLVED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProviderLocality: FfiConverterRustBuffer<ProviderLocality> {
+    override fun read(buf: ByteBuffer) = try {
+        ProviderLocality.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ProviderLocality) = 4UL
+
+    override fun write(value: ProviderLocality, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class ProviderReadiness {
+    
+    object Unconfigured : ProviderReadiness()
+    
+    
+    object Configured : ProviderReadiness()
+    
+    
+    object Verifying : ProviderReadiness()
+    
+    
+    object Ready : ProviderReadiness()
+    
+    
+    data class Unavailable(
+        val `reason`: uniffi.neuralcompose_mobile_core.ProviderFailure) : ProviderReadiness()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProviderReadiness : FfiConverterRustBuffer<ProviderReadiness>{
+    override fun read(buf: ByteBuffer): ProviderReadiness {
+        return when(buf.getInt()) {
+            1 -> ProviderReadiness.Unconfigured
+            2 -> ProviderReadiness.Configured
+            3 -> ProviderReadiness.Verifying
+            4 -> ProviderReadiness.Ready
+            5 -> ProviderReadiness.Unavailable(
+                FfiConverterTypeProviderFailure.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ProviderReadiness): ULong = when(value) {
+        is ProviderReadiness.Unconfigured -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ProviderReadiness.Configured -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ProviderReadiness.Verifying -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ProviderReadiness.Ready -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ProviderReadiness.Unavailable -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeProviderFailure.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: ProviderReadiness, buf: ByteBuffer) {
+        when(value) {
+            is ProviderReadiness.Unconfigured -> {
+                buf.putInt(1)
+                Unit
+            }
+            is ProviderReadiness.Configured -> {
+                buf.putInt(2)
+                Unit
+            }
+            is ProviderReadiness.Verifying -> {
+                buf.putInt(3)
+                Unit
+            }
+            is ProviderReadiness.Ready -> {
+                buf.putInt(4)
+                Unit
+            }
+            is ProviderReadiness.Unavailable -> {
+                buf.putInt(5)
+                FfiConverterTypeProviderFailure.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class ProviderTransport {
+    
+    ON_DEVICE_MODEL_PACK,
+    SYSTEM_MODEL,
+    HTTP_ENDPOINT,
+    BROKERED_CLOUD;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProviderTransport: FfiConverterRustBuffer<ProviderTransport> {
+    override fun read(buf: ByteBuffer) = try {
+        ProviderTransport.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ProviderTransport) = 4UL
+
+    override fun write(value: ProviderTransport, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -3133,6 +5985,270 @@ public object FfiConverterTypeRecordingPhase : FfiConverterRustBuffer<RecordingP
             is RecordingPhase.Failed -> {
                 buf.putInt(9)
                 FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+sealed class RestoreFailure {
+    
+    object TrustedCatalogEntryMissing : RestoreFailure()
+    
+    
+    object AmbiguousTrustedCatalog : RestoreFailure()
+    
+    
+    object TargetPackMismatch : RestoreFailure()
+    
+    
+    object CatalogDigestMismatch : RestoreFailure()
+    
+    
+    object InstalledInventoryMismatch : RestoreFailure()
+    
+    
+    data class OnDiskInventoryMismatch(
+        val `relativePath`: kotlin.String) : RestoreFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object UnsupportedRuntimeAbi : RestoreFailure()
+    
+    
+    object UnsupportedVerificationPolicy : RestoreFailure()
+    
+    
+    data class InvalidInstalledRecord(
+        val `reason`: kotlin.String) : RestoreFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRestoreFailure : FfiConverterRustBuffer<RestoreFailure>{
+    override fun read(buf: ByteBuffer): RestoreFailure {
+        return when(buf.getInt()) {
+            1 -> RestoreFailure.TrustedCatalogEntryMissing
+            2 -> RestoreFailure.AmbiguousTrustedCatalog
+            3 -> RestoreFailure.TargetPackMismatch
+            4 -> RestoreFailure.CatalogDigestMismatch
+            5 -> RestoreFailure.InstalledInventoryMismatch
+            6 -> RestoreFailure.OnDiskInventoryMismatch(
+                FfiConverterString.read(buf),
+                )
+            7 -> RestoreFailure.UnsupportedRuntimeAbi
+            8 -> RestoreFailure.UnsupportedVerificationPolicy
+            9 -> RestoreFailure.InvalidInstalledRecord(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: RestoreFailure): ULong = when(value) {
+        is RestoreFailure.TrustedCatalogEntryMissing -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.AmbiguousTrustedCatalog -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.TargetPackMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.CatalogDigestMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.InstalledInventoryMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.OnDiskInventoryMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`relativePath`)
+            )
+        }
+        is RestoreFailure.UnsupportedRuntimeAbi -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.UnsupportedVerificationPolicy -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RestoreFailure.InvalidInstalledRecord -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: RestoreFailure, buf: ByteBuffer) {
+        when(value) {
+            is RestoreFailure.TrustedCatalogEntryMissing -> {
+                buf.putInt(1)
+                Unit
+            }
+            is RestoreFailure.AmbiguousTrustedCatalog -> {
+                buf.putInt(2)
+                Unit
+            }
+            is RestoreFailure.TargetPackMismatch -> {
+                buf.putInt(3)
+                Unit
+            }
+            is RestoreFailure.CatalogDigestMismatch -> {
+                buf.putInt(4)
+                Unit
+            }
+            is RestoreFailure.InstalledInventoryMismatch -> {
+                buf.putInt(5)
+                Unit
+            }
+            is RestoreFailure.OnDiskInventoryMismatch -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`relativePath`, buf)
+                Unit
+            }
+            is RestoreFailure.UnsupportedRuntimeAbi -> {
+                buf.putInt(7)
+                Unit
+            }
+            is RestoreFailure.UnsupportedVerificationPolicy -> {
+                buf.putInt(8)
+                Unit
+            }
+            is RestoreFailure.InvalidInstalledRecord -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+sealed class RestoreResult {
+    
+    data class Restored(
+        val `record`: uniffi.neuralcompose_mobile_core.InstalledModelPack) : RestoreResult()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Rejected(
+        val `failure`: uniffi.neuralcompose_mobile_core.RestoreFailure) : RestoreResult()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRestoreResult : FfiConverterRustBuffer<RestoreResult>{
+    override fun read(buf: ByteBuffer): RestoreResult {
+        return when(buf.getInt()) {
+            1 -> RestoreResult.Restored(
+                FfiConverterTypeInstalledModelPack.read(buf),
+                )
+            2 -> RestoreResult.Rejected(
+                FfiConverterTypeRestoreFailure.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: RestoreResult): ULong = when(value) {
+        is RestoreResult.Restored -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeInstalledModelPack.allocationSize(value.`record`)
+            )
+        }
+        is RestoreResult.Rejected -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeRestoreFailure.allocationSize(value.`failure`)
+            )
+        }
+    }
+
+    override fun write(value: RestoreResult, buf: ByteBuffer) {
+        when(value) {
+            is RestoreResult.Restored -> {
+                buf.putInt(1)
+                FfiConverterTypeInstalledModelPack.write(value.`record`, buf)
+                Unit
+            }
+            is RestoreResult.Rejected -> {
+                buf.putInt(2)
+                FfiConverterTypeRestoreFailure.write(value.`failure`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -3415,6 +6531,258 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeEmbeddingContract: FfiConverterRustBuffer<EmbeddingContract?> {
+    override fun read(buf: ByteBuffer): EmbeddingContract? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeEmbeddingContract.read(buf)
+    }
+
+    override fun allocationSize(value: EmbeddingContract?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeEmbeddingContract.allocationSize(value)
+        }
+    }
+
+    override fun write(value: EmbeddingContract?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeEmbeddingContract.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeGenerationContract: FfiConverterRustBuffer<GenerationContract?> {
+    override fun read(buf: ByteBuffer): GenerationContract? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeGenerationContract.read(buf)
+    }
+
+    override fun allocationSize(value: GenerationContract?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeGenerationContract.allocationSize(value)
+        }
+    }
+
+    override fun write(value: GenerationContract?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeGenerationContract.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeInstalledModelPack: FfiConverterRustBuffer<InstalledModelPack?> {
+    override fun read(buf: ByteBuffer): InstalledModelPack? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeInstalledModelPack.read(buf)
+    }
+
+    override fun allocationSize(value: InstalledModelPack?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeInstalledModelPack.allocationSize(value)
+        }
+    }
+
+    override fun write(value: InstalledModelPack?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeInstalledModelPack.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeOperationFailure: FfiConverterRustBuffer<OperationFailure?> {
+    override fun read(buf: ByteBuffer): OperationFailure? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeOperationFailure.read(buf)
+    }
+
+    override fun allocationSize(value: OperationFailure?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeOperationFailure.allocationSize(value)
+        }
+    }
+
+    override fun write(value: OperationFailure?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeOperationFailure.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeActiveIntegrityFailure: FfiConverterRustBuffer<ActiveIntegrityFailure?> {
+    override fun read(buf: ByteBuffer): ActiveIntegrityFailure? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeActiveIntegrityFailure.read(buf)
+    }
+
+    override fun allocationSize(value: ActiveIntegrityFailure?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeActiveIntegrityFailure.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ActiveIntegrityFailure?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeActiveIntegrityFailure.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeProviderTransport: FfiConverterRustBuffer<ProviderTransport?> {
+    override fun read(buf: ByteBuffer): ProviderTransport? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeProviderTransport.read(buf)
+    }
+
+    override fun allocationSize(value: ProviderTransport?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeProviderTransport.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ProviderTransport?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeProviderTransport.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeRestoreFailure: FfiConverterRustBuffer<RestoreFailure?> {
+    override fun read(buf: ByteBuffer): RestoreFailure? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeRestoreFailure.read(buf)
+    }
+
+    override fun allocationSize(value: RestoreFailure?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeRestoreFailure.allocationSize(value)
+        }
+    }
+
+    override fun write(value: RestoreFailure?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeRestoreFailure.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>> {
+    override fun read(buf: ByteBuffer): List<kotlin.UInt> {
+        val len = buf.getInt()
+        return List<kotlin.UInt>(len) {
+            FfiConverterUInt.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.UInt>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterUInt.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.UInt>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterUInt.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceDouble: FfiConverterRustBuffer<List<kotlin.Double>> {
     override fun read(buf: ByteBuffer): List<kotlin.Double> {
         val len = buf.getInt()
@@ -3433,6 +6801,34 @@ public object FfiConverterSequenceDouble: FfiConverterRustBuffer<List<kotlin.Dou
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterDouble.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
+    override fun read(buf: ByteBuffer): List<kotlin.String> {
+        val len = buf.getInt()
+        return List<kotlin.String>(len) {
+            FfiConverterString.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.String>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterString.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.String>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterString.write(it, buf)
         }
     }
 }
@@ -3471,6 +6867,174 @@ public object FfiConverterSequenceTypeAudioTransition: FfiConverterRustBuffer<Li
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeModelAlias: FfiConverterRustBuffer<List<ModelAlias>> {
+    override fun read(buf: ByteBuffer): List<ModelAlias> {
+        val len = buf.getInt()
+        return List<ModelAlias>(len) {
+            FfiConverterTypeModelAlias.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ModelAlias>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeModelAlias.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ModelAlias>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeModelAlias.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeModelArtifact: FfiConverterRustBuffer<List<ModelArtifact>> {
+    override fun read(buf: ByteBuffer): List<ModelArtifact> {
+        val len = buf.getInt()
+        return List<ModelArtifact>(len) {
+            FfiConverterTypeModelArtifact.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ModelArtifact>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeModelArtifact.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ModelArtifact>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeModelArtifact.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeModelPackCatalogEntry: FfiConverterRustBuffer<List<ModelPackCatalogEntry>> {
+    override fun read(buf: ByteBuffer): List<ModelPackCatalogEntry> {
+        val len = buf.getInt()
+        return List<ModelPackCatalogEntry>(len) {
+            FfiConverterTypeModelPackCatalogEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ModelPackCatalogEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeModelPackCatalogEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ModelPackCatalogEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeModelPackCatalogEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeObservedArtifact: FfiConverterRustBuffer<List<ObservedArtifact>> {
+    override fun read(buf: ByteBuffer): List<ObservedArtifact> {
+        val len = buf.getInt()
+        return List<ObservedArtifact>(len) {
+            FfiConverterTypeObservedArtifact.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ObservedArtifact>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeObservedArtifact.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ObservedArtifact>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeObservedArtifact.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeProviderAvailability: FfiConverterRustBuffer<List<ProviderAvailability>> {
+    override fun read(buf: ByteBuffer): List<ProviderAvailability> {
+        val len = buf.getInt()
+        return List<ProviderAvailability>(len) {
+            FfiConverterTypeProviderAvailability.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ProviderAvailability>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeProviderAvailability.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ProviderAvailability>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeProviderAvailability.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeProviderDescriptor: FfiConverterRustBuffer<List<ProviderDescriptor>> {
+    override fun read(buf: ByteBuffer): List<ProviderDescriptor> {
+        val len = buf.getInt()
+        return List<ProviderDescriptor>(len) {
+            FfiConverterTypeProviderDescriptor.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ProviderDescriptor>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeProviderDescriptor.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ProviderDescriptor>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeProviderDescriptor.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeRecordingManifest: FfiConverterRustBuffer<List<RecordingManifest>> {
     override fun read(buf: ByteBuffer): List<RecordingManifest> {
         val len = buf.getInt()
@@ -3489,6 +7053,34 @@ public object FfiConverterSequenceTypeRecordingManifest: FfiConverterRustBuffer<
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeRecordingManifest.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeVerifiedArtifact: FfiConverterRustBuffer<List<VerifiedArtifact>> {
+    override fun read(buf: ByteBuffer): List<VerifiedArtifact> {
+        val len = buf.getInt()
+        return List<VerifiedArtifact>(len) {
+            FfiConverterTypeVerifiedArtifact.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<VerifiedArtifact>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeVerifiedArtifact.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<VerifiedArtifact>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeVerifiedArtifact.write(it, buf)
         }
     }
 }
@@ -3577,6 +7169,93 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
 
         /**
+         * Digest of the full catalog entry (artifacts canonically sorted).
+         */ fun `catalogEntryDigest`(`entry`: ModelPackCatalogEntry): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_catalog_entry_digest(
+    
+        
+        FfiConverterTypeModelPackCatalogEntry.lower(`entry`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Embedding-space identity: canonical document over ALL weight and
+         * tokenizer artifacts (sorted), with a domain string. Requires the entry
+         * to pass full catalog validation first.
+         */ fun `embeddingSpaceIdentity`(`entry`: ModelPackCatalogEntry): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_embedding_space_identity(
+    
+        
+        FfiConverterTypeModelPackCatalogEntry.lower(`entry`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Resolve a persisted installed record against the TRUSTED catalog set
+         * AND fresh observations of the actual on-disk artifacts. The record is
+         * never compared against an update target; it must match its own trusted
+         * entry exactly, and the observed bytes must match the record exactly —
+         * deleted or modified weights never restore as usable. Rejection is
+         * visible — callers preserve/quarantine the record for diagnosis, never
+         * silently drop it. This is a pure diagnostic view of the same sealed
+         * path `ModelPackInstaller::new` runs internally; no constructor or
+         * state-changing method accepts a `RestoreResult`.
+         */ fun `restoreInstalledRecord`(`record`: InstalledModelPack, `observed`: List<ObservedArtifact>, `trustedCatalog`: List<ModelPackCatalogEntry>, `supportedAbis`: List<kotlin.String>, `acceptedPolicyVersions`: List<kotlin.UInt>, `targetPackId`: kotlin.String): RestoreResult {
+            return FfiConverterTypeRestoreResult.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_restore_installed_record(
+    
+        
+        FfiConverterTypeInstalledModelPack.lower(`record`),
+        FfiConverterSequenceTypeObservedArtifact.lower(`observed`),
+        FfiConverterSequenceTypeModelPackCatalogEntry.lower(`trustedCatalog`),
+        FfiConverterSequenceString.lower(`supportedAbis`),
+        FfiConverterSequenceUInt.lower(`acceptedPolicyVersions`),
+        FfiConverterString.lower(`targetPackId`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The single Rust-side authority on which verification-policy versions
+         * exist. Zero and future versions are rejected at verification AND at
+         * restoration — the JSON Schema's `>= 1` bound alone is not enforcement.
+         */ fun `supportedVerificationPolicyVersions`(): List<kotlin.UInt> {
+            return FfiConverterSequenceUInt.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_supported_verification_policy_versions(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * Public validation pinned to the RUNNING core version — never
+         * caller-supplied.
+         */ fun `validateCatalogEntry`(`entry`: ModelPackCatalogEntry): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_catalog_entry(
+    
+        
+        FfiConverterTypeModelPackCatalogEntry.lower(`entry`),_status)
+}
+    )
+    }
+    
+
+        /**
          * English banner — must reproduce the Expo Jest oracle strings exactly.
          */ fun `formatBannerEn`(`p`: Presentation): kotlin.String? {
             return FfiConverterOptionalString.lift(
@@ -3599,6 +7278,101 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
         
         FfiConverterTypePresentation.lower(`p`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Substitution disclosure: provider mismatch is always substitution; model
+         * mismatch is substitution unless a VALID, provider-scoped alias proves
+         * equivalence. An invalid alias set authorizes nothing (fail closed).
+         */ fun `isSubstitution`(`identity`: ResolvedProviderIdentity, `aliases`: List<ModelAlias>): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_is_substitution(
+    
+        
+        FfiConverterTypeResolvedProviderIdentity.lower(`identity`),
+        FfiConverterSequenceTypeModelAlias.lower(`aliases`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * The allowed transport/locality matrix. A descriptor outside it is
+         * making an impossible — potentially false — privacy claim and must fail
+         * closed (e.g. BrokeredCloud+OnDevice would present a cloud runtime as
+         * local). Descriptor-declared Unresolved is not allowed either: locality
+         * is the descriptor's one privacy claim and it must commit to it.
+         *
+         * ```text
+         * OnDeviceModelPack → OnDevice
+         * SystemModel       → OnDevice
+         * HttpEndpoint      → LocalNetwork | RemoteEndpoint | Cloud
+         * BrokeredCloud     → Cloud
+         * ```
+         */ fun `isValidTransportLocality`(`transport`: ProviderTransport, `locality`: ProviderLocality): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_is_valid_transport_locality(
+    
+        
+        FfiConverterTypeProviderTransport.lower(`transport`),
+        FfiConverterTypeProviderLocality.lower(`locality`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Unknown locality must present conservatively: possible egress.
+         */ fun `presentsAsPossibleEgress`(`locality`: ProviderLocality): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_presents_as_possible_egress(
+    
+        
+        FfiConverterTypeProviderLocality.lower(`locality`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Resolve a request against configuration + shell-reported availability.
+         * NEVER substitutes a provider; fail closed on inconsistent configuration.
+         */ fun `resolveProviderIdentity`(`requestedProviderId`: kotlin.String, `requestedModelId`: kotlin.String, `resolvedModelId`: kotlin.String, `modelDigest`: kotlin.String?, `descriptors`: List<ProviderDescriptor>, `availability`: List<ProviderAvailability>, `promptProfile`: kotlin.String?, `promptHash`: kotlin.String?): ResolvedProviderIdentity {
+            return FfiConverterTypeResolvedProviderIdentity.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_resolve_provider_identity(
+    
+        
+        FfiConverterString.lower(`requestedProviderId`),
+        FfiConverterString.lower(`requestedModelId`),
+        FfiConverterString.lower(`resolvedModelId`),
+        FfiConverterOptionalString.lower(`modelDigest`),
+        FfiConverterSequenceTypeProviderDescriptor.lower(`descriptors`),
+        FfiConverterSequenceTypeProviderAvailability.lower(`availability`),
+        FfiConverterOptionalString.lower(`promptProfile`),
+        FfiConverterOptionalString.lower(`promptHash`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Structural alias validation: no self-aliases, no alias mapped to more
+         * than one canonical within a provider, no alias id reused as a canonical
+         * within the same provider (cycles). Empty vec = valid.
+         */ fun `validateModelAliases`(`aliases`: List<ModelAlias>): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_model_aliases(
+    
+        
+        FfiConverterSequenceTypeModelAlias.lower(`aliases`),_status)
 }
     )
     }

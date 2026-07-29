@@ -12,7 +12,9 @@
 pub mod audio;
 pub mod buffer;
 pub mod config;
+pub mod model_pack;
 pub mod presentation;
+pub mod provider;
 pub mod reconnect;
 pub mod stream;
 pub mod types;

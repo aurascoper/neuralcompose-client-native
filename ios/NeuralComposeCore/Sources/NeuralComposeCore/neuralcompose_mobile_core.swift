@@ -990,6 +990,369 @@ public func FfiConverterTypeAudioLifecycle_lower(_ value: AudioLifecycle) -> UIn
 
 
 
+public protocol ModelPackInstallerProtocol: AnyObject, Sendable {
+    
+    func acknowledgeOperationFailure()  -> Bool
+    
+    func activeInstallation()  -> InstalledModelPack?
+    
+    func onDownloadComplete()  -> Bool
+    
+    func onDownloadFailed(reason: String)  -> Bool
+    
+    func onDownloadProgress(receivedBytes: UInt64, totalBytes: UInt64)  -> Bool
+    
+    /**
+     * Requires the inventory-bound receipt; consumes it. The published
+     * installation becomes the active one (replacing any prior version).
+     */
+    func onPublished(installedAtMs: UInt64)  -> Bool
+    
+    /**
+     * Legal only from Idle (derived Ready/NotInstalled — updates start
+     * from Ready). A Failed operation must be acknowledged first: a failed
+     * removal and a failed update have different filesystem implications.
+     */
+    func onQueued()  -> Bool
+    
+    /**
+     * NotInstalled only after the platform confirmed deletion.
+     */
+    func onRemovalConfirmed()  -> Bool
+    
+    /**
+     * Integrity is now uncertain: acknowledging this failure clears the
+     * operation state but does NOT restore usability — only a fresh exact
+     * `revalidate_active` can.
+     */
+    func onRemovalFailed(reason: String)  -> Bool
+    
+    /**
+     * The record is retained during removal, but the pack is NOT usable —
+     * files may be disappearing while the platform works.
+     */
+    func onRemovalStarted()  -> Bool
+    
+    /**
+     * Derived presentation phase. Failed/op states describe the OPERATION;
+     * the active installation stays independently observable.
+     */
+    func phase()  -> ModelPackPhase
+    
+    /**
+     * Fresh integrity revalidation of the retained active installation
+     * against on-disk observations. Exact match (well-formed, no missing/
+     * modified/extra/duplicate) restores usability; any mismatch leaves
+     * the pack unusable with the specific reason visible.
+     */
+    func revalidateActive(observed: [ObservedArtifact])  -> Bool
+    
+    func snapshot()  -> ModelPackSnapshot
+    
+    /**
+     * Full verification. The receipt is cleared at the START of every
+     * attempt, set only on complete success, and bound to the exact
+     * verified inventory via the canonical VerificationMaterial digest.
+     */
+    func verify(observed: [ObservedArtifact])  -> Bool
+    
+}
+open class ModelPackInstaller: ModelPackInstallerProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_neuralcompose_mobile_core_fn_clone_modelpackinstaller(self.handle, $0) }
+    }
+    /**
+     * SEALED restoration: the constructor accepts only raw untrusted
+     * inputs (persisted record + fresh on-disk observations + trusted
+     * catalog) and runs `restore_installed_record` internally against
+     * `entry.pack_id`. No constructor or state-changing method accepts a
+     * `RestoreResult` — a shell-constructed `.restored` has no injection
+     * point. A rejected restore is surfaced visibly in the snapshot while
+     * the shell preserves/quarantines the persisted record.
+     */
+public convenience init(entry: ModelPackCatalogEntry, supportedAbis: [String], verificationPolicyVersion: UInt32, persistedRecord: InstalledModelPack?, observedInventory: [ObservedArtifact], trustedCatalog: [ModelPackCatalogEntry], acceptedPolicyVersions: [UInt32]) {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_constructor_modelpackinstaller_new(
+        FfiConverterTypeModelPackCatalogEntry_lower(entry),
+        FfiConverterSequenceString.lower(supportedAbis),
+        FfiConverterUInt32.lower(verificationPolicyVersion),
+        FfiConverterOptionTypeInstalledModelPack.lower(persistedRecord),
+        FfiConverterSequenceTypeObservedArtifact.lower(observedInventory),
+        FfiConverterSequenceTypeModelPackCatalogEntry.lower(trustedCatalog),
+        FfiConverterSequenceUInt32.lower(acceptedPolicyVersions),uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_neuralcompose_mobile_core_fn_free_modelpackinstaller(handle, $0) }
+    }
+
+    
+
+    
+open func acknowledgeOperationFailure() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_acknowledge_operation_failure(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func activeInstallation() -> InstalledModelPack?  {
+    return try!  FfiConverterOptionTypeInstalledModelPack.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_active_installation(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func onDownloadComplete() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_download_complete(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func onDownloadFailed(reason: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_download_failed(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(reason),uniffiCallStatus
+    )
+})
+}
+    
+open func onDownloadProgress(receivedBytes: UInt64, totalBytes: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_download_progress(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(receivedBytes),
+        FfiConverterUInt64.lower(totalBytes),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Requires the inventory-bound receipt; consumes it. The published
+     * installation becomes the active one (replacing any prior version).
+     */
+open func onPublished(installedAtMs: UInt64) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_published(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(installedAtMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Legal only from Idle (derived Ready/NotInstalled — updates start
+     * from Ready). A Failed operation must be acknowledged first: a failed
+     * removal and a failed update have different filesystem implications.
+     */
+open func onQueued() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_queued(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * NotInstalled only after the platform confirmed deletion.
+     */
+open func onRemovalConfirmed() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_removal_confirmed(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Integrity is now uncertain: acknowledging this failure clears the
+     * operation state but does NOT restore usability — only a fresh exact
+     * `revalidate_active` can.
+     */
+open func onRemovalFailed(reason: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_removal_failed(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(reason),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The record is retained during removal, but the pack is NOT usable —
+     * files may be disappearing while the platform works.
+     */
+open func onRemovalStarted() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_on_removal_started(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Derived presentation phase. Failed/op states describe the OPERATION;
+     * the active installation stays independently observable.
+     */
+open func phase() -> ModelPackPhase  {
+    return try!  FfiConverterTypeModelPackPhase_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_phase(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Fresh integrity revalidation of the retained active installation
+     * against on-disk observations. Exact match (well-formed, no missing/
+     * modified/extra/duplicate) restores usability; any mismatch leaves
+     * the pack unusable with the specific reason visible.
+     */
+open func revalidateActive(observed: [ObservedArtifact]) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_revalidate_active(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceTypeObservedArtifact.lower(observed),uniffiCallStatus
+    )
+})
+}
+    
+open func snapshot() -> ModelPackSnapshot  {
+    return try!  FfiConverterTypeModelPackSnapshot_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_snapshot(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Full verification. The receipt is cleared at the START of every
+     * attempt, set only on complete success, and bound to the exact
+     * verified inventory via the canonical VerificationMaterial digest.
+     */
+open func verify(observed: [ObservedArtifact]) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_modelpackinstaller_verify(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceTypeObservedArtifact.lower(observed),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeModelPackInstaller: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = ModelPackInstaller
+
+    public static func lift(_ handle: UInt64) throws -> ModelPackInstaller {
+        return ModelPackInstaller(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: ModelPackInstaller) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ModelPackInstaller {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: ModelPackInstaller, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackInstaller_lift(_ handle: UInt64) throws -> ModelPackInstaller {
+    return try FfiConverterTypeModelPackInstaller.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackInstaller_lower(_ value: ModelPackInstaller) -> UInt64 {
+    return FfiConverterTypeModelPackInstaller.lower(value)
+}
+
+
+
+
+
+
 public protocol StreamMonitorProtocol: AnyObject, Sendable {
     
     /**
@@ -1493,6 +1856,597 @@ public func FfiConverterTypeChannelSnapshot_lower(_ value: ChannelSnapshot) -> R
 }
 
 
+public struct DeviceRequirements: Equatable, Hashable {
+    public var minimumRamMb: UInt32
+    public var deviceClass: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(minimumRamMb: UInt32, deviceClass: String) {
+        self.minimumRamMb = minimumRamMb
+        self.deviceClass = deviceClass
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DeviceRequirements: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDeviceRequirements: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DeviceRequirements {
+        return
+            try DeviceRequirements(
+                minimumRamMb: FfiConverterUInt32.read(from: &buf), 
+                deviceClass: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DeviceRequirements, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.minimumRamMb, into: &buf)
+        FfiConverterString.write(value.deviceClass, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeviceRequirements_lift(_ buf: RustBuffer) throws -> DeviceRequirements {
+    return try FfiConverterTypeDeviceRequirements.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeviceRequirements_lower(_ value: DeviceRequirements) -> RustBuffer {
+    return FfiConverterTypeDeviceRequirements.lower(value)
+}
+
+
+public struct EmbeddingContract: Equatable, Hashable {
+    public var tokenizerId: String
+    public var dimensions: UInt32
+    public var pooling: EmbeddingPooling
+    public var normalization: EmbeddingNormalization
+    public var taskInstruction: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(tokenizerId: String, dimensions: UInt32, pooling: EmbeddingPooling, normalization: EmbeddingNormalization, taskInstruction: String?) {
+        self.tokenizerId = tokenizerId
+        self.dimensions = dimensions
+        self.pooling = pooling
+        self.normalization = normalization
+        self.taskInstruction = taskInstruction
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EmbeddingContract: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEmbeddingContract: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EmbeddingContract {
+        return
+            try EmbeddingContract(
+                tokenizerId: FfiConverterString.read(from: &buf), 
+                dimensions: FfiConverterUInt32.read(from: &buf), 
+                pooling: FfiConverterTypeEmbeddingPooling.read(from: &buf), 
+                normalization: FfiConverterTypeEmbeddingNormalization.read(from: &buf), 
+                taskInstruction: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EmbeddingContract, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.tokenizerId, into: &buf)
+        FfiConverterUInt32.write(value.dimensions, into: &buf)
+        FfiConverterTypeEmbeddingPooling.write(value.pooling, into: &buf)
+        FfiConverterTypeEmbeddingNormalization.write(value.normalization, into: &buf)
+        FfiConverterOptionString.write(value.taskInstruction, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmbeddingContract_lift(_ buf: RustBuffer) throws -> EmbeddingContract {
+    return try FfiConverterTypeEmbeddingContract.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmbeddingContract_lower(_ value: EmbeddingContract) -> RustBuffer {
+    return FfiConverterTypeEmbeddingContract.lower(value)
+}
+
+
+public struct GenerationContract: Equatable, Hashable {
+    public var tokenizerId: String
+    public var contextCap: UInt32
+    public var promptTemplateId: String
+    public var compatiblePromptProfiles: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(tokenizerId: String, contextCap: UInt32, promptTemplateId: String, compatiblePromptProfiles: [String]) {
+        self.tokenizerId = tokenizerId
+        self.contextCap = contextCap
+        self.promptTemplateId = promptTemplateId
+        self.compatiblePromptProfiles = compatiblePromptProfiles
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GenerationContract: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGenerationContract: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GenerationContract {
+        return
+            try GenerationContract(
+                tokenizerId: FfiConverterString.read(from: &buf), 
+                contextCap: FfiConverterUInt32.read(from: &buf), 
+                promptTemplateId: FfiConverterString.read(from: &buf), 
+                compatiblePromptProfiles: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GenerationContract, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.tokenizerId, into: &buf)
+        FfiConverterUInt32.write(value.contextCap, into: &buf)
+        FfiConverterString.write(value.promptTemplateId, into: &buf)
+        FfiConverterSequenceString.write(value.compatiblePromptProfiles, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGenerationContract_lift(_ buf: RustBuffer) throws -> GenerationContract {
+    return try FfiConverterTypeGenerationContract.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGenerationContract_lower(_ value: GenerationContract) -> RustBuffer {
+    return FfiConverterTypeGenerationContract.lower(value)
+}
+
+
+public struct InstalledModelPack: Equatable, Hashable {
+    public var packId: String
+    public var packVersion: String
+    public var installedAtMs: UInt64
+    public var artifactDigests: [VerifiedArtifact]
+    public var runtimeAbi: String
+    public var verificationPolicyVersion: UInt32
+    public var catalogEntryDigest: String
+    public var verifiedInventoryDigest: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(packId: String, packVersion: String, installedAtMs: UInt64, artifactDigests: [VerifiedArtifact], runtimeAbi: String, verificationPolicyVersion: UInt32, catalogEntryDigest: String, verifiedInventoryDigest: String) {
+        self.packId = packId
+        self.packVersion = packVersion
+        self.installedAtMs = installedAtMs
+        self.artifactDigests = artifactDigests
+        self.runtimeAbi = runtimeAbi
+        self.verificationPolicyVersion = verificationPolicyVersion
+        self.catalogEntryDigest = catalogEntryDigest
+        self.verifiedInventoryDigest = verifiedInventoryDigest
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension InstalledModelPack: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeInstalledModelPack: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> InstalledModelPack {
+        return
+            try InstalledModelPack(
+                packId: FfiConverterString.read(from: &buf), 
+                packVersion: FfiConverterString.read(from: &buf), 
+                installedAtMs: FfiConverterUInt64.read(from: &buf), 
+                artifactDigests: FfiConverterSequenceTypeVerifiedArtifact.read(from: &buf), 
+                runtimeAbi: FfiConverterString.read(from: &buf), 
+                verificationPolicyVersion: FfiConverterUInt32.read(from: &buf), 
+                catalogEntryDigest: FfiConverterString.read(from: &buf), 
+                verifiedInventoryDigest: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: InstalledModelPack, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.packId, into: &buf)
+        FfiConverterString.write(value.packVersion, into: &buf)
+        FfiConverterUInt64.write(value.installedAtMs, into: &buf)
+        FfiConverterSequenceTypeVerifiedArtifact.write(value.artifactDigests, into: &buf)
+        FfiConverterString.write(value.runtimeAbi, into: &buf)
+        FfiConverterUInt32.write(value.verificationPolicyVersion, into: &buf)
+        FfiConverterString.write(value.catalogEntryDigest, into: &buf)
+        FfiConverterString.write(value.verifiedInventoryDigest, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInstalledModelPack_lift(_ buf: RustBuffer) throws -> InstalledModelPack {
+    return try FfiConverterTypeInstalledModelPack.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInstalledModelPack_lower(_ value: InstalledModelPack) -> RustBuffer {
+    return FfiConverterTypeInstalledModelPack.lower(value)
+}
+
+
+/**
+ * Explicitly registered, PROVIDER-SCOPED model equivalence (model names
+ * are not globally unique).
+ */
+public struct ModelAlias: Equatable, Hashable {
+    public var providerId: String
+    public var canonicalModelId: String
+    public var aliasModelId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(providerId: String, canonicalModelId: String, aliasModelId: String) {
+        self.providerId = providerId
+        self.canonicalModelId = canonicalModelId
+        self.aliasModelId = aliasModelId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ModelAlias: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeModelAlias: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ModelAlias {
+        return
+            try ModelAlias(
+                providerId: FfiConverterString.read(from: &buf), 
+                canonicalModelId: FfiConverterString.read(from: &buf), 
+                aliasModelId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ModelAlias, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.providerId, into: &buf)
+        FfiConverterString.write(value.canonicalModelId, into: &buf)
+        FfiConverterString.write(value.aliasModelId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelAlias_lift(_ buf: RustBuffer) throws -> ModelAlias {
+    return try FfiConverterTypeModelAlias.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelAlias_lower(_ value: ModelAlias) -> RustBuffer {
+    return FfiConverterTypeModelAlias.lower(value)
+}
+
+
+public struct ModelArtifact: Equatable, Hashable {
+    public var artifactId: String
+    public var kind: ModelArtifactKind
+    public var relativePath: String
+    public var byteSize: UInt64
+    public var sha256Hex: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(artifactId: String, kind: ModelArtifactKind, relativePath: String, byteSize: UInt64, sha256Hex: String) {
+        self.artifactId = artifactId
+        self.kind = kind
+        self.relativePath = relativePath
+        self.byteSize = byteSize
+        self.sha256Hex = sha256Hex
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ModelArtifact: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeModelArtifact: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ModelArtifact {
+        return
+            try ModelArtifact(
+                artifactId: FfiConverterString.read(from: &buf), 
+                kind: FfiConverterTypeModelArtifactKind.read(from: &buf), 
+                relativePath: FfiConverterString.read(from: &buf), 
+                byteSize: FfiConverterUInt64.read(from: &buf), 
+                sha256Hex: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ModelArtifact, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.artifactId, into: &buf)
+        FfiConverterTypeModelArtifactKind.write(value.kind, into: &buf)
+        FfiConverterString.write(value.relativePath, into: &buf)
+        FfiConverterUInt64.write(value.byteSize, into: &buf)
+        FfiConverterString.write(value.sha256Hex, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelArtifact_lift(_ buf: RustBuffer) throws -> ModelArtifact {
+    return try FfiConverterTypeModelArtifact.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelArtifact_lower(_ value: ModelArtifact) -> RustBuffer {
+    return FfiConverterTypeModelArtifact.lower(value)
+}
+
+
+public struct ModelPackCatalogEntry: Equatable, Hashable {
+    public var schemaVersion: UInt32
+    public var packId: String
+    public var packVersion: String
+    public var kind: ModelPackKind
+    public var modelFamily: String
+    public var modelRevision: String
+    public var quantization: String?
+    public var artifactFormat: String
+    public var licenseId: String
+    public var sourceRepository: String
+    public var runtimeAbi: String
+    public var minimumCoreVersion: String
+    public var artifacts: [ModelArtifact]
+    public var requirements: DeviceRequirements
+    public var generation: GenerationContract?
+    public var embedding: EmbeddingContract?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(schemaVersion: UInt32, packId: String, packVersion: String, kind: ModelPackKind, modelFamily: String, modelRevision: String, quantization: String?, artifactFormat: String, licenseId: String, sourceRepository: String, runtimeAbi: String, minimumCoreVersion: String, artifacts: [ModelArtifact], requirements: DeviceRequirements, generation: GenerationContract?, embedding: EmbeddingContract?) {
+        self.schemaVersion = schemaVersion
+        self.packId = packId
+        self.packVersion = packVersion
+        self.kind = kind
+        self.modelFamily = modelFamily
+        self.modelRevision = modelRevision
+        self.quantization = quantization
+        self.artifactFormat = artifactFormat
+        self.licenseId = licenseId
+        self.sourceRepository = sourceRepository
+        self.runtimeAbi = runtimeAbi
+        self.minimumCoreVersion = minimumCoreVersion
+        self.artifacts = artifacts
+        self.requirements = requirements
+        self.generation = generation
+        self.embedding = embedding
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ModelPackCatalogEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeModelPackCatalogEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ModelPackCatalogEntry {
+        return
+            try ModelPackCatalogEntry(
+                schemaVersion: FfiConverterUInt32.read(from: &buf), 
+                packId: FfiConverterString.read(from: &buf), 
+                packVersion: FfiConverterString.read(from: &buf), 
+                kind: FfiConverterTypeModelPackKind.read(from: &buf), 
+                modelFamily: FfiConverterString.read(from: &buf), 
+                modelRevision: FfiConverterString.read(from: &buf), 
+                quantization: FfiConverterOptionString.read(from: &buf), 
+                artifactFormat: FfiConverterString.read(from: &buf), 
+                licenseId: FfiConverterString.read(from: &buf), 
+                sourceRepository: FfiConverterString.read(from: &buf), 
+                runtimeAbi: FfiConverterString.read(from: &buf), 
+                minimumCoreVersion: FfiConverterString.read(from: &buf), 
+                artifacts: FfiConverterSequenceTypeModelArtifact.read(from: &buf), 
+                requirements: FfiConverterTypeDeviceRequirements.read(from: &buf), 
+                generation: FfiConverterOptionTypeGenerationContract.read(from: &buf), 
+                embedding: FfiConverterOptionTypeEmbeddingContract.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ModelPackCatalogEntry, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.schemaVersion, into: &buf)
+        FfiConverterString.write(value.packId, into: &buf)
+        FfiConverterString.write(value.packVersion, into: &buf)
+        FfiConverterTypeModelPackKind.write(value.kind, into: &buf)
+        FfiConverterString.write(value.modelFamily, into: &buf)
+        FfiConverterString.write(value.modelRevision, into: &buf)
+        FfiConverterOptionString.write(value.quantization, into: &buf)
+        FfiConverterString.write(value.artifactFormat, into: &buf)
+        FfiConverterString.write(value.licenseId, into: &buf)
+        FfiConverterString.write(value.sourceRepository, into: &buf)
+        FfiConverterString.write(value.runtimeAbi, into: &buf)
+        FfiConverterString.write(value.minimumCoreVersion, into: &buf)
+        FfiConverterSequenceTypeModelArtifact.write(value.artifacts, into: &buf)
+        FfiConverterTypeDeviceRequirements.write(value.requirements, into: &buf)
+        FfiConverterOptionTypeGenerationContract.write(value.generation, into: &buf)
+        FfiConverterOptionTypeEmbeddingContract.write(value.embedding, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackCatalogEntry_lift(_ buf: RustBuffer) throws -> ModelPackCatalogEntry {
+    return try FfiConverterTypeModelPackCatalogEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackCatalogEntry_lower(_ value: ModelPackCatalogEntry) -> RustBuffer {
+    return FfiConverterTypeModelPackCatalogEntry.lower(value)
+}
+
+
+/**
+ * Independent observability of the usable installation vs the operation.
+ */
+public struct ModelPackSnapshot: Equatable, Hashable {
+    public var operationPhase: ModelPackPhase
+    public var activeInstallation: InstalledModelPack?
+    /**
+     * Provider availability for local inference derives from THIS,
+     * never from `operation_phase == Ready`. False whenever integrity is
+     * uncertain: removal in progress, failed removal (even after the
+     * failure is acknowledged), or a failed revalidation — only a fresh
+     * exact revalidation restores usability.
+     */
+    public var hasUsableActiveInstallation: Bool
+    /**
+     * Why the retained active installation is not usable, when known.
+     */
+    public var activeIntegrityFailure: ActiveIntegrityFailure?
+    public var operationFailure: OperationFailure?
+    public var restoreFailure: RestoreFailure?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(operationPhase: ModelPackPhase, activeInstallation: InstalledModelPack?, 
+        /**
+         * Provider availability for local inference derives from THIS,
+         * never from `operation_phase == Ready`. False whenever integrity is
+         * uncertain: removal in progress, failed removal (even after the
+         * failure is acknowledged), or a failed revalidation — only a fresh
+         * exact revalidation restores usability.
+         */hasUsableActiveInstallation: Bool, 
+        /**
+         * Why the retained active installation is not usable, when known.
+         */activeIntegrityFailure: ActiveIntegrityFailure?, operationFailure: OperationFailure?, restoreFailure: RestoreFailure?) {
+        self.operationPhase = operationPhase
+        self.activeInstallation = activeInstallation
+        self.hasUsableActiveInstallation = hasUsableActiveInstallation
+        self.activeIntegrityFailure = activeIntegrityFailure
+        self.operationFailure = operationFailure
+        self.restoreFailure = restoreFailure
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ModelPackSnapshot: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeModelPackSnapshot: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ModelPackSnapshot {
+        return
+            try ModelPackSnapshot(
+                operationPhase: FfiConverterTypeModelPackPhase.read(from: &buf), 
+                activeInstallation: FfiConverterOptionTypeInstalledModelPack.read(from: &buf), 
+                hasUsableActiveInstallation: FfiConverterBool.read(from: &buf), 
+                activeIntegrityFailure: FfiConverterOptionTypeActiveIntegrityFailure.read(from: &buf), 
+                operationFailure: FfiConverterOptionTypeOperationFailure.read(from: &buf), 
+                restoreFailure: FfiConverterOptionTypeRestoreFailure.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ModelPackSnapshot, into buf: inout [UInt8]) {
+        FfiConverterTypeModelPackPhase.write(value.operationPhase, into: &buf)
+        FfiConverterOptionTypeInstalledModelPack.write(value.activeInstallation, into: &buf)
+        FfiConverterBool.write(value.hasUsableActiveInstallation, into: &buf)
+        FfiConverterOptionTypeActiveIntegrityFailure.write(value.activeIntegrityFailure, into: &buf)
+        FfiConverterOptionTypeOperationFailure.write(value.operationFailure, into: &buf)
+        FfiConverterOptionTypeRestoreFailure.write(value.restoreFailure, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackSnapshot_lift(_ buf: RustBuffer) throws -> ModelPackSnapshot {
+    return try FfiConverterTypeModelPackSnapshot.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackSnapshot_lower(_ value: ModelPackSnapshot) -> RustBuffer {
+    return FfiConverterTypeModelPackSnapshot.lower(value)
+}
+
+
 public struct MonitorConfig: Equatable, Hashable {
     public var keepSamples: UInt32
     public var staleAfterMs: UInt64
@@ -1556,6 +2510,118 @@ public func FfiConverterTypeMonitorConfig_lift(_ buf: RustBuffer) throws -> Moni
 #endif
 public func FfiConverterTypeMonitorConfig_lower(_ value: MonitorConfig) -> RustBuffer {
     return FfiConverterTypeMonitorConfig.lower(value)
+}
+
+
+public struct ObservedArtifact: Equatable, Hashable {
+    public var relativePath: String
+    public var byteSize: UInt64
+    public var sha256Hex: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(relativePath: String, byteSize: UInt64, sha256Hex: String) {
+        self.relativePath = relativePath
+        self.byteSize = byteSize
+        self.sha256Hex = sha256Hex
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ObservedArtifact: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeObservedArtifact: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ObservedArtifact {
+        return
+            try ObservedArtifact(
+                relativePath: FfiConverterString.read(from: &buf), 
+                byteSize: FfiConverterUInt64.read(from: &buf), 
+                sha256Hex: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ObservedArtifact, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.relativePath, into: &buf)
+        FfiConverterUInt64.write(value.byteSize, into: &buf)
+        FfiConverterString.write(value.sha256Hex, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeObservedArtifact_lift(_ buf: RustBuffer) throws -> ObservedArtifact {
+    return try FfiConverterTypeObservedArtifact.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeObservedArtifact_lower(_ value: ObservedArtifact) -> RustBuffer {
+    return FfiConverterTypeObservedArtifact.lower(value)
+}
+
+
+public struct OperationFailure: Equatable, Hashable {
+    public var operation: OperationKind
+    public var reason: ModelPackFailure
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(operation: OperationKind, reason: ModelPackFailure) {
+        self.operation = operation
+        self.reason = reason
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension OperationFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOperationFailure: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OperationFailure {
+        return
+            try OperationFailure(
+                operation: FfiConverterTypeOperationKind.read(from: &buf), 
+                reason: FfiConverterTypeModelPackFailure.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: OperationFailure, into buf: inout [UInt8]) {
+        FfiConverterTypeOperationKind.write(value.operation, into: &buf)
+        FfiConverterTypeModelPackFailure.write(value.reason, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOperationFailure_lift(_ buf: RustBuffer) throws -> OperationFailure {
+    return try FfiConverterTypeOperationFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOperationFailure_lower(_ value: OperationFailure) -> RustBuffer {
+    return FfiConverterTypeOperationFailure.lower(value)
 }
 
 
@@ -1640,6 +2706,192 @@ public func FfiConverterTypePresentation_lift(_ buf: RustBuffer) throws -> Prese
 #endif
 public func FfiConverterTypePresentation_lower(_ value: Presentation) -> RustBuffer {
     return FfiConverterTypePresentation.lower(value)
+}
+
+
+public struct ProviderAvailability: Equatable, Hashable {
+    public var providerId: String
+    public var credentialState: CredentialState
+    public var probe: AvailabilityProbe
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(providerId: String, credentialState: CredentialState, probe: AvailabilityProbe) {
+        self.providerId = providerId
+        self.credentialState = credentialState
+        self.probe = probe
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ProviderAvailability: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProviderAvailability: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProviderAvailability {
+        return
+            try ProviderAvailability(
+                providerId: FfiConverterString.read(from: &buf), 
+                credentialState: FfiConverterTypeCredentialState.read(from: &buf), 
+                probe: FfiConverterTypeAvailabilityProbe.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ProviderAvailability, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.providerId, into: &buf)
+        FfiConverterTypeCredentialState.write(value.credentialState, into: &buf)
+        FfiConverterTypeAvailabilityProbe.write(value.probe, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderAvailability_lift(_ buf: RustBuffer) throws -> ProviderAvailability {
+    return try FfiConverterTypeProviderAvailability.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderAvailability_lower(_ value: ProviderAvailability) -> RustBuffer {
+    return FfiConverterTypeProviderAvailability.lower(value)
+}
+
+
+public struct ProviderCapabilities: Equatable, Hashable {
+    public var generation: Bool
+    public var embeddings: Bool
+    public var streaming: Bool
+    public var cancellation: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(generation: Bool, embeddings: Bool, streaming: Bool, cancellation: Bool) {
+        self.generation = generation
+        self.embeddings = embeddings
+        self.streaming = streaming
+        self.cancellation = cancellation
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ProviderCapabilities: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProviderCapabilities: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProviderCapabilities {
+        return
+            try ProviderCapabilities(
+                generation: FfiConverterBool.read(from: &buf), 
+                embeddings: FfiConverterBool.read(from: &buf), 
+                streaming: FfiConverterBool.read(from: &buf), 
+                cancellation: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ProviderCapabilities, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.generation, into: &buf)
+        FfiConverterBool.write(value.embeddings, into: &buf)
+        FfiConverterBool.write(value.streaming, into: &buf)
+        FfiConverterBool.write(value.cancellation, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderCapabilities_lift(_ buf: RustBuffer) throws -> ProviderCapabilities {
+    return try FfiConverterTypeProviderCapabilities.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderCapabilities_lower(_ value: ProviderCapabilities) -> RustBuffer {
+    return FfiConverterTypeProviderCapabilities.lower(value)
+}
+
+
+public struct ProviderDescriptor: Equatable, Hashable {
+    public var providerId: String
+    public var transport: ProviderTransport
+    public var locality: ProviderLocality
+    public var credentialRequirement: CredentialRequirement
+    public var capabilities: ProviderCapabilities
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(providerId: String, transport: ProviderTransport, locality: ProviderLocality, credentialRequirement: CredentialRequirement, capabilities: ProviderCapabilities) {
+        self.providerId = providerId
+        self.transport = transport
+        self.locality = locality
+        self.credentialRequirement = credentialRequirement
+        self.capabilities = capabilities
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ProviderDescriptor: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProviderDescriptor: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProviderDescriptor {
+        return
+            try ProviderDescriptor(
+                providerId: FfiConverterString.read(from: &buf), 
+                transport: FfiConverterTypeProviderTransport.read(from: &buf), 
+                locality: FfiConverterTypeProviderLocality.read(from: &buf), 
+                credentialRequirement: FfiConverterTypeCredentialRequirement.read(from: &buf), 
+                capabilities: FfiConverterTypeProviderCapabilities.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ProviderDescriptor, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.providerId, into: &buf)
+        FfiConverterTypeProviderTransport.write(value.transport, into: &buf)
+        FfiConverterTypeProviderLocality.write(value.locality, into: &buf)
+        FfiConverterTypeCredentialRequirement.write(value.credentialRequirement, into: &buf)
+        FfiConverterTypeProviderCapabilities.write(value.capabilities, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderDescriptor_lift(_ buf: RustBuffer) throws -> ProviderDescriptor {
+    return try FfiConverterTypeProviderDescriptor.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderDescriptor_lower(_ value: ProviderDescriptor) -> RustBuffer {
+    return FfiConverterTypeProviderDescriptor.lower(value)
 }
 
 
@@ -1786,6 +3038,104 @@ public func FfiConverterTypeResolvedClientConfig_lower(_ value: ResolvedClientCo
 }
 
 
+public struct ResolvedProviderIdentity: Equatable, Hashable {
+    public var requestedProviderId: String
+    public var requestedModelId: String
+    public var resolvedProviderId: String
+    public var resolvedModelId: String
+    public var modelDigest: String?
+    /**
+     * None for an unknown provider — the transport is unknowable and is
+     * never fabricated (telemetry must not contain false facts).
+     */
+    public var transport: ProviderTransport?
+    public var locality: ProviderLocality
+    public var readiness: ProviderReadiness
+    public var promptProfile: String?
+    public var promptHash: String?
+    public var capabilities: ProviderCapabilities
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(requestedProviderId: String, requestedModelId: String, resolvedProviderId: String, resolvedModelId: String, modelDigest: String?, 
+        /**
+         * None for an unknown provider — the transport is unknowable and is
+         * never fabricated (telemetry must not contain false facts).
+         */transport: ProviderTransport?, locality: ProviderLocality, readiness: ProviderReadiness, promptProfile: String?, promptHash: String?, capabilities: ProviderCapabilities) {
+        self.requestedProviderId = requestedProviderId
+        self.requestedModelId = requestedModelId
+        self.resolvedProviderId = resolvedProviderId
+        self.resolvedModelId = resolvedModelId
+        self.modelDigest = modelDigest
+        self.transport = transport
+        self.locality = locality
+        self.readiness = readiness
+        self.promptProfile = promptProfile
+        self.promptHash = promptHash
+        self.capabilities = capabilities
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ResolvedProviderIdentity: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeResolvedProviderIdentity: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ResolvedProviderIdentity {
+        return
+            try ResolvedProviderIdentity(
+                requestedProviderId: FfiConverterString.read(from: &buf), 
+                requestedModelId: FfiConverterString.read(from: &buf), 
+                resolvedProviderId: FfiConverterString.read(from: &buf), 
+                resolvedModelId: FfiConverterString.read(from: &buf), 
+                modelDigest: FfiConverterOptionString.read(from: &buf), 
+                transport: FfiConverterOptionTypeProviderTransport.read(from: &buf), 
+                locality: FfiConverterTypeProviderLocality.read(from: &buf), 
+                readiness: FfiConverterTypeProviderReadiness.read(from: &buf), 
+                promptProfile: FfiConverterOptionString.read(from: &buf), 
+                promptHash: FfiConverterOptionString.read(from: &buf), 
+                capabilities: FfiConverterTypeProviderCapabilities.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ResolvedProviderIdentity, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.requestedProviderId, into: &buf)
+        FfiConverterString.write(value.requestedModelId, into: &buf)
+        FfiConverterString.write(value.resolvedProviderId, into: &buf)
+        FfiConverterString.write(value.resolvedModelId, into: &buf)
+        FfiConverterOptionString.write(value.modelDigest, into: &buf)
+        FfiConverterOptionTypeProviderTransport.write(value.transport, into: &buf)
+        FfiConverterTypeProviderLocality.write(value.locality, into: &buf)
+        FfiConverterTypeProviderReadiness.write(value.readiness, into: &buf)
+        FfiConverterOptionString.write(value.promptProfile, into: &buf)
+        FfiConverterOptionString.write(value.promptHash, into: &buf)
+        FfiConverterTypeProviderCapabilities.write(value.capabilities, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeResolvedProviderIdentity_lift(_ buf: RustBuffer) throws -> ResolvedProviderIdentity {
+    return try FfiConverterTypeResolvedProviderIdentity.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeResolvedProviderIdentity_lower(_ value: ResolvedProviderIdentity) -> RustBuffer {
+    return FfiConverterTypeResolvedProviderIdentity.lower(value)
+}
+
+
 /**
  * Stream metadata: everything freshness- and retry-related, per generation.
  */
@@ -1873,6 +3223,272 @@ public func FfiConverterTypeStreamSnapshot_lower(_ value: StreamSnapshot) -> Rus
 }
 
 
+public struct VerifiedArtifact: Equatable, Hashable {
+    public var artifactId: String
+    public var relativePath: String
+    public var byteSize: UInt64
+    public var sha256Hex: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(artifactId: String, relativePath: String, byteSize: UInt64, sha256Hex: String) {
+        self.artifactId = artifactId
+        self.relativePath = relativePath
+        self.byteSize = byteSize
+        self.sha256Hex = sha256Hex
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension VerifiedArtifact: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeVerifiedArtifact: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VerifiedArtifact {
+        return
+            try VerifiedArtifact(
+                artifactId: FfiConverterString.read(from: &buf), 
+                relativePath: FfiConverterString.read(from: &buf), 
+                byteSize: FfiConverterUInt64.read(from: &buf), 
+                sha256Hex: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: VerifiedArtifact, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.artifactId, into: &buf)
+        FfiConverterString.write(value.relativePath, into: &buf)
+        FfiConverterUInt64.write(value.byteSize, into: &buf)
+        FfiConverterString.write(value.sha256Hex, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVerifiedArtifact_lift(_ buf: RustBuffer) throws -> VerifiedArtifact {
+    return try FfiConverterTypeVerifiedArtifact.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVerifiedArtifact_lower(_ value: VerifiedArtifact) -> RustBuffer {
+    return FfiConverterTypeVerifiedArtifact.lower(value)
+}
+
+
+/**
+ * Why a retained active installation is currently NOT usable. Distinct
+ * evidence class from RestoreFailure: restoration happens at construction,
+ * integrity revalidation happens later against the active record.
+ */
+
+public enum ActiveIntegrityFailure: Equatable, Hashable {
+    
+    case missingArtifact(relativePath: String
+    )
+    case duplicateObservedPath(relativePath: String
+    )
+    case undeclaredArtifact(relativePath: String
+    )
+    case sizeMismatch(relativePath: String
+    )
+    case digestMismatch(relativePath: String
+    )
+    case malformedObservation(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ActiveIntegrityFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeActiveIntegrityFailure: FfiConverterRustBuffer {
+    typealias SwiftType = ActiveIntegrityFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ActiveIntegrityFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .missingArtifact(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .duplicateObservedPath(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .undeclaredArtifact(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .sizeMismatch(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .digestMismatch(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 6: return .malformedObservation(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ActiveIntegrityFailure, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .missingArtifact(relativePath):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .duplicateObservedPath(relativePath):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .undeclaredArtifact(relativePath):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .sizeMismatch(relativePath):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .digestMismatch(relativePath):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .malformedObservation(reason):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeActiveIntegrityFailure_lift(_ buf: RustBuffer) throws -> ActiveIntegrityFailure {
+    return try FfiConverterTypeActiveIntegrityFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeActiveIntegrityFailure_lower(_ value: ActiveIntegrityFailure) -> RustBuffer {
+    return FfiConverterTypeActiveIntegrityFailure.lower(value)
+}
+
+
+
+/**
+ * The provider-specific readiness contract's observed status. A single
+ * boolean cannot distinguish not-checked, checking, and failed — this can.
+ */
+
+public enum AvailabilityProbe: Equatable, Hashable {
+    
+    case notChecked
+    case checking
+    case verified
+    case failed(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AvailabilityProbe: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAvailabilityProbe: FfiConverterRustBuffer {
+    typealias SwiftType = AvailabilityProbe
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AvailabilityProbe {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .notChecked
+        
+        case 2: return .checking
+        
+        case 3: return .verified
+        
+        case 4: return .failed(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AvailabilityProbe, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .notChecked:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .checking:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .verified:
+            writeInt(&buf, Int32(3))
+        
+        
+        case let .failed(reason):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAvailabilityProbe_lift(_ buf: RustBuffer) throws -> AvailabilityProbe {
+    return try FfiConverterTypeAvailabilityProbe.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAvailabilityProbe_lower(_ value: AvailabilityProbe) -> RustBuffer {
+    return FfiConverterTypeAvailabilityProbe.lower(value)
+}
+
+
+
 
 public enum ClientMode: Equatable, Hashable {
     
@@ -1935,6 +3551,1117 @@ public func FfiConverterTypeClientMode_lift(_ buf: RustBuffer) throws -> ClientM
 #endif
 public func FfiConverterTypeClientMode_lower(_ value: ClientMode) -> RustBuffer {
     return FfiConverterTypeClientMode.lower(value)
+}
+
+
+
+
+public enum CredentialRequirement: Equatable, Hashable {
+    
+    case notRequired
+    case required
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CredentialRequirement: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCredentialRequirement: FfiConverterRustBuffer {
+    typealias SwiftType = CredentialRequirement
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialRequirement {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .notRequired
+        
+        case 2: return .required
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CredentialRequirement, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .notRequired:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .required:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCredentialRequirement_lift(_ buf: RustBuffer) throws -> CredentialRequirement {
+    return try FfiConverterTypeCredentialRequirement.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCredentialRequirement_lower(_ value: CredentialRequirement) -> RustBuffer {
+    return FfiConverterTypeCredentialRequirement.lower(value)
+}
+
+
+
+/**
+ * The core never sees secrets — only whether one exists where required.
+ */
+
+public enum CredentialState: Equatable, Hashable {
+    
+    case notRequired
+    case missing
+    case available
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CredentialState: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCredentialState: FfiConverterRustBuffer {
+    typealias SwiftType = CredentialState
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialState {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .notRequired
+        
+        case 2: return .missing
+        
+        case 3: return .available
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CredentialState, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .notRequired:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .missing:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .available:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCredentialState_lift(_ buf: RustBuffer) throws -> CredentialState {
+    return try FfiConverterTypeCredentialState.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCredentialState_lower(_ value: CredentialState) -> RustBuffer {
+    return FfiConverterTypeCredentialState.lower(value)
+}
+
+
+
+
+public enum EmbeddingNormalization: Equatable, Hashable {
+    
+    case none
+    case l2
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension EmbeddingNormalization: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEmbeddingNormalization: FfiConverterRustBuffer {
+    typealias SwiftType = EmbeddingNormalization
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EmbeddingNormalization {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .none
+        
+        case 2: return .l2
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: EmbeddingNormalization, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .none:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .l2:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmbeddingNormalization_lift(_ buf: RustBuffer) throws -> EmbeddingNormalization {
+    return try FfiConverterTypeEmbeddingNormalization.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmbeddingNormalization_lower(_ value: EmbeddingNormalization) -> RustBuffer {
+    return FfiConverterTypeEmbeddingNormalization.lower(value)
+}
+
+
+
+
+public enum EmbeddingPooling: Equatable, Hashable {
+    
+    case mean
+    case cls
+    case lastToken
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension EmbeddingPooling: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEmbeddingPooling: FfiConverterRustBuffer {
+    typealias SwiftType = EmbeddingPooling
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EmbeddingPooling {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .mean
+        
+        case 2: return .cls
+        
+        case 3: return .lastToken
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: EmbeddingPooling, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .mean:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .cls:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .lastToken:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmbeddingPooling_lift(_ buf: RustBuffer) throws -> EmbeddingPooling {
+    return try FfiConverterTypeEmbeddingPooling.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmbeddingPooling_lower(_ value: EmbeddingPooling) -> RustBuffer {
+    return FfiConverterTypeEmbeddingPooling.lower(value)
+}
+
+
+
+
+public enum ModelArtifactKind: Equatable, Hashable {
+    
+    case weights
+    case tokenizer
+    case config
+    case auxiliary
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ModelArtifactKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeModelArtifactKind: FfiConverterRustBuffer {
+    typealias SwiftType = ModelArtifactKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ModelArtifactKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .weights
+        
+        case 2: return .tokenizer
+        
+        case 3: return .config
+        
+        case 4: return .auxiliary
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ModelArtifactKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .weights:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .tokenizer:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .config:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .auxiliary:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelArtifactKind_lift(_ buf: RustBuffer) throws -> ModelArtifactKind {
+    return try FfiConverterTypeModelArtifactKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelArtifactKind_lower(_ value: ModelArtifactKind) -> RustBuffer {
+    return FfiConverterTypeModelArtifactKind.lower(value)
+}
+
+
+
+
+public enum ModelPackFailure: Equatable, Hashable {
+    
+    case downloadFailed(reason: String
+    )
+    case sizeMismatch(artifactId: String
+    )
+    case digestMismatch(artifactId: String
+    )
+    case undeclaredArtifact(relativePath: String
+    )
+    case missingArtifact(artifactId: String
+    )
+    case duplicateObservedPath(relativePath: String
+    )
+    case schemaInvalid(reason: String
+    )
+    case runtimeAbiIncompatible
+    case unsupportedVerificationPolicy(version: UInt32
+    )
+    case removalFailed(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ModelPackFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeModelPackFailure: FfiConverterRustBuffer {
+    typealias SwiftType = ModelPackFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ModelPackFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .downloadFailed(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .sizeMismatch(artifactId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .digestMismatch(artifactId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .undeclaredArtifact(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .missingArtifact(artifactId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 6: return .duplicateObservedPath(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .schemaInvalid(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 8: return .runtimeAbiIncompatible
+        
+        case 9: return .unsupportedVerificationPolicy(version: try FfiConverterUInt32.read(from: &buf)
+        )
+        
+        case 10: return .removalFailed(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ModelPackFailure, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .downloadFailed(reason):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(reason, into: &buf)
+            
+        
+        case let .sizeMismatch(artifactId):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(artifactId, into: &buf)
+            
+        
+        case let .digestMismatch(artifactId):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(artifactId, into: &buf)
+            
+        
+        case let .undeclaredArtifact(relativePath):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .missingArtifact(artifactId):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(artifactId, into: &buf)
+            
+        
+        case let .duplicateObservedPath(relativePath):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case let .schemaInvalid(reason):
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(reason, into: &buf)
+            
+        
+        case .runtimeAbiIncompatible:
+            writeInt(&buf, Int32(8))
+        
+        
+        case let .unsupportedVerificationPolicy(version):
+            writeInt(&buf, Int32(9))
+            FfiConverterUInt32.write(version, into: &buf)
+            
+        
+        case let .removalFailed(reason):
+            writeInt(&buf, Int32(10))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackFailure_lift(_ buf: RustBuffer) throws -> ModelPackFailure {
+    return try FfiConverterTypeModelPackFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackFailure_lower(_ value: ModelPackFailure) -> RustBuffer {
+    return FfiConverterTypeModelPackFailure.lower(value)
+}
+
+
+
+
+public enum ModelPackKind: Equatable, Hashable {
+    
+    case generation
+    case embedding
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ModelPackKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeModelPackKind: FfiConverterRustBuffer {
+    typealias SwiftType = ModelPackKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ModelPackKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .generation
+        
+        case 2: return .embedding
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ModelPackKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .generation:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .embedding:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackKind_lift(_ buf: RustBuffer) throws -> ModelPackKind {
+    return try FfiConverterTypeModelPackKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackKind_lower(_ value: ModelPackKind) -> RustBuffer {
+    return FfiConverterTypeModelPackKind.lower(value)
+}
+
+
+
+
+public enum ModelPackPhase: Equatable, Hashable {
+    
+    case notInstalled
+    case queued
+    case downloading(receivedBytes: UInt64, totalBytes: UInt64
+    )
+    case verifying
+    case ready
+    case failed(reason: ModelPackFailure
+    )
+    case removing
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ModelPackPhase: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeModelPackPhase: FfiConverterRustBuffer {
+    typealias SwiftType = ModelPackPhase
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ModelPackPhase {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .notInstalled
+        
+        case 2: return .queued
+        
+        case 3: return .downloading(receivedBytes: try FfiConverterUInt64.read(from: &buf), totalBytes: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 4: return .verifying
+        
+        case 5: return .ready
+        
+        case 6: return .failed(reason: try FfiConverterTypeModelPackFailure.read(from: &buf)
+        )
+        
+        case 7: return .removing
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ModelPackPhase, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .notInstalled:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .queued:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .downloading(receivedBytes,totalBytes):
+            writeInt(&buf, Int32(3))
+            FfiConverterUInt64.write(receivedBytes, into: &buf)
+            FfiConverterUInt64.write(totalBytes, into: &buf)
+            
+        
+        case .verifying:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .ready:
+            writeInt(&buf, Int32(5))
+        
+        
+        case let .failed(reason):
+            writeInt(&buf, Int32(6))
+            FfiConverterTypeModelPackFailure.write(reason, into: &buf)
+            
+        
+        case .removing:
+            writeInt(&buf, Int32(7))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackPhase_lift(_ buf: RustBuffer) throws -> ModelPackPhase {
+    return try FfiConverterTypeModelPackPhase.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeModelPackPhase_lower(_ value: ModelPackPhase) -> RustBuffer {
+    return FfiConverterTypeModelPackPhase.lower(value)
+}
+
+
+
+
+public enum OperationKind: Equatable, Hashable {
+    
+    case install
+    case update
+    case removal
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension OperationKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOperationKind: FfiConverterRustBuffer {
+    typealias SwiftType = OperationKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OperationKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .install
+        
+        case 2: return .update
+        
+        case 3: return .removal
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: OperationKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .install:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .update:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .removal:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOperationKind_lift(_ buf: RustBuffer) throws -> OperationKind {
+    return try FfiConverterTypeOperationKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOperationKind_lower(_ value: OperationKind) -> RustBuffer {
+    return FfiConverterTypeOperationKind.lower(value)
+}
+
+
+
+
+public enum ProviderFailure: Equatable, Hashable {
+    
+    case unknownProvider
+    case missingCredentials
+    case localPackNotReady
+    case notVerified(reason: String
+    )
+    /**
+     * Duplicate descriptors/availability rows, provider_id disagreement,
+     * or an inconsistent credential report — fail closed, never guess.
+     */
+    case inconsistentConfiguration(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ProviderFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProviderFailure: FfiConverterRustBuffer {
+    typealias SwiftType = ProviderFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProviderFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .unknownProvider
+        
+        case 2: return .missingCredentials
+        
+        case 3: return .localPackNotReady
+        
+        case 4: return .notVerified(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .inconsistentConfiguration(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ProviderFailure, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .unknownProvider:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .missingCredentials:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .localPackNotReady:
+            writeInt(&buf, Int32(3))
+        
+        
+        case let .notVerified(reason):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(reason, into: &buf)
+            
+        
+        case let .inconsistentConfiguration(reason):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderFailure_lift(_ buf: RustBuffer) throws -> ProviderFailure {
+    return try FfiConverterTypeProviderFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderFailure_lower(_ value: ProviderFailure) -> RustBuffer {
+    return FfiConverterTypeProviderFailure.lower(value)
+}
+
+
+
+
+public enum ProviderLocality: Equatable, Hashable {
+    
+    case onDevice
+    case localNetwork
+    case remoteEndpoint
+    case cloud
+    case unresolved
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ProviderLocality: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProviderLocality: FfiConverterRustBuffer {
+    typealias SwiftType = ProviderLocality
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProviderLocality {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .onDevice
+        
+        case 2: return .localNetwork
+        
+        case 3: return .remoteEndpoint
+        
+        case 4: return .cloud
+        
+        case 5: return .unresolved
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ProviderLocality, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .onDevice:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .localNetwork:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .remoteEndpoint:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .cloud:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .unresolved:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderLocality_lift(_ buf: RustBuffer) throws -> ProviderLocality {
+    return try FfiConverterTypeProviderLocality.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderLocality_lower(_ value: ProviderLocality) -> RustBuffer {
+    return FfiConverterTypeProviderLocality.lower(value)
+}
+
+
+
+
+public enum ProviderReadiness: Equatable, Hashable {
+    
+    case unconfigured
+    case configured
+    case verifying
+    case ready
+    case unavailable(reason: ProviderFailure
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ProviderReadiness: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProviderReadiness: FfiConverterRustBuffer {
+    typealias SwiftType = ProviderReadiness
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProviderReadiness {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .unconfigured
+        
+        case 2: return .configured
+        
+        case 3: return .verifying
+        
+        case 4: return .ready
+        
+        case 5: return .unavailable(reason: try FfiConverterTypeProviderFailure.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ProviderReadiness, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .unconfigured:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .configured:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .verifying:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .ready:
+            writeInt(&buf, Int32(4))
+        
+        
+        case let .unavailable(reason):
+            writeInt(&buf, Int32(5))
+            FfiConverterTypeProviderFailure.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderReadiness_lift(_ buf: RustBuffer) throws -> ProviderReadiness {
+    return try FfiConverterTypeProviderReadiness.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderReadiness_lower(_ value: ProviderReadiness) -> RustBuffer {
+    return FfiConverterTypeProviderReadiness.lower(value)
+}
+
+
+
+
+public enum ProviderTransport: Equatable, Hashable {
+    
+    case onDeviceModelPack
+    case systemModel
+    case httpEndpoint
+    case brokeredCloud
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ProviderTransport: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProviderTransport: FfiConverterRustBuffer {
+    typealias SwiftType = ProviderTransport
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProviderTransport {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .onDeviceModelPack
+        
+        case 2: return .systemModel
+        
+        case 3: return .httpEndpoint
+        
+        case 4: return .brokeredCloud
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ProviderTransport, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .onDeviceModelPack:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .systemModel:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .httpEndpoint:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .brokeredCloud:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderTransport_lift(_ buf: RustBuffer) throws -> ProviderTransport {
+    return try FfiConverterTypeProviderTransport.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProviderTransport_lower(_ value: ProviderTransport) -> RustBuffer {
+    return FfiConverterTypeProviderTransport.lower(value)
 }
 
 
@@ -2125,6 +4852,199 @@ public func FfiConverterTypeRecordingPhase_lift(_ buf: RustBuffer) throws -> Rec
 #endif
 public func FfiConverterTypeRecordingPhase_lower(_ value: RecordingPhase) -> RustBuffer {
     return FfiConverterTypeRecordingPhase.lower(value)
+}
+
+
+
+
+public enum RestoreFailure: Equatable, Hashable {
+    
+    case trustedCatalogEntryMissing
+    case ambiguousTrustedCatalog
+    case targetPackMismatch
+    case catalogDigestMismatch
+    case installedInventoryMismatch
+    case onDiskInventoryMismatch(relativePath: String
+    )
+    case unsupportedRuntimeAbi
+    case unsupportedVerificationPolicy
+    case invalidInstalledRecord(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension RestoreFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRestoreFailure: FfiConverterRustBuffer {
+    typealias SwiftType = RestoreFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RestoreFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .trustedCatalogEntryMissing
+        
+        case 2: return .ambiguousTrustedCatalog
+        
+        case 3: return .targetPackMismatch
+        
+        case 4: return .catalogDigestMismatch
+        
+        case 5: return .installedInventoryMismatch
+        
+        case 6: return .onDiskInventoryMismatch(relativePath: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .unsupportedRuntimeAbi
+        
+        case 8: return .unsupportedVerificationPolicy
+        
+        case 9: return .invalidInstalledRecord(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: RestoreFailure, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .trustedCatalogEntryMissing:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .ambiguousTrustedCatalog:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .targetPackMismatch:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .catalogDigestMismatch:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .installedInventoryMismatch:
+            writeInt(&buf, Int32(5))
+        
+        
+        case let .onDiskInventoryMismatch(relativePath):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(relativePath, into: &buf)
+            
+        
+        case .unsupportedRuntimeAbi:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .unsupportedVerificationPolicy:
+            writeInt(&buf, Int32(8))
+        
+        
+        case let .invalidInstalledRecord(reason):
+            writeInt(&buf, Int32(9))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRestoreFailure_lift(_ buf: RustBuffer) throws -> RestoreFailure {
+    return try FfiConverterTypeRestoreFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRestoreFailure_lower(_ value: RestoreFailure) -> RustBuffer {
+    return FfiConverterTypeRestoreFailure.lower(value)
+}
+
+
+
+
+public enum RestoreResult: Equatable, Hashable {
+    
+    case restored(record: InstalledModelPack
+    )
+    case rejected(failure: RestoreFailure
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension RestoreResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRestoreResult: FfiConverterRustBuffer {
+    typealias SwiftType = RestoreResult
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RestoreResult {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .restored(record: try FfiConverterTypeInstalledModelPack.read(from: &buf)
+        )
+        
+        case 2: return .rejected(failure: try FfiConverterTypeRestoreFailure.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: RestoreResult, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .restored(record):
+            writeInt(&buf, Int32(1))
+            FfiConverterTypeInstalledModelPack.write(record, into: &buf)
+            
+        
+        case let .rejected(failure):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypeRestoreFailure.write(failure, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRestoreResult_lift(_ buf: RustBuffer) throws -> RestoreResult {
+    return try FfiConverterTypeRestoreResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRestoreResult_lower(_ value: RestoreResult) -> RustBuffer {
+    return FfiConverterTypeRestoreResult.lower(value)
 }
 
 
@@ -2439,6 +5359,199 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeEmbeddingContract: FfiConverterRustBuffer {
+    typealias SwiftType = EmbeddingContract?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEmbeddingContract.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEmbeddingContract.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeGenerationContract: FfiConverterRustBuffer {
+    typealias SwiftType = GenerationContract?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeGenerationContract.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeGenerationContract.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeInstalledModelPack: FfiConverterRustBuffer {
+    typealias SwiftType = InstalledModelPack?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeInstalledModelPack.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeInstalledModelPack.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeOperationFailure: FfiConverterRustBuffer {
+    typealias SwiftType = OperationFailure?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeOperationFailure.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeOperationFailure.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeActiveIntegrityFailure: FfiConverterRustBuffer {
+    typealias SwiftType = ActiveIntegrityFailure?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeActiveIntegrityFailure.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeActiveIntegrityFailure.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeProviderTransport: FfiConverterRustBuffer {
+    typealias SwiftType = ProviderTransport?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeProviderTransport.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeProviderTransport.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeRestoreFailure: FfiConverterRustBuffer {
+    typealias SwiftType = RestoreFailure?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeRestoreFailure.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeRestoreFailure.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt32]
+
+    public static func write(_ value: [UInt32], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterUInt32.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UInt32] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UInt32]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterUInt32.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceDouble: FfiConverterRustBuffer {
     typealias SwiftType = [Double]
 
@@ -2456,6 +5569,31 @@ fileprivate struct FfiConverterSequenceDouble: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterDouble.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]
+
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [String]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterString.read(from: &buf))
         }
         return seq
     }
@@ -2489,6 +5627,156 @@ fileprivate struct FfiConverterSequenceTypeAudioTransition: FfiConverterRustBuff
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeModelAlias: FfiConverterRustBuffer {
+    typealias SwiftType = [ModelAlias]
+
+    public static func write(_ value: [ModelAlias], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeModelAlias.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ModelAlias] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ModelAlias]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeModelAlias.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeModelArtifact: FfiConverterRustBuffer {
+    typealias SwiftType = [ModelArtifact]
+
+    public static func write(_ value: [ModelArtifact], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeModelArtifact.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ModelArtifact] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ModelArtifact]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeModelArtifact.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeModelPackCatalogEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [ModelPackCatalogEntry]
+
+    public static func write(_ value: [ModelPackCatalogEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeModelPackCatalogEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ModelPackCatalogEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ModelPackCatalogEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeModelPackCatalogEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeObservedArtifact: FfiConverterRustBuffer {
+    typealias SwiftType = [ObservedArtifact]
+
+    public static func write(_ value: [ObservedArtifact], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeObservedArtifact.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ObservedArtifact] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ObservedArtifact]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeObservedArtifact.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeProviderAvailability: FfiConverterRustBuffer {
+    typealias SwiftType = [ProviderAvailability]
+
+    public static func write(_ value: [ProviderAvailability], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeProviderAvailability.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ProviderAvailability] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ProviderAvailability]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeProviderAvailability.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeProviderDescriptor: FfiConverterRustBuffer {
+    typealias SwiftType = [ProviderDescriptor]
+
+    public static func write(_ value: [ProviderDescriptor], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeProviderDescriptor.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ProviderDescriptor] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ProviderDescriptor]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeProviderDescriptor.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeRecordingManifest: FfiConverterRustBuffer {
     typealias SwiftType = [RecordingManifest]
 
@@ -2506,6 +5794,31 @@ fileprivate struct FfiConverterSequenceTypeRecordingManifest: FfiConverterRustBu
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeRecordingManifest.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeVerifiedArtifact: FfiConverterRustBuffer {
+    typealias SwiftType = [VerifiedArtifact]
+
+    public static func write(_ value: [VerifiedArtifact], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeVerifiedArtifact.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [VerifiedArtifact] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [VerifiedArtifact]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeVerifiedArtifact.read(from: &buf))
         }
         return seq
     }
@@ -2580,6 +5893,78 @@ public func resolveClientMode(useMockRaw: String?, serverRaw: String?, wsRaw: St
 })
 }
 /**
+ * Digest of the full catalog entry (artifacts canonically sorted).
+ */
+public func catalogEntryDigest(entry: ModelPackCatalogEntry) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_catalog_entry_digest(
+        FfiConverterTypeModelPackCatalogEntry_lower(entry),uniffiCallStatus
+    )
+})
+}
+/**
+ * Embedding-space identity: canonical document over ALL weight and
+ * tokenizer artifacts (sorted), with a domain string. Requires the entry
+ * to pass full catalog validation first.
+ */
+public func embeddingSpaceIdentity(entry: ModelPackCatalogEntry) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_embedding_space_identity(
+        FfiConverterTypeModelPackCatalogEntry_lower(entry),uniffiCallStatus
+    )
+})
+}
+/**
+ * Resolve a persisted installed record against the TRUSTED catalog set
+ * AND fresh observations of the actual on-disk artifacts. The record is
+ * never compared against an update target; it must match its own trusted
+ * entry exactly, and the observed bytes must match the record exactly —
+ * deleted or modified weights never restore as usable. Rejection is
+ * visible — callers preserve/quarantine the record for diagnosis, never
+ * silently drop it. This is a pure diagnostic view of the same sealed
+ * path `ModelPackInstaller::new` runs internally; no constructor or
+ * state-changing method accepts a `RestoreResult`.
+ */
+public func restoreInstalledRecord(record: InstalledModelPack, observed: [ObservedArtifact], trustedCatalog: [ModelPackCatalogEntry], supportedAbis: [String], acceptedPolicyVersions: [UInt32], targetPackId: String) -> RestoreResult  {
+    return try!  FfiConverterTypeRestoreResult_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_restore_installed_record(
+        FfiConverterTypeInstalledModelPack_lower(record),
+        FfiConverterSequenceTypeObservedArtifact.lower(observed),
+        FfiConverterSequenceTypeModelPackCatalogEntry.lower(trustedCatalog),
+        FfiConverterSequenceString.lower(supportedAbis),
+        FfiConverterSequenceUInt32.lower(acceptedPolicyVersions),
+        FfiConverterString.lower(targetPackId),uniffiCallStatus
+    )
+})
+}
+/**
+ * The single Rust-side authority on which verification-policy versions
+ * exist. Zero and future versions are rejected at verification AND at
+ * restoration — the JSON Schema's `>= 1` bound alone is not enforcement.
+ */
+public func supportedVerificationPolicyVersions() -> [UInt32]  {
+    return try!  FfiConverterSequenceUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_supported_verification_policy_versions(uniffiCallStatus
+    )
+})
+}
+/**
+ * Public validation pinned to the RUNNING core version — never
+ * caller-supplied.
+ */
+public func validateCatalogEntry(entry: ModelPackCatalogEntry) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_validate_catalog_entry(
+        FfiConverterTypeModelPackCatalogEntry_lower(entry),uniffiCallStatus
+    )
+})
+}
+/**
  * English banner — must reproduce the Expo Jest oracle strings exactly.
  */
 public func formatBannerEn(p: Presentation) -> String?  {
@@ -2598,6 +5983,86 @@ public func formatLabelEn(p: Presentation) -> String  {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_format_label_en(
         FfiConverterTypePresentation_lower(p),uniffiCallStatus
+    )
+})
+}
+/**
+ * Substitution disclosure: provider mismatch is always substitution; model
+ * mismatch is substitution unless a VALID, provider-scoped alias proves
+ * equivalence. An invalid alias set authorizes nothing (fail closed).
+ */
+public func isSubstitution(identity: ResolvedProviderIdentity, aliases: [ModelAlias]) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_is_substitution(
+        FfiConverterTypeResolvedProviderIdentity_lower(identity),
+        FfiConverterSequenceTypeModelAlias.lower(aliases),uniffiCallStatus
+    )
+})
+}
+/**
+ * The allowed transport/locality matrix. A descriptor outside it is
+ * making an impossible — potentially false — privacy claim and must fail
+ * closed (e.g. BrokeredCloud+OnDevice would present a cloud runtime as
+ * local). Descriptor-declared Unresolved is not allowed either: locality
+ * is the descriptor's one privacy claim and it must commit to it.
+ *
+ * ```text
+ * OnDeviceModelPack → OnDevice
+ * SystemModel       → OnDevice
+ * HttpEndpoint      → LocalNetwork | RemoteEndpoint | Cloud
+ * BrokeredCloud     → Cloud
+ * ```
+ */
+public func isValidTransportLocality(transport: ProviderTransport, locality: ProviderLocality) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_is_valid_transport_locality(
+        FfiConverterTypeProviderTransport_lower(transport),
+        FfiConverterTypeProviderLocality_lower(locality),uniffiCallStatus
+    )
+})
+}
+/**
+ * Unknown locality must present conservatively: possible egress.
+ */
+public func presentsAsPossibleEgress(locality: ProviderLocality) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_presents_as_possible_egress(
+        FfiConverterTypeProviderLocality_lower(locality),uniffiCallStatus
+    )
+})
+}
+/**
+ * Resolve a request against configuration + shell-reported availability.
+ * NEVER substitutes a provider; fail closed on inconsistent configuration.
+ */
+public func resolveProviderIdentity(requestedProviderId: String, requestedModelId: String, resolvedModelId: String, modelDigest: String?, descriptors: [ProviderDescriptor], availability: [ProviderAvailability], promptProfile: String?, promptHash: String?) -> ResolvedProviderIdentity  {
+    return try!  FfiConverterTypeResolvedProviderIdentity_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_resolve_provider_identity(
+        FfiConverterString.lower(requestedProviderId),
+        FfiConverterString.lower(requestedModelId),
+        FfiConverterString.lower(resolvedModelId),
+        FfiConverterOptionString.lower(modelDigest),
+        FfiConverterSequenceTypeProviderDescriptor.lower(descriptors),
+        FfiConverterSequenceTypeProviderAvailability.lower(availability),
+        FfiConverterOptionString.lower(promptProfile),
+        FfiConverterOptionString.lower(promptHash),uniffiCallStatus
+    )
+})
+}
+/**
+ * Structural alias validation: no self-aliases, no alias mapped to more
+ * than one canonical within a provider, no alias id reused as a canonical
+ * within the same provider (cycles). Empty vec = valid.
+ */
+public func validateModelAliases(aliases: [ModelAlias]) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_validate_model_aliases(
+        FfiConverterSequenceTypeModelAlias.lower(aliases),uniffiCallStatus
     )
 })
 }
@@ -2629,10 +6094,40 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_func_resolve_client_mode() != 9781) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest() != 27683) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_embedding_space_identity() != 38517) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_restore_installed_record() != 19982) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_supported_verification_policy_versions() != 61319) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_catalog_entry() != 52641) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_neuralcompose_mobile_core_checksum_func_format_banner_en() != 12060) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_format_label_en() != 32187) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_is_substitution() != 3602) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_is_valid_transport_locality() != 30316) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_presents_as_possible_egress() != 5092) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_resolve_provider_identity() != 64458) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_model_aliases() != 30637) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged() != 13465) {
@@ -2671,6 +6166,48 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot() != 28404) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_acknowledge_operation_failure() != 33736) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_active_installation() != 46074) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_complete() != 27043) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_failed() != 53284) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_download_progress() != 53339) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_published() != 59859) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_queued() != 10779) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_confirmed() != 57952) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_failed() != 17084) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_on_removal_started() != 1939) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_phase() != 62150) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_revalidate_active() != 36487) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_snapshot() != 16702) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_verify() != 60916) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame() != 45030) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2699,6 +6236,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests() != 11328) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_constructor_modelpackinstaller_new() != 43648) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new() != 40578) {

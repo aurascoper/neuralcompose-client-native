@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "packId": "semantic-search-basic",
+  "packVersion": "1.0.0",
+  "kind": "embedding",
+  "modelFamily": "example-embed",
+  "modelRevision": "small-256",
+  "quantization": null,
+  "artifactFormat": "gguf",
+  "licenseId": "Apache-2.0",
+  "sourceRepository": "example/embed-small",
+  "runtimeAbi": "nc-gguf-v1",
+  "minimumCoreVersion": "0.1.0",
+  "artifacts": [
+    { "artifactId": "weights", "kind": "weights", "relativePath": "model.gguf", "byteSize": 134217728, "sha256Hex": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" },
+    { "artifactId": "tokenizer", "kind": "tokenizer", "relativePath": "tokenizer.json", "byteSize": 1048576, "sha256Hex": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" }
+  ],
+  "requirements": { "minimumRamMb": 2048, "deviceClass": "modern-phone" },
+  "generation": null,
+  "embedding": { "tokenizerId": "tokenizer", "dimensions": 256, "pooling": "mean", "normalization": "l2", "taskInstruction": "retrieve related journal entries" }
+}

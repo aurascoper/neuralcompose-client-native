@@ -115,6 +115,108 @@ class Gate4Test {
         assertEquals(false, reloaded.onRecordStart(1uL))
     }
 
+
+    private fun makeEntry() = uniffi.neuralcompose_mobile_core.ModelPackCatalogEntry(
+        schemaVersion = 1u, packId = "p", packVersion = "1.0.0",
+        kind = uniffi.neuralcompose_mobile_core.ModelPackKind.GENERATION,
+        modelFamily = "qwen", modelRevision = "r", quantization = null,
+        artifactFormat = "gguf", licenseId = "Apache-2.0", sourceRepository = "x",
+        runtimeAbi = "abi", minimumCoreVersion = "0.1.0",
+        artifacts = listOf(
+            uniffi.neuralcompose_mobile_core.ModelArtifact(
+                "w", uniffi.neuralcompose_mobile_core.ModelArtifactKind.WEIGHTS,
+                "m.gguf", 10uL, "aa".repeat(32),
+            ),
+            uniffi.neuralcompose_mobile_core.ModelArtifact(
+                "t", uniffi.neuralcompose_mobile_core.ModelArtifactKind.TOKENIZER,
+                "t.json", 5uL, "bb".repeat(32),
+            ),
+        ),
+        requirements = uniffi.neuralcompose_mobile_core.DeviceRequirements(1024u, "phone"),
+        generation = uniffi.neuralcompose_mobile_core.GenerationContract(
+            "t", 2048u, "chatml", listOf("focused"),
+        ),
+        embedding = null,
+    )
+
+    private fun observedOk() = listOf(
+        uniffi.neuralcompose_mobile_core.ObservedArtifact("m.gguf", 10uL, "aa".repeat(32)),
+        uniffi.neuralcompose_mobile_core.ObservedArtifact("t.json", 5uL, "bb".repeat(32)),
+    )
+
+    private fun freshInstaller(entry: uniffi.neuralcompose_mobile_core.ModelPackCatalogEntry) =
+        uniffi.neuralcompose_mobile_core.ModelPackInstaller(
+            entry, listOf("abi"), 1u, null, listOf(), listOf(), listOf(1u),
+        )
+
+    @Test
+    fun m7aContractsThroughBindings() {
+        val entry = makeEntry()
+        assertEquals(0, uniffi.neuralcompose_mobile_core.validateCatalogEntry(entry).size)
+        val inst = freshInstaller(entry)
+        assertEquals(true, inst.onQueued())
+        assertEquals(true, inst.onDownloadComplete())
+        assertEquals(false, inst.onPublished(1uL)) // bypass negative path
+        assertEquals(true, inst.verify(observedOk()))
+        assertEquals(true, inst.onPublished(2uL))
+        val rec = inst.activeInstallation()!!
+        assertEquals(64, rec.verifiedInventoryDigest.length)
+        // Sealed restoration: no RestoreResult injection point exists.
+        // Tampered on-disk bytes are rejected visibly and never activate.
+        val tampered = listOf(
+            uniffi.neuralcompose_mobile_core.ObservedArtifact("m.gguf", 10uL, "99".repeat(32)),
+            uniffi.neuralcompose_mobile_core.ObservedArtifact("t.json", 5uL, "bb".repeat(32)),
+        )
+        val rej = uniffi.neuralcompose_mobile_core.ModelPackInstaller(
+            entry, listOf("abi"), 1u, rec, tampered, listOf(entry), listOf(1u),
+        )
+        assertEquals(false, rej.snapshot().hasUsableActiveInstallation)
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.RestoreFailure.OnDiskInventoryMismatch("m.gguf"),
+            rej.snapshot().restoreFailure,
+        )
+        // Missing trusted entry is equally visible.
+        val noTrust = uniffi.neuralcompose_mobile_core.ModelPackInstaller(
+            entry, listOf("abi"), 1u, rec, observedOk(), listOf(), listOf(1u),
+        )
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.RestoreFailure.TrustedCatalogEntryMissing,
+            noTrust.snapshot().restoreFailure,
+        )
+        assertEquals(false, noTrust.snapshot().hasUsableActiveInstallation)
+        // Polarity: exact bytes + trusted entry restore as usable.
+        val good = uniffi.neuralcompose_mobile_core.ModelPackInstaller(
+            entry, listOf("abi"), 1u, rec, observedOk(), listOf(entry), listOf(1u),
+        )
+        assertEquals(true, good.snapshot().hasUsableActiveInstallation)
+        val id = uniffi.neuralcompose_mobile_core.resolveProviderIdentity(
+            "nope", "m", "m", null, listOf(), listOf(), null, null,
+        )
+        assertEquals(null, id.transport)
+    }
+
+    @Test
+    fun m7aRemovalIntegrityThroughBindings() {
+        // Dismissing a removal error must never reactivate the pack; only
+        // fresh exact revalidation can.
+        val inst = freshInstaller(makeEntry())
+        assertEquals(true, inst.onQueued())
+        assertEquals(true, inst.onDownloadComplete())
+        assertEquals(true, inst.verify(observedOk()))
+        assertEquals(true, inst.onPublished(1uL))
+        assertEquals(true, inst.snapshot().hasUsableActiveInstallation)
+
+        assertEquals(true, inst.onRemovalStarted())
+        assertEquals(false, inst.snapshot().hasUsableActiveInstallation)
+        assertEquals(true, inst.onRemovalFailed("fs busy"))
+        assertEquals(false, inst.snapshot().hasUsableActiveInstallation)
+        assertEquals(true, inst.acknowledgeOperationFailure())
+        assertEquals(false, inst.snapshot().hasUsableActiveInstallation)
+        assertEquals(true, inst.revalidateActive(observedOk()))
+        assertEquals(true, inst.snapshot().hasUsableActiveInstallation)
+        assertEquals(null, inst.snapshot().activeIntegrityFailure)
+    }
+
     @Test
     fun configResolutionNeverSilentlyFallsBackToMock() {
         val c = resolveClientMode("false", "", "")

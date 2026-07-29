@@ -1,0 +1,60 @@
+{
+  "description": "Structurally invalid catalog entries; each must FAIL validate_catalog_entry (Rust) and, where marked, the JSON schema. Field mutations are applied to valid-generation-pack.json.",
+  "cases": [
+    {
+      "name": "absolute artifact path",
+      "mutate": {
+        "artifacts.0.relativePath": "/etc/model.gguf"
+      },
+      "schemaInvalid": true
+    },
+    {
+      "name": "path traversal",
+      "mutate": {
+        "artifacts.0.relativePath": "../model.gguf"
+      },
+      "schemaInvalid": true
+    },
+    {
+      "name": "uppercase sha256",
+      "mutate": {
+        "artifacts.0.sha256Hex": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "schemaInvalid": true
+    },
+    {
+      "name": "short sha256",
+      "mutate": {
+        "artifacts.0.sha256Hex": "abc123"
+      },
+      "schemaInvalid": true
+    },
+    {
+      "name": "zero-byte weights",
+      "mutate": {
+        "artifacts.0.byteSize": 0
+      },
+      "schemaInvalid": false
+    },
+    {
+      "name": "duplicate artifact ids",
+      "mutate": {
+        "artifacts.1.artifactId": "weights"
+      },
+      "schemaInvalid": false
+    },
+    {
+      "name": "generation pack with embedding contract",
+      "mutate": {
+        "embedding": {
+          "tokenizerId": "tokenizer",
+          "dimensions": 256,
+          "pooling": "mean",
+          "normalization": "l2",
+          "taskInstruction": null
+        }
+      },
+      "schemaInvalid": true
+    }
+  ]
+}
