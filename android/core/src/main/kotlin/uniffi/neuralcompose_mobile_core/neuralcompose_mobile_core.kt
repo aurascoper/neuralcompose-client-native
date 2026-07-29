@@ -725,6 +725,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_evaluation_protocol(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_global_ledger(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_run_environment(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest(
@@ -1043,6 +1045,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_validate_evaluation_protocol(`protocol`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_validate_global_ledger(`protocol`: RustBuffer.ByValue,`resultA`: RustBuffer.ByValue,`resultB`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_validate_run_environment(`env`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_catalog_entry_digest(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1272,7 +1276,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_candidate_identity() != 36234) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation() != 33145) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation() != 50431) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion() != 42781) {
@@ -1294,6 +1298,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_evaluation_protocol() != 17041) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_global_ledger() != 37692) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_run_environment() != 53649) {
@@ -6596,10 +6603,10 @@ data class RunEnvironment (
     var `recheckPackIntegrityBetweenCandidates`: kotlin.Boolean
     , 
     /**
-     * Candidate order alternates rather than running all of A then all of B,
-     * so ordering and accumulated heat do not bias one candidate.
+     * v4: the global ordering policy, validated against the plan itself. A
+     * boolean could be true while the plan ran all of A then all of B.
      */
-    var `alternatingCandidateOrder`: kotlin.Boolean
+    var `orderPolicy`: OrderPolicy
     
 ){
     
@@ -6627,7 +6634,7 @@ public object FfiConverterTypeRunEnvironment: FfiConverterRustBuffer<RunEnvironm
             FfiConverterBoolean.read(buf),
             FfiConverterBoolean.read(buf),
             FfiConverterBoolean.read(buf),
-            FfiConverterBoolean.read(buf),
+            FfiConverterTypeOrderPolicy.read(buf),
         )
     }
 
@@ -6643,7 +6650,7 @@ public object FfiConverterTypeRunEnvironment: FfiConverterRustBuffer<RunEnvironm
             FfiConverterBoolean.allocationSize(value.`airplaneMode`) +
             FfiConverterBoolean.allocationSize(value.`restartProcessBetweenCandidates`) +
             FfiConverterBoolean.allocationSize(value.`recheckPackIntegrityBetweenCandidates`) +
-            FfiConverterBoolean.allocationSize(value.`alternatingCandidateOrder`)
+            FfiConverterTypeOrderPolicy.allocationSize(value.`orderPolicy`)
     )
 
     override fun write(value: RunEnvironment, buf: ByteBuffer) {
@@ -6658,7 +6665,7 @@ public object FfiConverterTypeRunEnvironment: FfiConverterRustBuffer<RunEnvironm
             FfiConverterBoolean.write(value.`airplaneMode`, buf)
             FfiConverterBoolean.write(value.`restartProcessBetweenCandidates`, buf)
             FfiConverterBoolean.write(value.`recheckPackIntegrityBetweenCandidates`, buf)
-            FfiConverterBoolean.write(value.`alternatingCandidateOrder`, buf)
+            FfiConverterTypeOrderPolicy.write(value.`orderPolicy`, buf)
     }
 }
 
@@ -6791,9 +6798,26 @@ data class RunObservation (
     var `processInstanceId`: kotlin.String
     , 
     /**
-     * Digest proving the pack was re-verified before this run.
+     * The artifact this run loaded, as OBSERVED by the runtime when it
+     * opened the file — not copied from the manifest.
      */
-    var `packIntegrityReceipt`: kotlin.String
+    var `loadedModelSha256`: kotlin.String
+    , 
+    /**
+     * The model-pack layer's verified inventory digest.
+     */
+    var `verifiedInventoryDigest`: kotlin.String
+    , 
+    /**
+     * Evidence that revalidation actually happened BEFORE this run. A known
+     * digest can be copied; this cannot be produced without re-verifying.
+     */
+    var `revalidationEvidenceId`: kotlin.String
+    , 
+    /**
+     * Which process performed that revalidation.
+     */
+    var `revalidatedProcessInstanceId`: kotlin.String
     , 
     var `coldEvidence`: ColdEvidence
     , 
@@ -6842,6 +6866,9 @@ public object FfiConverterTypeRunObservation: FfiConverterRustBuffer<RunObservat
             FfiConverterBoolean.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
             FfiConverterTypeColdEvidence.read(buf),
             FfiConverterUInt.read(buf),
             FfiConverterULong.read(buf),
@@ -6866,7 +6893,10 @@ public object FfiConverterTypeRunObservation: FfiConverterRustBuffer<RunObservat
             FfiConverterUInt.allocationSize(value.`observedBrightnessPercent`) +
             FfiConverterBoolean.allocationSize(value.`observedAirplaneMode`) +
             FfiConverterString.allocationSize(value.`processInstanceId`) +
-            FfiConverterString.allocationSize(value.`packIntegrityReceipt`) +
+            FfiConverterString.allocationSize(value.`loadedModelSha256`) +
+            FfiConverterString.allocationSize(value.`verifiedInventoryDigest`) +
+            FfiConverterString.allocationSize(value.`revalidationEvidenceId`) +
+            FfiConverterString.allocationSize(value.`revalidatedProcessInstanceId`) +
             FfiConverterTypeColdEvidence.allocationSize(value.`coldEvidence`) +
             FfiConverterUInt.allocationSize(value.`startTemperatureCelsiusTenths`) +
             FfiConverterULong.allocationSize(value.`cooldownDurationMs`) +
@@ -6890,7 +6920,10 @@ public object FfiConverterTypeRunObservation: FfiConverterRustBuffer<RunObservat
             FfiConverterUInt.write(value.`observedBrightnessPercent`, buf)
             FfiConverterBoolean.write(value.`observedAirplaneMode`, buf)
             FfiConverterString.write(value.`processInstanceId`, buf)
-            FfiConverterString.write(value.`packIntegrityReceipt`, buf)
+            FfiConverterString.write(value.`loadedModelSha256`, buf)
+            FfiConverterString.write(value.`verifiedInventoryDigest`, buf)
+            FfiConverterString.write(value.`revalidationEvidenceId`, buf)
+            FfiConverterString.write(value.`revalidatedProcessInstanceId`, buf)
             FfiConverterTypeColdEvidence.write(value.`coldEvidence`, buf)
             FfiConverterUInt.write(value.`startTemperatureCelsiusTenths`, buf)
             FfiConverterULong.write(value.`cooldownDurationMs`, buf)
@@ -10172,6 +10205,47 @@ public object FfiConverterTypeOperationKind: FfiConverterRustBuffer<OperationKin
     override fun allocationSize(value: OperationKind) = 4UL
 
     override fun write(value: OperationKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * How candidates are interleaved. A closed policy, validated against the
+ * actual plan — not an assertion.
+ */
+
+enum class OrderPolicy {
+    
+    /**
+     * Timed runs proceed A, B, B, A per seed so ordering and accumulated
+     * heat cannot favour either candidate.
+     */
+    COUNTERBALANCED_ABBA;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOrderPolicy: FfiConverterRustBuffer<OrderPolicy> {
+    override fun read(buf: ByteBuffer) = try {
+        OrderPolicy.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: OrderPolicy) = 4UL
+
+    override fun write(value: OrderPolicy, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -13809,11 +13883,16 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
 
         /**
-         * Derive the promotion aggregate from the ledger. The frozen rule: cold and
-         * warm loads come from their own modes, throughput and latency from the
-         * TIMED runs only (warmups excluded), memory and temperature are peaks
-         * across every run, cancellation latency comes from the cancellation run,
-         * and any throttled or unrecovered run poisons the aggregate.
+         * Derive the promotion aggregate as a conservative WORST-CASE envelope.
+         *
+         * These fields are compared against `max_*` ceilings and `min_*` floors, so
+         * averaging is the wrong operator: a mean lets one bad run be smoothed away,
+         * and with only three seeds a median hides it even harder. A candidate
+         * passes only if EVERY qualifying run passes.
+         *
+         * Descriptive statistics (mean, median, spread, pooled throughput) belong in
+         * a separate report for comparing typical behaviour — they do not decide
+         * whether a hard product ceiling is met.
          */ fun `deriveCostObservation`(`observations`: List<RunObservation>, `installedBytes`: kotlin.ULong): CostObservation? {
             return FfiConverterOptionalTypeCostObservation.lift(
     uniffiRustCall() { _status ->
@@ -13929,6 +14008,25 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
         
         FfiConverterTypeEvaluationProtocol.lower(`protocol`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Cross-candidate checks that cannot live inside per-candidate admission:
+         * the global run ORDER, and process-restart evidence spanning both
+         * candidates. `admit_result` rebuilds its process set per candidate, so a
+         * restart between A and B is only provable here.
+         */ fun `validateGlobalLedger`(`protocol`: EvaluationProtocol, `resultA`: CandidateResult, `resultB`: CandidateResult): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_global_ledger(
+    
+        
+        FfiConverterTypeEvaluationProtocol.lower(`protocol`),
+        FfiConverterTypeCandidateResult.lower(`resultA`),
+        FfiConverterTypeCandidateResult.lower(`resultB`),_status)
 }
     )
     }

@@ -5268,10 +5268,10 @@ public struct RunEnvironment: Equatable, Hashable {
      */
     public var recheckPackIntegrityBetweenCandidates: Bool
     /**
-     * Candidate order alternates rather than running all of A then all of B,
-     * so ordering and accumulated heat do not bias one candidate.
+     * v4: the global ordering policy, validated against the plan itself. A
+     * boolean could be true while the plan ran all of A then all of B.
      */
-    public var alternatingCandidateOrder: Bool
+    public var orderPolicy: OrderPolicy
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -5290,9 +5290,9 @@ public struct RunEnvironment: Equatable, Hashable {
          * Pack integrity re-verified between candidates.
          */recheckPackIntegrityBetweenCandidates: Bool, 
         /**
-         * Candidate order alternates rather than running all of A then all of B,
-         * so ordering and accumulated heat do not bias one candidate.
-         */alternatingCandidateOrder: Bool) {
+         * v4: the global ordering policy, validated against the plan itself. A
+         * boolean could be true while the plan ran all of A then all of B.
+         */orderPolicy: OrderPolicy) {
         self.coldDefinition = coldDefinition
         self.warmDefinition = warmDefinition
         self.chargingState = chargingState
@@ -5304,7 +5304,7 @@ public struct RunEnvironment: Equatable, Hashable {
         self.airplaneMode = airplaneMode
         self.restartProcessBetweenCandidates = restartProcessBetweenCandidates
         self.recheckPackIntegrityBetweenCandidates = recheckPackIntegrityBetweenCandidates
-        self.alternatingCandidateOrder = alternatingCandidateOrder
+        self.orderPolicy = orderPolicy
     }
 
     
@@ -5334,7 +5334,7 @@ public struct FfiConverterTypeRunEnvironment: FfiConverterRustBuffer {
                 airplaneMode: FfiConverterBool.read(from: &buf), 
                 restartProcessBetweenCandidates: FfiConverterBool.read(from: &buf), 
                 recheckPackIntegrityBetweenCandidates: FfiConverterBool.read(from: &buf), 
-                alternatingCandidateOrder: FfiConverterBool.read(from: &buf)
+                orderPolicy: FfiConverterTypeOrderPolicy.read(from: &buf)
         )
     }
 
@@ -5350,7 +5350,7 @@ public struct FfiConverterTypeRunEnvironment: FfiConverterRustBuffer {
         FfiConverterBool.write(value.airplaneMode, into: &buf)
         FfiConverterBool.write(value.restartProcessBetweenCandidates, into: &buf)
         FfiConverterBool.write(value.recheckPackIntegrityBetweenCandidates, into: &buf)
-        FfiConverterBool.write(value.alternatingCandidateOrder, into: &buf)
+        FfiConverterTypeOrderPolicy.write(value.orderPolicy, into: &buf)
     }
 }
 
@@ -5493,9 +5493,23 @@ public struct RunObservation: Equatable, Hashable {
     public var observedAirplaneMode: Bool
     public var processInstanceId: String
     /**
-     * Digest proving the pack was re-verified before this run.
+     * The artifact this run loaded, as OBSERVED by the runtime when it
+     * opened the file — not copied from the manifest.
      */
-    public var packIntegrityReceipt: String
+    public var loadedModelSha256: String
+    /**
+     * The model-pack layer's verified inventory digest.
+     */
+    public var verifiedInventoryDigest: String
+    /**
+     * Evidence that revalidation actually happened BEFORE this run. A known
+     * digest can be copied; this cannot be produced without re-verifying.
+     */
+    public var revalidationEvidenceId: String
+    /**
+     * Which process performed that revalidation.
+     */
+    public var revalidatedProcessInstanceId: String
     public var coldEvidence: ColdEvidence
     public var startTemperatureCelsiusTenths: UInt32
     public var cooldownDurationMs: UInt64
@@ -5512,8 +5526,19 @@ public struct RunObservation: Equatable, Hashable {
     // declare one manually.
     public init(runId: String, candidateId: String, seed: UInt64, mode: RunMode, sequenceIndex: UInt32, startedMonotonicMs: UInt64, endedMonotonicMs: UInt64, observedChargingState: ChargingState, observedScreenOn: Bool, observedBrightnessPercent: UInt32, observedAirplaneMode: Bool, processInstanceId: String, 
         /**
-         * Digest proving the pack was re-verified before this run.
-         */packIntegrityReceipt: String, coldEvidence: ColdEvidence, startTemperatureCelsiusTenths: UInt32, cooldownDurationMs: UInt64, cooldownExitTemperatureCelsiusTenths: UInt32, thermalSensorIdentity: String, throttlingDetectorIdentity: String, disposition: RunDisposition, 
+         * The artifact this run loaded, as OBSERVED by the runtime when it
+         * opened the file — not copied from the manifest.
+         */loadedModelSha256: String, 
+        /**
+         * The model-pack layer's verified inventory digest.
+         */verifiedInventoryDigest: String, 
+        /**
+         * Evidence that revalidation actually happened BEFORE this run. A known
+         * digest can be copied; this cannot be produced without re-verifying.
+         */revalidationEvidenceId: String, 
+        /**
+         * Which process performed that revalidation.
+         */revalidatedProcessInstanceId: String, coldEvidence: ColdEvidence, startTemperatureCelsiusTenths: UInt32, cooldownDurationMs: UInt64, cooldownExitTemperatureCelsiusTenths: UInt32, thermalSensorIdentity: String, throttlingDetectorIdentity: String, disposition: RunDisposition, 
         /**
          * v4: what this run measured. The promotion aggregate derives from here.
          */metrics: RunMetrics) {
@@ -5529,7 +5554,10 @@ public struct RunObservation: Equatable, Hashable {
         self.observedBrightnessPercent = observedBrightnessPercent
         self.observedAirplaneMode = observedAirplaneMode
         self.processInstanceId = processInstanceId
-        self.packIntegrityReceipt = packIntegrityReceipt
+        self.loadedModelSha256 = loadedModelSha256
+        self.verifiedInventoryDigest = verifiedInventoryDigest
+        self.revalidationEvidenceId = revalidationEvidenceId
+        self.revalidatedProcessInstanceId = revalidatedProcessInstanceId
         self.coldEvidence = coldEvidence
         self.startTemperatureCelsiusTenths = startTemperatureCelsiusTenths
         self.cooldownDurationMs = cooldownDurationMs
@@ -5568,7 +5596,10 @@ public struct FfiConverterTypeRunObservation: FfiConverterRustBuffer {
                 observedBrightnessPercent: FfiConverterUInt32.read(from: &buf), 
                 observedAirplaneMode: FfiConverterBool.read(from: &buf), 
                 processInstanceId: FfiConverterString.read(from: &buf), 
-                packIntegrityReceipt: FfiConverterString.read(from: &buf), 
+                loadedModelSha256: FfiConverterString.read(from: &buf), 
+                verifiedInventoryDigest: FfiConverterString.read(from: &buf), 
+                revalidationEvidenceId: FfiConverterString.read(from: &buf), 
+                revalidatedProcessInstanceId: FfiConverterString.read(from: &buf), 
                 coldEvidence: FfiConverterTypeColdEvidence.read(from: &buf), 
                 startTemperatureCelsiusTenths: FfiConverterUInt32.read(from: &buf), 
                 cooldownDurationMs: FfiConverterUInt64.read(from: &buf), 
@@ -5593,7 +5624,10 @@ public struct FfiConverterTypeRunObservation: FfiConverterRustBuffer {
         FfiConverterUInt32.write(value.observedBrightnessPercent, into: &buf)
         FfiConverterBool.write(value.observedAirplaneMode, into: &buf)
         FfiConverterString.write(value.processInstanceId, into: &buf)
-        FfiConverterString.write(value.packIntegrityReceipt, into: &buf)
+        FfiConverterString.write(value.loadedModelSha256, into: &buf)
+        FfiConverterString.write(value.verifiedInventoryDigest, into: &buf)
+        FfiConverterString.write(value.revalidationEvidenceId, into: &buf)
+        FfiConverterString.write(value.revalidatedProcessInstanceId, into: &buf)
         FfiConverterTypeColdEvidence.write(value.coldEvidence, into: &buf)
         FfiConverterUInt32.write(value.startTemperatureCelsiusTenths, into: &buf)
         FfiConverterUInt64.write(value.cooldownDurationMs, into: &buf)
@@ -8974,6 +9008,73 @@ public func FfiConverterTypeOperationKind_lower(_ value: OperationKind) -> RustB
 
 
 
+/**
+ * How candidates are interleaved. A closed policy, validated against the
+ * actual plan — not an assertion.
+ */
+
+public enum OrderPolicy: Equatable, Hashable {
+    
+    /**
+     * Timed runs proceed A, B, B, A per seed so ordering and accumulated
+     * heat cannot favour either candidate.
+     */
+    case counterbalancedAbba
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension OrderPolicy: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOrderPolicy: FfiConverterRustBuffer {
+    typealias SwiftType = OrderPolicy
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OrderPolicy {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .counterbalancedAbba
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: OrderPolicy, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .counterbalancedAbba:
+            writeInt(&buf, Int32(1))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOrderPolicy_lift(_ buf: RustBuffer) throws -> OrderPolicy {
+    return try FfiConverterTypeOrderPolicy.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOrderPolicy_lower(_ value: OrderPolicy) -> RustBuffer {
+    return FfiConverterTypeOrderPolicy.lower(value)
+}
+
+
+
 
 public enum PromotionVerdict: Equatable, Hashable {
     
@@ -12095,11 +12196,16 @@ public func candidateIdentity(candidate: EvaluationCandidate) -> String  {
 })
 }
 /**
- * Derive the promotion aggregate from the ledger. The frozen rule: cold and
- * warm loads come from their own modes, throughput and latency from the
- * TIMED runs only (warmups excluded), memory and temperature are peaks
- * across every run, cancellation latency comes from the cancellation run,
- * and any throttled or unrecovered run poisons the aggregate.
+ * Derive the promotion aggregate as a conservative WORST-CASE envelope.
+ *
+ * These fields are compared against `max_*` ceilings and `min_*` floors, so
+ * averaging is the wrong operator: a mean lets one bad run be smoothed away,
+ * and with only three seeds a median hides it even harder. A candidate
+ * passes only if EVERY qualifying run passes.
+ *
+ * Descriptive statistics (mean, median, spread, pooled throughput) belong in
+ * a separate report for comparing typical behaviour — they do not decide
+ * whether a hard product ceiling is met.
  */
 public func deriveCostObservation(observations: [RunObservation], installedBytes: UInt64) -> CostObservation?  {
     return try!  FfiConverterOptionTypeCostObservation.lift(try! rustCall() {
@@ -12193,6 +12299,22 @@ public func validateEvaluationProtocol(`protocol`: EvaluationProtocol) -> [Strin
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_validate_evaluation_protocol(
         FfiConverterTypeEvaluationProtocol_lower(`protocol`),uniffiCallStatus
+    )
+})
+}
+/**
+ * Cross-candidate checks that cannot live inside per-candidate admission:
+ * the global run ORDER, and process-restart evidence spanning both
+ * candidates. `admit_result` rebuilds its process set per candidate, so a
+ * restart between A and B is only provable here.
+ */
+public func validateGlobalLedger(`protocol`: EvaluationProtocol, resultA: CandidateResult, resultB: CandidateResult) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_validate_global_ledger(
+        FfiConverterTypeEvaluationProtocol_lower(`protocol`),
+        FfiConverterTypeCandidateResult_lower(resultA),
+        FfiConverterTypeCandidateResult_lower(resultB),uniffiCallStatus
     )
 })
 }
@@ -12634,7 +12756,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_func_candidate_identity() != 36234) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation() != 33145) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation() != 50431) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion() != 42781) {
@@ -12656,6 +12778,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_validate_evaluation_protocol() != 17041) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_global_ledger() != 37692) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_validate_run_environment() != 53649) {

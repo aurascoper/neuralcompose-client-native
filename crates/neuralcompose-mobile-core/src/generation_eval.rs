@@ -232,8 +232,16 @@ pub struct RunObservation {
     pub observed_brightness_percent: u32,
     pub observed_airplane_mode: bool,
     pub process_instance_id: String,
-    /// Digest proving the pack was re-verified before this run.
-    pub pack_integrity_receipt: String,
+    /// The artifact this run loaded, as OBSERVED by the runtime when it
+    /// opened the file — not copied from the manifest.
+    pub loaded_model_sha256: String,
+    /// The model-pack layer's verified inventory digest.
+    pub verified_inventory_digest: String,
+    /// Evidence that revalidation actually happened BEFORE this run. A known
+    /// digest can be copied; this cannot be produced without re-verifying.
+    pub revalidation_evidence_id: String,
+    /// Which process performed that revalidation.
+    pub revalidated_process_instance_id: String,
     pub cold_evidence: ColdEvidence,
     pub start_temperature_celsius_tenths: u32,
     pub cooldown_duration_ms: u64,
@@ -396,6 +404,17 @@ pub fn candidate_identity(candidate: EvaluationCandidate) -> String {
 // unchanged in history; this supersedes it and, because every term is hashed,
 // necessarily yields a DIFFERENT protocol identity.
 
+/// How candidates are interleaved. A closed policy, validated against the
+/// actual plan — not an assertion.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum OrderPolicy {
+    /// Timed runs proceed A, B, B, A per seed so ordering and accumulated
+    /// heat cannot favour either candidate.
+    CounterbalancedAbba,
+}
+
 /// What "cold" honestly means on Android. An ordinary app cannot drop the OS
 /// page cache, so a force-stopped process is process-cold while the model may
 /// still be resident in cache — the evidence is named for what it is.
@@ -487,9 +506,9 @@ pub struct RunEnvironment {
     pub restart_process_between_candidates: bool,
     /// Pack integrity re-verified between candidates.
     pub recheck_pack_integrity_between_candidates: bool,
-    /// Candidate order alternates rather than running all of A then all of B,
-    /// so ordering and accumulated heat do not bias one candidate.
-    pub alternating_candidate_order: bool,
+    /// v4: the global ordering policy, validated against the plan itself. A
+    /// boolean could be true while the plan ran all of A then all of B.
+    pub order_policy: OrderPolicy,
 }
 
 /// Is a battery figure taken under these conditions interpretable as an
@@ -510,9 +529,7 @@ pub fn validate_run_environment(env: RunEnvironment) -> Vec<String> {
     if env.thermal_start_ceiling_celsius_tenths == 0 {
         errs.push("thermalStartCeiling must be set".into());
     }
-    if !env.alternating_candidate_order {
-        errs.push("candidate order must alternate to control ordering bias".into());
-    }
+
     if !env.restart_process_between_candidates {
         errs.push("process must restart between candidates".into());
     }
@@ -626,8 +643,8 @@ pub struct CandidateResult {
 pub fn validate_evaluation_protocol(protocol: EvaluationProtocol) -> Vec<String> {
     let mut e = validate_run_environment(protocol.environment.clone());
     let mut bad = |m: &str| e.push(m.to_string());
-    if protocol.protocol_version != 3 {
-        bad("unsupported protocolVersion (v3 expected)");
+    if protocol.protocol_version != 4 {
+        bad("unsupported protocolVersion (v4 expected)");
     }
     if protocol.corpus_id.trim().is_empty() || protocol.quality_rubric_id.trim().is_empty() {
         bad("corpusId and qualityRubricId must be non-empty");
@@ -753,11 +770,16 @@ pub fn validate_evaluation_protocol(protocol: EvaluationProtocol) -> Vec<String>
     e
 }
 
-/// Derive the promotion aggregate from the ledger. The frozen rule: cold and
-/// warm loads come from their own modes, throughput and latency from the
-/// TIMED runs only (warmups excluded), memory and temperature are peaks
-/// across every run, cancellation latency comes from the cancellation run,
-/// and any throttled or unrecovered run poisons the aggregate.
+/// Derive the promotion aggregate as a conservative WORST-CASE envelope.
+///
+/// These fields are compared against `max_*` ceilings and `min_*` floors, so
+/// averaging is the wrong operator: a mean lets one bad run be smoothed away,
+/// and with only three seeds a median hides it even harder. A candidate
+/// passes only if EVERY qualifying run passes.
+///
+/// Descriptive statistics (mean, median, spread, pooled throughput) belong in
+/// a separate report for comparing typical behaviour — they do not decide
+/// whether a hard product ceiling is met.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn derive_cost_observation(
     observations: Vec<RunObservation>,
@@ -767,10 +789,6 @@ pub fn derive_cost_observation(
         .iter()
         .filter(|o| matches!(o.mode, RunMode::Cold | RunMode::Warm))
         .collect();
-    if timed.is_empty() {
-        return None;
-    }
-    let mean = |vals: Vec<f64>| vals.iter().sum::<f64>() / vals.len() as f64;
     let cold: Vec<&&RunObservation> = timed.iter().filter(|o| o.mode == RunMode::Cold).collect();
     let warm: Vec<&&RunObservation> = timed.iter().filter(|o| o.mode == RunMode::Warm).collect();
     if cold.is_empty() || warm.is_empty() {
@@ -783,31 +801,38 @@ pub fn derive_cost_observation(
             num as f64 / (ms as f64 / 1000.0)
         }
     };
+    // Throughput floors take the WORST (minimum) observed rate.
+    let min_rate = |f: &dyn Fn(&RunObservation) -> f64| -> Option<f64> {
+        timed
+            .iter()
+            .map(|o| f(o))
+            .fold(None, |acc: Option<f64>, v| {
+                Some(acc.map_or(v, |a: f64| a.min(v)))
+            })
+    };
+    // Battery comes from the SUSTAINED run alone: summing every warmup, timed
+    // and cancellation run would make the figure move with plan length rather
+    // than with the model.
+    let sustained = observations.iter().find(|o| o.mode == RunMode::Sustained)?;
+    // Lifecycle recovery must be exercised, not defaulted onto every run.
+    let lifecycle_recovered = sustained.metrics.background_foreground_recovered;
     let cancellation = observations
         .iter()
         .find(|o| o.mode == RunMode::Cancellation)
         .and_then(|o| o.metrics.cancellation_latency_ms)?;
     Some(CostObservation {
-        cold_load_ms: mean(cold.iter().map(|o| o.metrics.load_ms as f64).collect()) as u64,
-        warm_load_ms: mean(warm.iter().map(|o| o.metrics.load_ms as f64).collect()) as u64,
-        time_to_first_token_ms: mean(
-            timed
-                .iter()
-                .map(|o| o.metrics.time_to_first_token_ms as f64)
-                .collect(),
-        ) as u64,
-        prompt_tokens_per_second: mean(
-            timed
-                .iter()
-                .map(|o| rate(o.metrics.prompt_tokens, o.metrics.prompt_duration_ms))
-                .collect(),
-        ),
-        generation_tokens_per_second: mean(
-            timed
-                .iter()
-                .map(|o| rate(o.metrics.generated_tokens, o.metrics.generation_duration_ms))
-                .collect(),
-        ),
+        cold_load_ms: cold.iter().map(|o| o.metrics.load_ms).max()?,
+        warm_load_ms: warm.iter().map(|o| o.metrics.load_ms).max()?,
+        time_to_first_token_ms: timed
+            .iter()
+            .map(|o| o.metrics.time_to_first_token_ms)
+            .max()?,
+        prompt_tokens_per_second: min_rate(&|o: &RunObservation| {
+            rate(o.metrics.prompt_tokens, o.metrics.prompt_duration_ms)
+        })?,
+        generation_tokens_per_second: min_rate(&|o: &RunObservation| {
+            rate(o.metrics.generated_tokens, o.metrics.generation_duration_ms)
+        })?,
         peak_rss_mb: observations.iter().map(|o| o.metrics.peak_rss_mb).max()?,
         model_memory_mb: observations
             .iter()
@@ -815,18 +840,13 @@ pub fn derive_cost_observation(
             .max()?,
         cancellation_latency_ms: cancellation,
         installed_bytes,
-        battery_drop_tenths_percent: observations
-            .iter()
-            .map(|o| o.metrics.battery_drop_tenths_percent)
-            .sum(),
+        battery_drop_tenths_percent: sustained.metrics.battery_drop_tenths_percent,
         peak_temperature_celsius_tenths: observations
             .iter()
             .map(|o| o.metrics.peak_temperature_celsius_tenths)
             .max()?,
         thermally_throttled: observations.iter().any(|o| o.metrics.throttled),
-        background_foreground_recovered: observations
-            .iter()
-            .all(|o| o.metrics.background_foreground_recovered),
+        background_foreground_recovered: lifecycle_recovered,
     })
 }
 
@@ -976,6 +996,7 @@ pub fn admit_result(
     }
     let mut run_ids = std::collections::HashSet::new();
     let mut seen_processes = std::collections::HashSet::new();
+    let mut revalidations = std::collections::HashSet::new();
     for (entry, obs) in planned.iter().zip(result.observations.iter()) {
         if obs.sequence_index != entry.index || obs.mode != entry.mode || obs.seed != entry.seed {
             return Some(AdmissionFailure::RunLedgerMismatch {
@@ -992,14 +1013,31 @@ pub fn admit_result(
                 reason: format!("run {}: {:?}", entry.index, obs.disposition),
             });
         }
-        // The receipt must be BOUND to this candidate's artifact, not merely
-        // present — a nonempty string proves nothing.
-        if obs.pack_integrity_receipt != candidate.artifact_sha256_hex {
+        // Identity: what the runtime actually opened must be this candidate.
+        if obs.loaded_model_sha256 != candidate.artifact_sha256_hex {
             return Some(AdmissionFailure::RunLedgerMismatch {
                 reason: format!(
-                    "run {} pack receipt is not this candidate's artifact digest",
+                    "run {} loaded a different artifact than this candidate",
                     entry.index
                 ),
+            });
+        }
+        // Freshness: a copied digest proves identity, never revalidation.
+        if obs.revalidation_evidence_id.trim().is_empty()
+            || obs.verified_inventory_digest.trim().is_empty()
+        {
+            return Some(AdmissionFailure::RunLedgerMismatch {
+                reason: format!("run {} has no fresh revalidation evidence", entry.index),
+            });
+        }
+        if !revalidations.insert(obs.revalidation_evidence_id.clone()) {
+            return Some(AdmissionFailure::RunLedgerMismatch {
+                reason: format!("run {} reused an earlier revalidation", entry.index),
+            });
+        }
+        if obs.revalidated_process_instance_id != obs.process_instance_id {
+            return Some(AdmissionFailure::RunLedgerMismatch {
+                reason: format!("run {} was revalidated by a different process", entry.index),
             });
         }
         if obs.run_id.trim().is_empty() || !run_ids.insert(obs.run_id.clone()) {
@@ -1197,6 +1235,67 @@ pub enum PromotionVerdict {
     PromoteNothing { reason: String },
 }
 
+/// Cross-candidate checks that cannot live inside per-candidate admission:
+/// the global run ORDER, and process-restart evidence spanning both
+/// candidates. `admit_result` rebuilds its process set per candidate, so a
+/// restart between A and B is only provable here.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn validate_global_ledger(
+    protocol: EvaluationProtocol,
+    result_a: CandidateResult,
+    result_b: CandidateResult,
+) -> Vec<String> {
+    let mut errs = Vec::new();
+    let mut all: Vec<&RunObservation> = result_a
+        .observations
+        .iter()
+        .chain(result_b.observations.iter())
+        .collect();
+    all.sort_by_key(|o| o.sequence_index);
+
+    // Indices must be the plan's, once each.
+    let planned: Vec<u32> = protocol.run_plan.iter().map(|e| e.index).collect();
+    let observed: Vec<u32> = all.iter().map(|o| o.sequence_index).collect();
+    if planned != observed {
+        errs.push("combined ledger does not cover the frozen plan exactly once".into());
+    }
+
+    match protocol.environment.order_policy {
+        OrderPolicy::CounterbalancedAbba => {
+            // Within each seed, the timed runs must read A, B, B, A.
+            let timed: Vec<&&RunObservation> = all
+                .iter()
+                .filter(|o| matches!(o.mode, RunMode::Cold | RunMode::Warm))
+                .collect();
+            for chunk in timed.chunks(4) {
+                if chunk.len() < 4 {
+                    continue;
+                }
+                let ids: Vec<&String> = chunk.iter().map(|o| &o.candidate_id).collect();
+                if !(ids[0] == ids[3] && ids[1] == ids[2] && ids[0] != ids[1]) {
+                    errs.push("timed runs are not counterbalanced ABBA".into());
+                    break;
+                }
+            }
+        }
+    }
+
+    // A process instance may not span both candidates.
+    let a_procs: std::collections::HashSet<&String> = result_a
+        .observations
+        .iter()
+        .map(|o| &o.process_instance_id)
+        .collect();
+    if result_b
+        .observations
+        .iter()
+        .any(|o| a_procs.contains(&o.process_instance_id))
+    {
+        errs.push("a process instance was shared across candidates".into());
+    }
+    errs
+}
+
 /// The frozen decision rule, behind a sealed door. There is deliberately no
 /// promotion path that accepts already-assumed-valid results: this admits
 /// both candidates itself, so an inadmissible run cannot be promoted by
@@ -1224,6 +1323,10 @@ pub fn evaluate_promotion(
     }
     if let Some(f) = admit_result(result_b.clone(), candidate_b.clone(), protocol.clone()) {
         return nothing(format!("candidate B inadmissible: {f:?}"));
+    }
+    let global = validate_global_ledger(protocol.clone(), result_a.clone(), result_b.clone());
+    if !global.is_empty() {
+        return nothing(format!("global ledger invalid: {}", global.join("; ")));
     }
 
     let (sa, sb) = match (

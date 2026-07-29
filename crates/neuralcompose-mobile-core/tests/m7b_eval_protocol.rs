@@ -56,7 +56,7 @@ fn environment() -> RunEnvironment {
         airplane_mode: true,
         restart_process_between_candidates: true,
         recheck_pack_integrity_between_candidates: true,
-        alternating_candidate_order: true,
+        order_policy: OrderPolicy::CounterbalancedAbba,
     }
 }
 
@@ -117,7 +117,7 @@ fn metrics(mode: RunMode) -> RunMetrics {
 
 fn protocol() -> EvaluationProtocol {
     EvaluationProtocol {
-        protocol_version: 3,
+        protocol_version: 4,
         corpus_id: "m7b-sanitized-v1".into(),
         corpus_sha256_hex: sha(0xa1),
         prompt_count: 1,
@@ -241,7 +241,10 @@ fn observation(idx: u32, cand: &str, mode: RunMode, seed: u64) -> RunObservation
         observed_brightness_percent: 20,
         observed_airplane_mode: true,
         process_instance_id: proc.clone(),
-        pack_integrity_receipt: candidate(cand).artifact_sha256_hex,
+        loaded_model_sha256: candidate(cand).artifact_sha256_hex,
+        verified_inventory_digest: sha(0x6b),
+        revalidation_evidence_id: format!("reval-{cand}-{idx}"),
+        revalidated_process_instance_id: proc.clone(),
         cold_evidence: ColdEvidence::ProcessCold {
             process_instance_id: proc,
         },
@@ -526,7 +529,7 @@ fn runs_cannot_be_dropped_reordered_or_selectively_discarded() {
     ));
     // A run with no integrity receipt is not evidence.
     let mut no_receipt = result(A, 0.8, 400_000_000);
-    no_receipt.observations[0].pack_integrity_receipt = "  ".into();
+    no_receipt.observations[0].revalidation_evidence_id = "  ".into();
     assert!(matches!(
         admit_result(no_receipt, candidate(A), p.clone()),
         Some(AdmissionFailure::RunLedgerMismatch { .. })
@@ -828,9 +831,6 @@ fn the_environment_requires_its_bias_controls() {
     assert!(validate_run_environment(environment()).is_empty());
     type Mutation = fn(&mut RunEnvironment);
     let required: Vec<(&str, Mutation)> = vec![
-        ("alternating order", |e| {
-            e.alternating_candidate_order = false
-        }),
         ("process restart", |e| {
             e.restart_process_between_candidates = false
         }),
@@ -847,4 +847,87 @@ fn the_environment_requires_its_bias_controls() {
         mutate(&mut e);
         assert!(!validate_run_environment(e).is_empty(), "{name} required");
     }
+}
+
+// v4: ceilings are compared against the WORST run, never an average.
+#[test]
+fn one_bad_run_cannot_be_averaged_away() {
+    // Two good cold runs and one slow one: the mean would pass, the envelope
+    // must not.
+    let mut r = result(A, 0.9, 400_000_000);
+    let slow_idx = r
+        .observations
+        .iter()
+        .position(|o| o.mode == RunMode::Cold)
+        .unwrap();
+    r.observations[slow_idx].metrics.time_to_first_token_ms = 9_000;
+    let derived = derive_cost_observation(r.observations.clone(), 400_000_000).unwrap();
+    assert_eq!(
+        derived.time_to_first_token_ms, 9_000,
+        "the envelope must take the worst run, not the mean"
+    );
+    assert!(meets_thresholds(derived, thresholds())
+        .iter()
+        .any(|f| f == "timeToFirstTokenMs"));
+
+    // Throughput floors take the MINIMUM observed rate.
+    let mut slowgen = result(B, 0.9, 400_000_000);
+    let i = slowgen
+        .observations
+        .iter()
+        .position(|o| o.mode == RunMode::Warm)
+        .unwrap();
+    slowgen.observations[i].metrics.generation_duration_ms = 1_000_000;
+    let d = derive_cost_observation(slowgen.observations, 400_000_000).unwrap();
+    assert!(
+        d.generation_tokens_per_second < 1.0,
+        "a single slow run must drag the floor down, got {}",
+        d.generation_tokens_per_second
+    );
+
+    // Battery comes from the sustained run alone, so it does not grow with
+    // the length of the run plan.
+    let base = result(A, 0.9, 400_000_000);
+    let d = derive_cost_observation(base.observations.clone(), 400_000_000).unwrap();
+    assert_eq!(d.battery_drop_tenths_percent, 2, "sustained run only");
+}
+
+// The global order is validated against the plan, not asserted.
+#[test]
+fn a_non_counterbalanced_order_is_rejected_globally() {
+    let p = protocol();
+    assert!(
+        validate_global_ledger(p.clone(), result(A, 0.8, 1), result(B, 0.8, 1)).is_empty(),
+        "the frozen ABBA plan validates"
+    );
+    // A process instance shared across candidates is refused.
+    let a = result(A, 0.8, 1);
+    let mut b = result(B, 0.8, 1);
+    let shared = a.observations[0].process_instance_id.clone();
+    b.observations[0].process_instance_id = shared;
+    assert!(!validate_global_ledger(p.clone(), a, b).is_empty());
+    // A ledger that does not cover the plan exactly once is refused.
+    let mut short = result(A, 0.8, 1);
+    short.observations.pop();
+    assert!(!validate_global_ledger(p, short, result(B, 0.8, 1)).is_empty());
+}
+
+// Fresh revalidation evidence cannot be a copied digest.
+#[test]
+fn revalidation_evidence_must_be_fresh_per_run() {
+    let p = protocol();
+    let mut reused = result(A, 0.8, 400_000_000);
+    let first = reused.observations[0].revalidation_evidence_id.clone();
+    reused.observations[1].revalidation_evidence_id = first;
+    assert!(matches!(
+        admit_result(reused, candidate(A), p.clone()),
+        Some(AdmissionFailure::RunLedgerMismatch { .. })
+    ));
+    // A run that loaded a different artifact is not this candidate's run.
+    let mut wrong_artifact = result(A, 0.8, 400_000_000);
+    wrong_artifact.observations[0].loaded_model_sha256 = sha(0x77);
+    assert!(matches!(
+        admit_result(wrong_artifact, candidate(A), p),
+        Some(AdmissionFailure::RunLedgerMismatch { .. })
+    ));
 }
