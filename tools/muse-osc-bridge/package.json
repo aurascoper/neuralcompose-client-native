@@ -1,0 +1,10 @@
+{
+  "name": "neuralcompose-muse-osc-bridge",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Bridges Mind Monitor /muse/eeg OSC (UDP) to the frozen /api/eeg/stream WebSocket contract. Development tool, not a product surface.",
+  "dependencies": {
+    "ws": "8.21.1"
+  }
+}

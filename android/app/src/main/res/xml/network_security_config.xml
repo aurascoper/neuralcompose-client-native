@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Cleartext ws:// permitted ONLY for the loopback dev stub (reached on the
-     device via `adb reverse tcp:8787 tcp:8787`) and the emulator host alias.
-     Production endpoints use TLS; no global cleartext, no broad exemption. -->
+     device via `adb reverse tcp:8787 tcp:8787`), the emulator host alias, and
+     the named LAN bridge hosts used by the Muse golden-capture gate.
+     Production endpoints use TLS; no global cleartext, no broad exemption.
+
+     This format has no CIDR support, so a LAN bridge must be listed here BY
+     ADDRESS — deliberately. Adding a host is a decision, not a default: the
+     app will not stream EEG in the clear to an address nobody signed off on.
+     The EEG screen reports "cleartext blocked" for any host missing here, so
+     the failure is actionable rather than a bare socket error. -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false" />
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
         <domain includeSubdomains="false">10.0.2.2</domain>
+        <!-- Muse golden-capture LAN bridge (operator workstation). -->
+        <domain includeSubdomains="false">192.168.40.86</domain>
     </domain-config>
 </network-security-config>

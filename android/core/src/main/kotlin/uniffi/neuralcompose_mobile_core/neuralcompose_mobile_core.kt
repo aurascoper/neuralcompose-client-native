@@ -675,6 +675,16 @@ internal object IntegrityCheckingUniffiLib {
     }
     external fun uniffi_neuralcompose_mobile_core_checksum_func_sha256_hex(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_capture_manifest_filename(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_capture_payload_filename(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_encode_capture_line(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_partial_suffix(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_verify_capture(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_derive_ws_url(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_parse_use_mock(
@@ -771,6 +781,14 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_accepted_sample_count(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_finish(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_messages_received(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_on_message(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_acknowledge_operation_failure(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_active_installation(
@@ -818,6 +836,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_new(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_constructor_capturerecorder_new(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_constructor_modelpackinstaller_new(
     ): Int
@@ -874,6 +894,20 @@ internal object UniffiLib {
     external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_phase(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_clone_capturerecorder(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_neuralcompose_mobile_core_fn_free_capturerecorder(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_neuralcompose_mobile_core_fn_constructor_capturerecorder_new(`recordingId`: RustBuffer.ByValue,`build`: RustBuffer.ByValue,`startedAtMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_accepted_sample_count(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_finish(`ptr`: Long,`endedAtMs`: Long,`payloadByteSize`: Long,`payloadSha256Hex`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_messages_received(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_on_message(`ptr`: Long,`payload`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_clone_modelpackinstaller(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
@@ -934,6 +968,16 @@ internal object UniffiLib {
     external fun uniffi_neuralcompose_mobile_core_fn_method_streammonitor_stream_snapshot(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_sha256_hex(`bytes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_capture_manifest_filename(`recordingId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_capture_payload_filename(`recordingId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_encode_capture_line(`line`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_partial_suffix(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_verify_capture(`jsonl`: RustBuffer.ByValue,`manifest`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_derive_ws_url(`serverUrl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1129,6 +1173,21 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_sha256_hex() != 20754) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_capture_manifest_filename() != 11684) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_capture_payload_filename() != 872) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_encode_capture_line() != 48268) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_partial_suffix() != 7216) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_verify_capture() != 63008) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_derive_ws_url() != 13734) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1273,6 +1332,18 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot() != 28404) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_accepted_sample_count() != 19169) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_finish() != 23917) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_messages_received() != 62992) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_on_message() != 43533) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_acknowledge_operation_failure() != 33736) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1343,6 +1414,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests() != 11328) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_capturerecorder_new() != 34159) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_modelpackinstaller_new() != 43648) {
@@ -2265,6 +2339,354 @@ public object FfiConverterTypeAudioLifecycle: FfiConverter<AudioLifecycle, Long>
     override fun allocationSize(value: AudioLifecycle) = 8UL
 
     override fun write(value: AudioLifecycle, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * Accumulates a recording. Effect-free: it returns the exact bytes the
+ * shell must append and the manifest the shell must publish, but never
+ * touches a file. `now_ms` is the shell's monotonic receive time.
+ */
+public interface CaptureRecorderInterface {
+    
+    fun `acceptedSampleCount`(): kotlin.ULong
+    
+    /**
+     * Seal the recording. The shell supplies the persisted payload's byte
+     * size and digest — the two facts only the filesystem knows.
+     */
+    fun `finish`(`endedAtMs`: kotlin.ULong, `payloadByteSize`: kotlin.ULong, `payloadSha256Hex`: kotlin.String): CaptureManifest
+    
+    fun `messagesReceived`(): kotlin.ULong
+    
+    /**
+     * Record one received message and return the JSONL line to append.
+     * Decoding happens here — the shell never parses EEG. A message that
+     * decodes to nothing is still preserved verbatim and counted as
+     * rejected: a capture that silently dropped malformed frames would
+     * misrepresent the stream.
+     */
+    fun `onMessage`(`payload`: kotlin.String, `nowMs`: kotlin.ULong): kotlin.String
+    
+    companion object
+}
+
+/**
+ * Accumulates a recording. Effect-free: it returns the exact bytes the
+ * shell must append and the manifest the shell must publish, but never
+ * touches a file. `now_ms` is the shell's monotonic receive time.
+ */
+open class CaptureRecorder: Disposable, AutoCloseable, CaptureRecorderInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    constructor(`recordingId`: kotlin.String, `build`: CaptureBuildIdentity, `startedAtMs`: kotlin.ULong) :
+        this(UniffiWithHandle, 
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_constructor_capturerecorder_new(
+    
+        
+        FfiConverterString.lower(`recordingId`),
+        FfiConverterTypeCaptureBuildIdentity.lower(`build`),
+        FfiConverterULong.lower(`startedAtMs`),_status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_neuralcompose_mobile_core_fn_free_capturerecorder(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_neuralcompose_mobile_core_fn_clone_capturerecorder(handle, status)
+        }
+    }
+
+    override fun `acceptedSampleCount`(): kotlin.ULong {
+            return FfiConverterULong.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_accepted_sample_count(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Seal the recording. The shell supplies the persisted payload's byte
+     * size and digest — the two facts only the filesystem knows.
+     */override fun `finish`(`endedAtMs`: kotlin.ULong, `payloadByteSize`: kotlin.ULong, `payloadSha256Hex`: kotlin.String): CaptureManifest {
+            return FfiConverterTypeCaptureManifest.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_finish(
+        it,
+        
+        FfiConverterULong.lower(`endedAtMs`),
+        FfiConverterULong.lower(`payloadByteSize`),
+        FfiConverterString.lower(`payloadSha256Hex`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `messagesReceived`(): kotlin.ULong {
+            return FfiConverterULong.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_messages_received(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Record one received message and return the JSONL line to append.
+     * Decoding happens here — the shell never parses EEG. A message that
+     * decodes to nothing is still preserved verbatim and counted as
+     * rejected: a capture that silently dropped malformed frames would
+     * misrepresent the stream.
+     */override fun `onMessage`(`payload`: kotlin.String, `nowMs`: kotlin.ULong): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_on_message(
+        it,
+        
+        FfiConverterString.lower(`payload`),
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCaptureRecorder: FfiConverter<CaptureRecorder, Long> {
+    override fun lower(value: CaptureRecorder): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): CaptureRecorder {
+        return CaptureRecorder(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): CaptureRecorder {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: CaptureRecorder) = 8UL
+
+    override fun write(value: CaptureRecorder, buf: ByteBuffer) {
         buf.putLong(lower(value))
     }
 }
@@ -3538,6 +3960,242 @@ public object FfiConverterTypeBackendObservation: FfiConverterRustBuffer<Backend
             FfiConverterOptionalDouble.write(value.`maxEmbeddingDivergence`, buf)
             FfiConverterBoolean.write(value.`greedyDeterminismAvailable`, buf)
             FfiConverterOptionalBoolean.write(value.`generatedTokensMatchReference`, buf)
+    }
+}
+
+
+
+/**
+ * Build identity the shell supplies once per recording.
+ */
+data class CaptureBuildIdentity (
+    var `platform`: kotlin.String
+    , 
+    var `osVersion`: kotlin.String
+    , 
+    var `appVersion`: kotlin.String
+    , 
+    var `gitCommit`: kotlin.String
+    , 
+    var `bridgeLocality`: BridgeLocality
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCaptureBuildIdentity: FfiConverterRustBuffer<CaptureBuildIdentity> {
+    override fun read(buf: ByteBuffer): CaptureBuildIdentity {
+        return CaptureBuildIdentity(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeBridgeLocality.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CaptureBuildIdentity) = (
+            FfiConverterString.allocationSize(value.`platform`) +
+            FfiConverterString.allocationSize(value.`osVersion`) +
+            FfiConverterString.allocationSize(value.`appVersion`) +
+            FfiConverterString.allocationSize(value.`gitCommit`) +
+            FfiConverterTypeBridgeLocality.allocationSize(value.`bridgeLocality`)
+    )
+
+    override fun write(value: CaptureBuildIdentity, buf: ByteBuffer) {
+            FfiConverterString.write(value.`platform`, buf)
+            FfiConverterString.write(value.`osVersion`, buf)
+            FfiConverterString.write(value.`appVersion`, buf)
+            FfiConverterString.write(value.`gitCommit`, buf)
+            FfiConverterTypeBridgeLocality.write(value.`bridgeLocality`, buf)
+    }
+}
+
+
+
+/**
+ * One preserved WebSocket message.
+ */
+data class CaptureLine (
+    var `sequence`: kotlin.ULong
+    , 
+    var `receivedAtMonotonicMs`: kotlin.ULong
+    , 
+    var `acceptedSampleCount`: kotlin.UInt
+    , 
+    /**
+     * The raw frame text, unmodified. Never a re-serialized reinterpretation.
+     */
+    var `payload`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCaptureLine: FfiConverterRustBuffer<CaptureLine> {
+    override fun read(buf: ByteBuffer): CaptureLine {
+        return CaptureLine(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CaptureLine) = (
+            FfiConverterULong.allocationSize(value.`sequence`) +
+            FfiConverterULong.allocationSize(value.`receivedAtMonotonicMs`) +
+            FfiConverterUInt.allocationSize(value.`acceptedSampleCount`) +
+            FfiConverterString.allocationSize(value.`payload`)
+    )
+
+    override fun write(value: CaptureLine, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`sequence`, buf)
+            FfiConverterULong.write(value.`receivedAtMonotonicMs`, buf)
+            FfiConverterUInt.write(value.`acceptedSampleCount`, buf)
+            FfiConverterString.write(value.`payload`, buf)
+    }
+}
+
+
+
+data class CaptureManifest (
+    var `schemaId`: kotlin.String
+    , 
+    var `lineSchemaId`: kotlin.String
+    , 
+    var `recordingId`: kotlin.String
+    , 
+    var `platform`: kotlin.String
+    , 
+    var `osVersion`: kotlin.String
+    , 
+    var `appVersion`: kotlin.String
+    , 
+    var `gitCommit`: kotlin.String
+    , 
+    var `bridgeLocality`: BridgeLocality
+    , 
+    var `startedAtMonotonicMs`: kotlin.ULong
+    , 
+    var `endedAtMonotonicMs`: kotlin.ULong
+    , 
+    var `durationMs`: kotlin.ULong
+    , 
+    var `messagesReceived`: kotlin.ULong
+    , 
+    var `acceptedSampleCount`: kotlin.ULong
+    , 
+    var `rejectedMessageCount`: kotlin.ULong
+    , 
+    /**
+     * Seconds since stream start — the wire axis, never wall clock.
+     */
+    var `firstSourceTimestamp`: kotlin.Double?
+    , 
+    var `lastSourceTimestamp`: kotlin.Double?
+    , 
+    var `channelOrder`: List<kotlin.String>
+    , 
+    var `payloadByteSize`: kotlin.ULong
+    , 
+    var `payloadSha256Hex`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCaptureManifest: FfiConverterRustBuffer<CaptureManifest> {
+    override fun read(buf: ByteBuffer): CaptureManifest {
+        return CaptureManifest(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeBridgeLocality.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CaptureManifest) = (
+            FfiConverterString.allocationSize(value.`schemaId`) +
+            FfiConverterString.allocationSize(value.`lineSchemaId`) +
+            FfiConverterString.allocationSize(value.`recordingId`) +
+            FfiConverterString.allocationSize(value.`platform`) +
+            FfiConverterString.allocationSize(value.`osVersion`) +
+            FfiConverterString.allocationSize(value.`appVersion`) +
+            FfiConverterString.allocationSize(value.`gitCommit`) +
+            FfiConverterTypeBridgeLocality.allocationSize(value.`bridgeLocality`) +
+            FfiConverterULong.allocationSize(value.`startedAtMonotonicMs`) +
+            FfiConverterULong.allocationSize(value.`endedAtMonotonicMs`) +
+            FfiConverterULong.allocationSize(value.`durationMs`) +
+            FfiConverterULong.allocationSize(value.`messagesReceived`) +
+            FfiConverterULong.allocationSize(value.`acceptedSampleCount`) +
+            FfiConverterULong.allocationSize(value.`rejectedMessageCount`) +
+            FfiConverterOptionalDouble.allocationSize(value.`firstSourceTimestamp`) +
+            FfiConverterOptionalDouble.allocationSize(value.`lastSourceTimestamp`) +
+            FfiConverterSequenceString.allocationSize(value.`channelOrder`) +
+            FfiConverterULong.allocationSize(value.`payloadByteSize`) +
+            FfiConverterString.allocationSize(value.`payloadSha256Hex`)
+    )
+
+    override fun write(value: CaptureManifest, buf: ByteBuffer) {
+            FfiConverterString.write(value.`schemaId`, buf)
+            FfiConverterString.write(value.`lineSchemaId`, buf)
+            FfiConverterString.write(value.`recordingId`, buf)
+            FfiConverterString.write(value.`platform`, buf)
+            FfiConverterString.write(value.`osVersion`, buf)
+            FfiConverterString.write(value.`appVersion`, buf)
+            FfiConverterString.write(value.`gitCommit`, buf)
+            FfiConverterTypeBridgeLocality.write(value.`bridgeLocality`, buf)
+            FfiConverterULong.write(value.`startedAtMonotonicMs`, buf)
+            FfiConverterULong.write(value.`endedAtMonotonicMs`, buf)
+            FfiConverterULong.write(value.`durationMs`, buf)
+            FfiConverterULong.write(value.`messagesReceived`, buf)
+            FfiConverterULong.write(value.`acceptedSampleCount`, buf)
+            FfiConverterULong.write(value.`rejectedMessageCount`, buf)
+            FfiConverterOptionalDouble.write(value.`firstSourceTimestamp`, buf)
+            FfiConverterOptionalDouble.write(value.`lastSourceTimestamp`, buf)
+            FfiConverterSequenceString.write(value.`channelOrder`, buf)
+            FfiConverterULong.write(value.`payloadByteSize`, buf)
+            FfiConverterString.write(value.`payloadSha256Hex`, buf)
     }
 }
 
@@ -5913,6 +6571,44 @@ public object FfiConverterTypeBackendRequirement : FfiConverterRustBuffer<Backen
 
 
 /**
+ * Where the bridge sits relative to the device. Recorded so a replay can
+ * never be mistaken for an on-device capture.
+ */
+
+enum class BridgeLocality {
+    
+    LOCAL_NETWORK,
+    REMOTE_ENDPOINT;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeBridgeLocality: FfiConverterRustBuffer<BridgeLocality> {
+    override fun read(buf: ByteBuffer) = try {
+        BridgeLocality.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: BridgeLocality) = 4UL
+
+    override fun write(value: BridgeLocality, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
  * Outcome of a labelled reorder. An enum rather than `Result` so the shape
  * crosses the FFI boundary unchanged (same convention as `RestoreResult`).
  */
@@ -7783,6 +8479,445 @@ public object FfiConverterTypeRecordingPhase : FfiConverterRustBuffer<RecordingP
 
 
 
+sealed class ReplayFailure {
+    
+    object ManifestSchemaMismatch : ReplayFailure()
+    
+    
+    object PayloadDigestMismatch : ReplayFailure()
+    
+    
+    object PayloadSizeMismatch : ReplayFailure()
+    
+    
+    data class MalformedLine(
+        val `lineNumber`: kotlin.ULong) : ReplayFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class LineSchemaMismatch(
+        val `lineNumber`: kotlin.ULong) : ReplayFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class SequenceOutOfOrder(
+        val `lineNumber`: kotlin.ULong) : ReplayFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class ReceiveTimeWentBackwards(
+        val `lineNumber`: kotlin.ULong) : ReplayFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class AcceptedCountMismatch(
+        val `lineNumber`: kotlin.ULong) : ReplayFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object MessageCountMismatch : ReplayFailure()
+    
+    
+    object AcceptedSampleCountMismatch : ReplayFailure()
+    
+    
+    object RejectedMessageCountMismatch : ReplayFailure()
+    
+    
+    data class SourceTimestampNotMonotonic(
+        val `lineNumber`: kotlin.ULong) : ReplayFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class NonFiniteChannel(
+        val `lineNumber`: kotlin.ULong) : ReplayFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class WrongChannelCount(
+        val `lineNumber`: kotlin.ULong) : ReplayFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object FirstSourceTimestampMismatch : ReplayFailure()
+    
+    
+    object LastSourceTimestampMismatch : ReplayFailure()
+    
+    
+    object ChannelOrderMismatch : ReplayFailure()
+    
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeReplayFailure : FfiConverterRustBuffer<ReplayFailure>{
+    override fun read(buf: ByteBuffer): ReplayFailure {
+        return when(buf.getInt()) {
+            1 -> ReplayFailure.ManifestSchemaMismatch
+            2 -> ReplayFailure.PayloadDigestMismatch
+            3 -> ReplayFailure.PayloadSizeMismatch
+            4 -> ReplayFailure.MalformedLine(
+                FfiConverterULong.read(buf),
+                )
+            5 -> ReplayFailure.LineSchemaMismatch(
+                FfiConverterULong.read(buf),
+                )
+            6 -> ReplayFailure.SequenceOutOfOrder(
+                FfiConverterULong.read(buf),
+                )
+            7 -> ReplayFailure.ReceiveTimeWentBackwards(
+                FfiConverterULong.read(buf),
+                )
+            8 -> ReplayFailure.AcceptedCountMismatch(
+                FfiConverterULong.read(buf),
+                )
+            9 -> ReplayFailure.MessageCountMismatch
+            10 -> ReplayFailure.AcceptedSampleCountMismatch
+            11 -> ReplayFailure.RejectedMessageCountMismatch
+            12 -> ReplayFailure.SourceTimestampNotMonotonic(
+                FfiConverterULong.read(buf),
+                )
+            13 -> ReplayFailure.NonFiniteChannel(
+                FfiConverterULong.read(buf),
+                )
+            14 -> ReplayFailure.WrongChannelCount(
+                FfiConverterULong.read(buf),
+                )
+            15 -> ReplayFailure.FirstSourceTimestampMismatch
+            16 -> ReplayFailure.LastSourceTimestampMismatch
+            17 -> ReplayFailure.ChannelOrderMismatch
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ReplayFailure): ULong = when(value) {
+        is ReplayFailure.ManifestSchemaMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ReplayFailure.PayloadDigestMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ReplayFailure.PayloadSizeMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ReplayFailure.MalformedLine -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`lineNumber`)
+            )
+        }
+        is ReplayFailure.LineSchemaMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`lineNumber`)
+            )
+        }
+        is ReplayFailure.SequenceOutOfOrder -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`lineNumber`)
+            )
+        }
+        is ReplayFailure.ReceiveTimeWentBackwards -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`lineNumber`)
+            )
+        }
+        is ReplayFailure.AcceptedCountMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`lineNumber`)
+            )
+        }
+        is ReplayFailure.MessageCountMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ReplayFailure.AcceptedSampleCountMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ReplayFailure.RejectedMessageCountMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ReplayFailure.SourceTimestampNotMonotonic -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`lineNumber`)
+            )
+        }
+        is ReplayFailure.NonFiniteChannel -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`lineNumber`)
+            )
+        }
+        is ReplayFailure.WrongChannelCount -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`lineNumber`)
+            )
+        }
+        is ReplayFailure.FirstSourceTimestampMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ReplayFailure.LastSourceTimestampMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ReplayFailure.ChannelOrderMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: ReplayFailure, buf: ByteBuffer) {
+        when(value) {
+            is ReplayFailure.ManifestSchemaMismatch -> {
+                buf.putInt(1)
+                Unit
+            }
+            is ReplayFailure.PayloadDigestMismatch -> {
+                buf.putInt(2)
+                Unit
+            }
+            is ReplayFailure.PayloadSizeMismatch -> {
+                buf.putInt(3)
+                Unit
+            }
+            is ReplayFailure.MalformedLine -> {
+                buf.putInt(4)
+                FfiConverterULong.write(value.`lineNumber`, buf)
+                Unit
+            }
+            is ReplayFailure.LineSchemaMismatch -> {
+                buf.putInt(5)
+                FfiConverterULong.write(value.`lineNumber`, buf)
+                Unit
+            }
+            is ReplayFailure.SequenceOutOfOrder -> {
+                buf.putInt(6)
+                FfiConverterULong.write(value.`lineNumber`, buf)
+                Unit
+            }
+            is ReplayFailure.ReceiveTimeWentBackwards -> {
+                buf.putInt(7)
+                FfiConverterULong.write(value.`lineNumber`, buf)
+                Unit
+            }
+            is ReplayFailure.AcceptedCountMismatch -> {
+                buf.putInt(8)
+                FfiConverterULong.write(value.`lineNumber`, buf)
+                Unit
+            }
+            is ReplayFailure.MessageCountMismatch -> {
+                buf.putInt(9)
+                Unit
+            }
+            is ReplayFailure.AcceptedSampleCountMismatch -> {
+                buf.putInt(10)
+                Unit
+            }
+            is ReplayFailure.RejectedMessageCountMismatch -> {
+                buf.putInt(11)
+                Unit
+            }
+            is ReplayFailure.SourceTimestampNotMonotonic -> {
+                buf.putInt(12)
+                FfiConverterULong.write(value.`lineNumber`, buf)
+                Unit
+            }
+            is ReplayFailure.NonFiniteChannel -> {
+                buf.putInt(13)
+                FfiConverterULong.write(value.`lineNumber`, buf)
+                Unit
+            }
+            is ReplayFailure.WrongChannelCount -> {
+                buf.putInt(14)
+                FfiConverterULong.write(value.`lineNumber`, buf)
+                Unit
+            }
+            is ReplayFailure.FirstSourceTimestampMismatch -> {
+                buf.putInt(15)
+                Unit
+            }
+            is ReplayFailure.LastSourceTimestampMismatch -> {
+                buf.putInt(16)
+                Unit
+            }
+            is ReplayFailure.ChannelOrderMismatch -> {
+                buf.putInt(17)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+sealed class ReplayVerdict {
+    
+    /**
+     * Every claim in the manifest is reproduced by re-decoding the payload.
+     */
+    data class Verified(
+        val `acceptedSampleCount`: kotlin.ULong) : ReplayVerdict()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Failed(
+        val `failure`: uniffi.neuralcompose_mobile_core.ReplayFailure) : ReplayVerdict()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeReplayVerdict : FfiConverterRustBuffer<ReplayVerdict>{
+    override fun read(buf: ByteBuffer): ReplayVerdict {
+        return when(buf.getInt()) {
+            1 -> ReplayVerdict.Verified(
+                FfiConverterULong.read(buf),
+                )
+            2 -> ReplayVerdict.Failed(
+                FfiConverterTypeReplayFailure.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ReplayVerdict): ULong = when(value) {
+        is ReplayVerdict.Verified -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`acceptedSampleCount`)
+            )
+        }
+        is ReplayVerdict.Failed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeReplayFailure.allocationSize(value.`failure`)
+            )
+        }
+    }
+
+    override fun write(value: ReplayVerdict, buf: ByteBuffer) {
+        when(value) {
+            is ReplayVerdict.Verified -> {
+                buf.putInt(1)
+                FfiConverterULong.write(value.`acceptedSampleCount`, buf)
+                Unit
+            }
+            is ReplayVerdict.Failed -> {
+                buf.putInt(2)
+                FfiConverterTypeReplayFailure.write(value.`failure`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
 sealed class RestoreFailure {
     
     object TrustedCatalogEntryMissing : RestoreFailure()
@@ -9520,6 +10655,78 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
         
         FfiConverterByteArray.lower(`bytes`),_status)
+}
+    )
+    }
+    
+ fun `captureManifestFilename`(`recordingId`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_capture_manifest_filename(
+    
+        
+        FfiConverterString.lower(`recordingId`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Canonical file names. Both shells must agree, or a recording written on
+         * one platform is not discoverable on the other.
+         */ fun `capturePayloadFilename`(`recordingId`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_capture_payload_filename(
+    
+        
+        FfiConverterString.lower(`recordingId`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Encode one line exactly as it must appear in the `.eeg.jsonl` file:
+         * compact JSON, no trailing newline (the shell appends the separator).
+         */ fun `encodeCaptureLine`(`line`: CaptureLine): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_encode_capture_line(
+    
+        
+        FfiConverterTypeCaptureLine.lower(`line`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * In-progress files carry `.partial` and are never discoverable as
+         * recordings; publication is the atomic rename of both.
+         */ fun `partialSuffix`(): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_partial_suffix(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * Replay a persisted recording through the same decoder that produced it
+         * and check every claim the manifest makes. This is the whole point of the
+         * gate: a file that cannot reproduce its own manifest is not evidence.
+         */ fun `verifyCapture`(`jsonl`: kotlin.String, `manifest`: CaptureManifest): ReplayVerdict {
+            return FfiConverterTypeReplayVerdict.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_verify_capture(
+    
+        
+        FfiConverterString.lower(`jsonl`),
+        FfiConverterTypeCaptureManifest.lower(`manifest`),_status)
 }
     )
     }

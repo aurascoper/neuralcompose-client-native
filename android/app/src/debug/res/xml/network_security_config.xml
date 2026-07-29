@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DEBUG BUILDS ONLY. Android's network-security config has no CIDR support,
+     so the release config in src/main must name every cleartext host by
+     address. That is the right posture for a shipped app, but it makes the
+     gate's *configurable* bridge endpoint a fiction: only one typed address
+     would ever connect.
+
+     A debug build is installed by the developer, onto their own device, to
+     talk to their own LAN bridge — so it permits cleartext generally and the
+     endpoint field means what it says. The release config is untouched and
+     stays strict; this file cannot widen it, because build-type resources
+     apply to the debug variant alone. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

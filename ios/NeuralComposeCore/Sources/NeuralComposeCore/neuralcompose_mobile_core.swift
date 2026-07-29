@@ -990,6 +990,204 @@ public func FfiConverterTypeAudioLifecycle_lower(_ value: AudioLifecycle) -> UIn
 
 
 
+/**
+ * Accumulates a recording. Effect-free: it returns the exact bytes the
+ * shell must append and the manifest the shell must publish, but never
+ * touches a file. `now_ms` is the shell's monotonic receive time.
+ */
+public protocol CaptureRecorderProtocol: AnyObject, Sendable {
+    
+    func acceptedSampleCount()  -> UInt64
+    
+    /**
+     * Seal the recording. The shell supplies the persisted payload's byte
+     * size and digest — the two facts only the filesystem knows.
+     */
+    func finish(endedAtMs: UInt64, payloadByteSize: UInt64, payloadSha256Hex: String)  -> CaptureManifest
+    
+    func messagesReceived()  -> UInt64
+    
+    /**
+     * Record one received message and return the JSONL line to append.
+     * Decoding happens here — the shell never parses EEG. A message that
+     * decodes to nothing is still preserved verbatim and counted as
+     * rejected: a capture that silently dropped malformed frames would
+     * misrepresent the stream.
+     */
+    func onMessage(payload: String, nowMs: UInt64)  -> String
+    
+}
+/**
+ * Accumulates a recording. Effect-free: it returns the exact bytes the
+ * shell must append and the manifest the shell must publish, but never
+ * touches a file. `now_ms` is the shell's monotonic receive time.
+ */
+open class CaptureRecorder: CaptureRecorderProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_neuralcompose_mobile_core_fn_clone_capturerecorder(self.handle, $0) }
+    }
+public convenience init(recordingId: String, build: CaptureBuildIdentity, startedAtMs: UInt64) {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_constructor_capturerecorder_new(
+        FfiConverterString.lower(recordingId),
+        FfiConverterTypeCaptureBuildIdentity_lower(build),
+        FfiConverterUInt64.lower(startedAtMs),uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_neuralcompose_mobile_core_fn_free_capturerecorder(handle, $0) }
+    }
+
+    
+
+    
+open func acceptedSampleCount() -> UInt64  {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_accepted_sample_count(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Seal the recording. The shell supplies the persisted payload's byte
+     * size and digest — the two facts only the filesystem knows.
+     */
+open func finish(endedAtMs: UInt64, payloadByteSize: UInt64, payloadSha256Hex: String) -> CaptureManifest  {
+    return try!  FfiConverterTypeCaptureManifest_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_finish(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(endedAtMs),
+        FfiConverterUInt64.lower(payloadByteSize),
+        FfiConverterString.lower(payloadSha256Hex),uniffiCallStatus
+    )
+})
+}
+    
+open func messagesReceived() -> UInt64  {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_messages_received(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Record one received message and return the JSONL line to append.
+     * Decoding happens here — the shell never parses EEG. A message that
+     * decodes to nothing is still preserved verbatim and counted as
+     * rejected: a capture that silently dropped malformed frames would
+     * misrepresent the stream.
+     */
+open func onMessage(payload: String, nowMs: UInt64) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_method_capturerecorder_on_message(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(payload),
+        FfiConverterUInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCaptureRecorder: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = CaptureRecorder
+
+    public static func lift(_ handle: UInt64) throws -> CaptureRecorder {
+        return CaptureRecorder(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: CaptureRecorder) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CaptureRecorder {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: CaptureRecorder, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCaptureRecorder_lift(_ handle: UInt64) throws -> CaptureRecorder {
+    return try FfiConverterTypeCaptureRecorder.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCaptureRecorder_lower(_ value: CaptureRecorder) -> UInt64 {
+    return FfiConverterTypeCaptureRecorder.lower(value)
+}
+
+
+
+
+
+
 public protocol ModelPackInstallerProtocol: AnyObject, Sendable {
     
     func acknowledgeOperationFailure()  -> Bool
@@ -1962,6 +2160,274 @@ public func FfiConverterTypeBackendObservation_lift(_ buf: RustBuffer) throws ->
 #endif
 public func FfiConverterTypeBackendObservation_lower(_ value: BackendObservation) -> RustBuffer {
     return FfiConverterTypeBackendObservation.lower(value)
+}
+
+
+/**
+ * Build identity the shell supplies once per recording.
+ */
+public struct CaptureBuildIdentity: Equatable, Hashable {
+    public var platform: String
+    public var osVersion: String
+    public var appVersion: String
+    public var gitCommit: String
+    public var bridgeLocality: BridgeLocality
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(platform: String, osVersion: String, appVersion: String, gitCommit: String, bridgeLocality: BridgeLocality) {
+        self.platform = platform
+        self.osVersion = osVersion
+        self.appVersion = appVersion
+        self.gitCommit = gitCommit
+        self.bridgeLocality = bridgeLocality
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CaptureBuildIdentity: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCaptureBuildIdentity: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CaptureBuildIdentity {
+        return
+            try CaptureBuildIdentity(
+                platform: FfiConverterString.read(from: &buf), 
+                osVersion: FfiConverterString.read(from: &buf), 
+                appVersion: FfiConverterString.read(from: &buf), 
+                gitCommit: FfiConverterString.read(from: &buf), 
+                bridgeLocality: FfiConverterTypeBridgeLocality.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CaptureBuildIdentity, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.platform, into: &buf)
+        FfiConverterString.write(value.osVersion, into: &buf)
+        FfiConverterString.write(value.appVersion, into: &buf)
+        FfiConverterString.write(value.gitCommit, into: &buf)
+        FfiConverterTypeBridgeLocality.write(value.bridgeLocality, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCaptureBuildIdentity_lift(_ buf: RustBuffer) throws -> CaptureBuildIdentity {
+    return try FfiConverterTypeCaptureBuildIdentity.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCaptureBuildIdentity_lower(_ value: CaptureBuildIdentity) -> RustBuffer {
+    return FfiConverterTypeCaptureBuildIdentity.lower(value)
+}
+
+
+/**
+ * One preserved WebSocket message.
+ */
+public struct CaptureLine: Equatable, Hashable {
+    public var sequence: UInt64
+    public var receivedAtMonotonicMs: UInt64
+    public var acceptedSampleCount: UInt32
+    /**
+     * The raw frame text, unmodified. Never a re-serialized reinterpretation.
+     */
+    public var payload: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(sequence: UInt64, receivedAtMonotonicMs: UInt64, acceptedSampleCount: UInt32, 
+        /**
+         * The raw frame text, unmodified. Never a re-serialized reinterpretation.
+         */payload: String) {
+        self.sequence = sequence
+        self.receivedAtMonotonicMs = receivedAtMonotonicMs
+        self.acceptedSampleCount = acceptedSampleCount
+        self.payload = payload
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CaptureLine: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCaptureLine: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CaptureLine {
+        return
+            try CaptureLine(
+                sequence: FfiConverterUInt64.read(from: &buf), 
+                receivedAtMonotonicMs: FfiConverterUInt64.read(from: &buf), 
+                acceptedSampleCount: FfiConverterUInt32.read(from: &buf), 
+                payload: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CaptureLine, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.sequence, into: &buf)
+        FfiConverterUInt64.write(value.receivedAtMonotonicMs, into: &buf)
+        FfiConverterUInt32.write(value.acceptedSampleCount, into: &buf)
+        FfiConverterString.write(value.payload, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCaptureLine_lift(_ buf: RustBuffer) throws -> CaptureLine {
+    return try FfiConverterTypeCaptureLine.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCaptureLine_lower(_ value: CaptureLine) -> RustBuffer {
+    return FfiConverterTypeCaptureLine.lower(value)
+}
+
+
+public struct CaptureManifest: Equatable, Hashable {
+    public var schemaId: String
+    public var lineSchemaId: String
+    public var recordingId: String
+    public var platform: String
+    public var osVersion: String
+    public var appVersion: String
+    public var gitCommit: String
+    public var bridgeLocality: BridgeLocality
+    public var startedAtMonotonicMs: UInt64
+    public var endedAtMonotonicMs: UInt64
+    public var durationMs: UInt64
+    public var messagesReceived: UInt64
+    public var acceptedSampleCount: UInt64
+    public var rejectedMessageCount: UInt64
+    /**
+     * Seconds since stream start — the wire axis, never wall clock.
+     */
+    public var firstSourceTimestamp: Double?
+    public var lastSourceTimestamp: Double?
+    public var channelOrder: [String]
+    public var payloadByteSize: UInt64
+    public var payloadSha256Hex: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(schemaId: String, lineSchemaId: String, recordingId: String, platform: String, osVersion: String, appVersion: String, gitCommit: String, bridgeLocality: BridgeLocality, startedAtMonotonicMs: UInt64, endedAtMonotonicMs: UInt64, durationMs: UInt64, messagesReceived: UInt64, acceptedSampleCount: UInt64, rejectedMessageCount: UInt64, 
+        /**
+         * Seconds since stream start — the wire axis, never wall clock.
+         */firstSourceTimestamp: Double?, lastSourceTimestamp: Double?, channelOrder: [String], payloadByteSize: UInt64, payloadSha256Hex: String) {
+        self.schemaId = schemaId
+        self.lineSchemaId = lineSchemaId
+        self.recordingId = recordingId
+        self.platform = platform
+        self.osVersion = osVersion
+        self.appVersion = appVersion
+        self.gitCommit = gitCommit
+        self.bridgeLocality = bridgeLocality
+        self.startedAtMonotonicMs = startedAtMonotonicMs
+        self.endedAtMonotonicMs = endedAtMonotonicMs
+        self.durationMs = durationMs
+        self.messagesReceived = messagesReceived
+        self.acceptedSampleCount = acceptedSampleCount
+        self.rejectedMessageCount = rejectedMessageCount
+        self.firstSourceTimestamp = firstSourceTimestamp
+        self.lastSourceTimestamp = lastSourceTimestamp
+        self.channelOrder = channelOrder
+        self.payloadByteSize = payloadByteSize
+        self.payloadSha256Hex = payloadSha256Hex
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CaptureManifest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCaptureManifest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CaptureManifest {
+        return
+            try CaptureManifest(
+                schemaId: FfiConverterString.read(from: &buf), 
+                lineSchemaId: FfiConverterString.read(from: &buf), 
+                recordingId: FfiConverterString.read(from: &buf), 
+                platform: FfiConverterString.read(from: &buf), 
+                osVersion: FfiConverterString.read(from: &buf), 
+                appVersion: FfiConverterString.read(from: &buf), 
+                gitCommit: FfiConverterString.read(from: &buf), 
+                bridgeLocality: FfiConverterTypeBridgeLocality.read(from: &buf), 
+                startedAtMonotonicMs: FfiConverterUInt64.read(from: &buf), 
+                endedAtMonotonicMs: FfiConverterUInt64.read(from: &buf), 
+                durationMs: FfiConverterUInt64.read(from: &buf), 
+                messagesReceived: FfiConverterUInt64.read(from: &buf), 
+                acceptedSampleCount: FfiConverterUInt64.read(from: &buf), 
+                rejectedMessageCount: FfiConverterUInt64.read(from: &buf), 
+                firstSourceTimestamp: FfiConverterOptionDouble.read(from: &buf), 
+                lastSourceTimestamp: FfiConverterOptionDouble.read(from: &buf), 
+                channelOrder: FfiConverterSequenceString.read(from: &buf), 
+                payloadByteSize: FfiConverterUInt64.read(from: &buf), 
+                payloadSha256Hex: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CaptureManifest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.schemaId, into: &buf)
+        FfiConverterString.write(value.lineSchemaId, into: &buf)
+        FfiConverterString.write(value.recordingId, into: &buf)
+        FfiConverterString.write(value.platform, into: &buf)
+        FfiConverterString.write(value.osVersion, into: &buf)
+        FfiConverterString.write(value.appVersion, into: &buf)
+        FfiConverterString.write(value.gitCommit, into: &buf)
+        FfiConverterTypeBridgeLocality.write(value.bridgeLocality, into: &buf)
+        FfiConverterUInt64.write(value.startedAtMonotonicMs, into: &buf)
+        FfiConverterUInt64.write(value.endedAtMonotonicMs, into: &buf)
+        FfiConverterUInt64.write(value.durationMs, into: &buf)
+        FfiConverterUInt64.write(value.messagesReceived, into: &buf)
+        FfiConverterUInt64.write(value.acceptedSampleCount, into: &buf)
+        FfiConverterUInt64.write(value.rejectedMessageCount, into: &buf)
+        FfiConverterOptionDouble.write(value.firstSourceTimestamp, into: &buf)
+        FfiConverterOptionDouble.write(value.lastSourceTimestamp, into: &buf)
+        FfiConverterSequenceString.write(value.channelOrder, into: &buf)
+        FfiConverterUInt64.write(value.payloadByteSize, into: &buf)
+        FfiConverterString.write(value.payloadSha256Hex, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCaptureManifest_lift(_ buf: RustBuffer) throws -> CaptureManifest {
+    return try FfiConverterTypeCaptureManifest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCaptureManifest_lower(_ value: CaptureManifest) -> RustBuffer {
+    return FfiConverterTypeCaptureManifest.lower(value)
 }
 
 
@@ -4754,6 +5220,76 @@ public func FfiConverterTypeBackendRequirement_lower(_ value: BackendRequirement
 
 
 /**
+ * Where the bridge sits relative to the device. Recorded so a replay can
+ * never be mistaken for an on-device capture.
+ */
+
+public enum BridgeLocality: Equatable, Hashable {
+    
+    case localNetwork
+    case remoteEndpoint
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension BridgeLocality: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBridgeLocality: FfiConverterRustBuffer {
+    typealias SwiftType = BridgeLocality
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BridgeLocality {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .localNetwork
+        
+        case 2: return .remoteEndpoint
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: BridgeLocality, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .localNetwork:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .remoteEndpoint:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBridgeLocality_lift(_ buf: RustBuffer) throws -> BridgeLocality {
+    return try FfiConverterTypeBridgeLocality.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBridgeLocality_lower(_ value: BridgeLocality) -> RustBuffer {
+    return FfiConverterTypeBridgeLocality.lower(value)
+}
+
+
+
+/**
  * Outcome of a labelled reorder. An enum rather than `Result` so the shape
  * crosses the FFI boundary unchanged (same convention as `RestoreResult`).
  */
@@ -6610,6 +7146,276 @@ public func FfiConverterTypeRecordingPhase_lower(_ value: RecordingPhase) -> Rus
 
 
 
+public enum ReplayFailure: Equatable, Hashable {
+    
+    case manifestSchemaMismatch
+    case payloadDigestMismatch
+    case payloadSizeMismatch
+    case malformedLine(lineNumber: UInt64
+    )
+    case lineSchemaMismatch(lineNumber: UInt64
+    )
+    case sequenceOutOfOrder(lineNumber: UInt64
+    )
+    case receiveTimeWentBackwards(lineNumber: UInt64
+    )
+    case acceptedCountMismatch(lineNumber: UInt64
+    )
+    case messageCountMismatch
+    case acceptedSampleCountMismatch
+    case rejectedMessageCountMismatch
+    case sourceTimestampNotMonotonic(lineNumber: UInt64
+    )
+    case nonFiniteChannel(lineNumber: UInt64
+    )
+    case wrongChannelCount(lineNumber: UInt64
+    )
+    case firstSourceTimestampMismatch
+    case lastSourceTimestampMismatch
+    case channelOrderMismatch
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ReplayFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeReplayFailure: FfiConverterRustBuffer {
+    typealias SwiftType = ReplayFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ReplayFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .manifestSchemaMismatch
+        
+        case 2: return .payloadDigestMismatch
+        
+        case 3: return .payloadSizeMismatch
+        
+        case 4: return .malformedLine(lineNumber: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 5: return .lineSchemaMismatch(lineNumber: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 6: return .sequenceOutOfOrder(lineNumber: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 7: return .receiveTimeWentBackwards(lineNumber: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 8: return .acceptedCountMismatch(lineNumber: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 9: return .messageCountMismatch
+        
+        case 10: return .acceptedSampleCountMismatch
+        
+        case 11: return .rejectedMessageCountMismatch
+        
+        case 12: return .sourceTimestampNotMonotonic(lineNumber: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 13: return .nonFiniteChannel(lineNumber: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 14: return .wrongChannelCount(lineNumber: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 15: return .firstSourceTimestampMismatch
+        
+        case 16: return .lastSourceTimestampMismatch
+        
+        case 17: return .channelOrderMismatch
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ReplayFailure, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .manifestSchemaMismatch:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .payloadDigestMismatch:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .payloadSizeMismatch:
+            writeInt(&buf, Int32(3))
+        
+        
+        case let .malformedLine(lineNumber):
+            writeInt(&buf, Int32(4))
+            FfiConverterUInt64.write(lineNumber, into: &buf)
+            
+        
+        case let .lineSchemaMismatch(lineNumber):
+            writeInt(&buf, Int32(5))
+            FfiConverterUInt64.write(lineNumber, into: &buf)
+            
+        
+        case let .sequenceOutOfOrder(lineNumber):
+            writeInt(&buf, Int32(6))
+            FfiConverterUInt64.write(lineNumber, into: &buf)
+            
+        
+        case let .receiveTimeWentBackwards(lineNumber):
+            writeInt(&buf, Int32(7))
+            FfiConverterUInt64.write(lineNumber, into: &buf)
+            
+        
+        case let .acceptedCountMismatch(lineNumber):
+            writeInt(&buf, Int32(8))
+            FfiConverterUInt64.write(lineNumber, into: &buf)
+            
+        
+        case .messageCountMismatch:
+            writeInt(&buf, Int32(9))
+        
+        
+        case .acceptedSampleCountMismatch:
+            writeInt(&buf, Int32(10))
+        
+        
+        case .rejectedMessageCountMismatch:
+            writeInt(&buf, Int32(11))
+        
+        
+        case let .sourceTimestampNotMonotonic(lineNumber):
+            writeInt(&buf, Int32(12))
+            FfiConverterUInt64.write(lineNumber, into: &buf)
+            
+        
+        case let .nonFiniteChannel(lineNumber):
+            writeInt(&buf, Int32(13))
+            FfiConverterUInt64.write(lineNumber, into: &buf)
+            
+        
+        case let .wrongChannelCount(lineNumber):
+            writeInt(&buf, Int32(14))
+            FfiConverterUInt64.write(lineNumber, into: &buf)
+            
+        
+        case .firstSourceTimestampMismatch:
+            writeInt(&buf, Int32(15))
+        
+        
+        case .lastSourceTimestampMismatch:
+            writeInt(&buf, Int32(16))
+        
+        
+        case .channelOrderMismatch:
+            writeInt(&buf, Int32(17))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReplayFailure_lift(_ buf: RustBuffer) throws -> ReplayFailure {
+    return try FfiConverterTypeReplayFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReplayFailure_lower(_ value: ReplayFailure) -> RustBuffer {
+    return FfiConverterTypeReplayFailure.lower(value)
+}
+
+
+
+
+public enum ReplayVerdict: Equatable, Hashable {
+    
+    /**
+     * Every claim in the manifest is reproduced by re-decoding the payload.
+     */
+    case verified(acceptedSampleCount: UInt64
+    )
+    case failed(failure: ReplayFailure
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ReplayVerdict: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeReplayVerdict: FfiConverterRustBuffer {
+    typealias SwiftType = ReplayVerdict
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ReplayVerdict {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .verified(acceptedSampleCount: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 2: return .failed(failure: try FfiConverterTypeReplayFailure.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ReplayVerdict, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .verified(acceptedSampleCount):
+            writeInt(&buf, Int32(1))
+            FfiConverterUInt64.write(acceptedSampleCount, into: &buf)
+            
+        
+        case let .failed(failure):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypeReplayFailure.write(failure, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReplayVerdict_lift(_ buf: RustBuffer) throws -> ReplayVerdict {
+    return try FfiConverterTypeReplayVerdict.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReplayVerdict_lower(_ value: ReplayVerdict) -> RustBuffer {
+    return FfiConverterTypeReplayVerdict.lower(value)
+}
+
+
+
+
 public enum RestoreFailure: Equatable, Hashable {
     
     case trustedCatalogEntryMissing
@@ -8116,6 +8922,63 @@ public func sha256Hex(bytes: Data) -> String  {
     )
 })
 }
+public func captureManifestFilename(recordingId: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_capture_manifest_filename(
+        FfiConverterString.lower(recordingId),uniffiCallStatus
+    )
+})
+}
+/**
+ * Canonical file names. Both shells must agree, or a recording written on
+ * one platform is not discoverable on the other.
+ */
+public func capturePayloadFilename(recordingId: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_capture_payload_filename(
+        FfiConverterString.lower(recordingId),uniffiCallStatus
+    )
+})
+}
+/**
+ * Encode one line exactly as it must appear in the `.eeg.jsonl` file:
+ * compact JSON, no trailing newline (the shell appends the separator).
+ */
+public func encodeCaptureLine(line: CaptureLine) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_encode_capture_line(
+        FfiConverterTypeCaptureLine_lower(line),uniffiCallStatus
+    )
+})
+}
+/**
+ * In-progress files carry `.partial` and are never discoverable as
+ * recordings; publication is the atomic rename of both.
+ */
+public func partialSuffix() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_partial_suffix(uniffiCallStatus
+    )
+})
+}
+/**
+ * Replay a persisted recording through the same decoder that produced it
+ * and check every claim the manifest makes. This is the whole point of the
+ * gate: a file that cannot reproduce its own manifest is not evidence.
+ */
+public func verifyCapture(jsonl: String, manifest: CaptureManifest) -> ReplayVerdict  {
+    return try!  FfiConverterTypeReplayVerdict_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_verify_capture(
+        FfiConverterString.lower(jsonl),
+        FfiConverterTypeCaptureManifest_lower(manifest),uniffiCallStatus
+    )
+})
+}
 /**
  * Derive the ws(s):// stream URL from the HTTP server URL when not given.
  */
@@ -8603,6 +9466,21 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_func_sha256_hex() != 20754) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_capture_manifest_filename() != 11684) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_capture_payload_filename() != 872) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_encode_capture_line() != 48268) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_partial_suffix() != 7216) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_verify_capture() != 63008) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_neuralcompose_mobile_core_checksum_func_derive_ws_url() != 13734) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8747,6 +9625,18 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot() != 28404) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_accepted_sample_count() != 19169) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_finish() != 23917) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_messages_received() != 62992) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_method_capturerecorder_on_message() != 43533) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_neuralcompose_mobile_core_checksum_method_modelpackinstaller_acknowledge_operation_failure() != 33736) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8817,6 +9707,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests() != 11328) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_constructor_capturerecorder_new() != 34159) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_constructor_modelpackinstaller_new() != 43648) {
