@@ -76,6 +76,32 @@ final class SmokeTests: XCTestCase {
         XCTAssertEqual(snap.channels.map { $0.last! }, [9, 9, 9, 9])
     }
 
+    func testAudioLifecycleThroughBindings() throws {
+        let lc = AudioLifecycle()
+        // denied → record unreachable, no entry
+        XCTAssertTrue(lc.onPermission(granted: false, nowMs: 5))
+        XCTAssertFalse(lc.onRecordStart(nowMs: 10))
+        XCTAssertEqual(lc.snapshot().manifests.count, 0)
+        // granted → full record → persist → play cycle
+        XCTAssertTrue(lc.onPermission(granted: true, nowMs: 20))
+        XCTAssertTrue(lc.onRecordStart(nowMs: 30))
+        XCTAssertTrue(lc.onRecordStop(nowMs: 4030))
+        let hash = sha256Hex(bytes: Data("abc".utf8))
+        XCTAssertEqual(hash, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+        XCTAssertTrue(
+            lc.onPersisted(
+                id: "r1", createdAtMs: 1000, durationMs: 4000, format: "m4a",
+                byteSize: 999, sha256Hex: hash, nowMs: 4100))
+        XCTAssertEqual(lc.phase(), .recorded)
+        XCTAssertTrue(lc.onPlayStart(nowMs: 5000))
+        XCTAssertTrue(lc.onPlayStop(nowMs: 6000))
+        XCTAssertEqual(lc.snapshot().manifests.count, 1)
+        // restart semantics
+        let reloaded = AudioLifecycle.withManifests(manifests: lc.snapshot().manifests)
+        XCTAssertEqual(reloaded.phase(), .idle)
+        XCTAssertFalse(reloaded.onRecordStart(nowMs: 1))
+    }
+
     func testConfigResolutionNoSilentMockFallback() throws {
         let c = resolveClientMode(useMockRaw: "false", serverRaw: "", wsRaw: "")
         XCTAssertEqual(c.mode, .live)

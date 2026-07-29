@@ -673,6 +673,8 @@ internal object IntegrityCheckingUniffiLib {
         uniffiCheckContractApiVersion(this)
         uniffiCheckApiChecksums(this)
     }
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_sha256_hex(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_derive_ws_url(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_parse_use_mock(
@@ -682,6 +684,30 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_neuralcompose_mobile_core_checksum_func_format_banner_en(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_format_label_en(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption_ended(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_permission(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_persist_failed(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_persisted(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_start(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_stop(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_record_start(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_record_stop(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_phase(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame(
     ): Int
@@ -698,6 +724,10 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_snapshot(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_stream_snapshot(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_new(
+    ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new(
     ): Int
@@ -721,6 +751,38 @@ internal object UniffiLib {
         Native.register(UniffiLib::class.java, findLibraryName(componentName = "neuralcompose_mobile_core"))
         
     }
+    external fun uniffi_neuralcompose_mobile_core_fn_clone_audiolifecycle(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_neuralcompose_mobile_core_fn_free_audiolifecycle(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_neuralcompose_mobile_core_fn_constructor_audiolifecycle_new(uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_neuralcompose_mobile_core_fn_constructor_audiolifecycle_with_manifests(`manifests`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_failure_acknowledged(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_interruption(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_interruption_ended(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_permission(`ptr`: Long,`granted`: Byte,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_persist_failed(`ptr`: Long,`reason`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_persisted(`ptr`: Long,`id`: RustBuffer.ByValue,`createdAtMs`: Long,`durationMs`: Long,`format`: RustBuffer.ByValue,`byteSize`: Long,`sha256Hex`: RustBuffer.ByValue,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_play_start(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_play_stop(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_record_start(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_record_stop(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_phase(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_clone_streammonitor(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_neuralcompose_mobile_core_fn_free_streammonitor(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -744,6 +806,8 @@ internal object UniffiLib {
     external fun uniffi_neuralcompose_mobile_core_fn_method_streammonitor_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_method_streammonitor_stream_snapshot(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_sha256_hex(`bytes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_derive_ws_url(`serverUrl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -874,6 +938,9 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 }
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_sha256_hex() != 20754) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_derive_ws_url() != 13734) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -887,6 +954,42 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_format_label_en() != 32187) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_failure_acknowledged() != 13465) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption() != 29975) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_interruption_ended() != 26899) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_permission() != 56169) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_persist_failed() != 27076) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_persisted() != 23120) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_start() != 57673) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_play_stop() != 31692) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_record_start() != 35402) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_on_record_stop() != 45806) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_phase() != 6179) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_method_audiolifecycle_snapshot() != 28404) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_on_frame() != 45030) {
@@ -911,6 +1014,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_method_streammonitor_stream_snapshot() != 1964) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_new() != 11454) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_audiolifecycle_with_manifests() != 11328) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_constructor_streammonitor_new() != 40578) {
@@ -1272,6 +1381,557 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
         val byteBuf = toUtf8(value)
         buf.putInt(byteBuf.limit())
         buf.put(byteBuf)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
+    override fun read(buf: ByteBuffer): ByteArray {
+        val len = buf.getInt()
+        val byteArr = ByteArray(len)
+        buf.get(byteArr)
+        return byteArr
+    }
+    override fun allocationSize(value: ByteArray): ULong {
+        return 4UL + value.size.toULong()
+    }
+    override fun write(value: ByteArray, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        buf.put(value)
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+public interface AudioLifecycleInterface {
+    
+    /**
+     * Recover from Failed back to Ready (operator acknowledges the error).
+     */
+    fun `onFailureAcknowledged`(`nowMs`: kotlin.ULong): kotlin.Boolean
+    
+    /**
+     * OS interruption (call, route change, backgrounding policy) while
+     * Recording or Playing.
+     */
+    fun `onInterruption`(`nowMs`: kotlin.ULong): kotlin.Boolean
+    
+    /**
+     * Explicit recovery from an interruption. An interrupted recording was
+     * never persisted, so recovery lands on Ready (or Recorded when the
+     * interruption happened during playback and entries exist).
+     */
+    fun `onInterruptionEnded`(`nowMs`: kotlin.ULong): kotlin.Boolean
+    
+    /**
+     * Shell reports the platform permission result.
+     */
+    fun `onPermission`(`granted`: kotlin.Boolean, `nowMs`: kotlin.ULong): kotlin.Boolean
+    
+    /**
+     * Persist failure: NO manifest, explicit Failed state with the reason.
+     */
+    fun `onPersistFailed`(`reason`: kotlin.String, `nowMs`: kotlin.ULong): kotlin.Boolean
+    
+    /**
+     * Atomic persistence: the manifest appears only here, together with the
+     * Recorded phase. `sha256_hex(bytes)` provides the content hash.
+     */
+    fun `onPersisted`(`id`: kotlin.String, `createdAtMs`: kotlin.ULong, `durationMs`: kotlin.ULong, `format`: kotlin.String, `byteSize`: kotlin.ULong, `sha256Hex`: kotlin.String, `nowMs`: kotlin.ULong): kotlin.Boolean
+    
+    /**
+     * Playback starts from Recorded only.
+     */
+    fun `onPlayStart`(`nowMs`: kotlin.ULong): kotlin.Boolean
+    
+    /**
+     * The second action stops playback.
+     */
+    fun `onPlayStop`(`nowMs`: kotlin.ULong): kotlin.Boolean
+    
+    /**
+     * Record is reachable ONLY from Ready or Recorded (a new take).
+     * From PermissionDenied this is a rejected no-op: no state change,
+     * no file, no entry — the shell shows the explanation.
+     */
+    fun `onRecordStart`(`nowMs`: kotlin.ULong): kotlin.Boolean
+    
+    fun `onRecordStop`(`nowMs`: kotlin.ULong): kotlin.Boolean
+    
+    fun `phase`(): RecordingPhase
+    
+    /**
+     * Read-only. Never mutates lifecycle state.
+     */
+    fun `snapshot`(): AudioSnapshot
+    
+    companion object
+}
+
+open class AudioLifecycle: Disposable, AutoCloseable, AudioLifecycleInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    constructor() :
+        this(UniffiWithHandle, 
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_constructor_audiolifecycle_new(
+    
+        _status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_neuralcompose_mobile_core_fn_free_audiolifecycle(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_neuralcompose_mobile_core_fn_clone_audiolifecycle(handle, status)
+        }
+    }
+
+    
+    /**
+     * Recover from Failed back to Ready (operator acknowledges the error).
+     */override fun `onFailureAcknowledged`(`nowMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_failure_acknowledged(
+        it,
+        
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * OS interruption (call, route change, backgrounding policy) while
+     * Recording or Playing.
+     */override fun `onInterruption`(`nowMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_interruption(
+        it,
+        
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Explicit recovery from an interruption. An interrupted recording was
+     * never persisted, so recovery lands on Ready (or Recorded when the
+     * interruption happened during playback and entries exist).
+     */override fun `onInterruptionEnded`(`nowMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_interruption_ended(
+        it,
+        
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Shell reports the platform permission result.
+     */override fun `onPermission`(`granted`: kotlin.Boolean, `nowMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_permission(
+        it,
+        
+        FfiConverterBoolean.lower(`granted`),
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Persist failure: NO manifest, explicit Failed state with the reason.
+     */override fun `onPersistFailed`(`reason`: kotlin.String, `nowMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_persist_failed(
+        it,
+        
+        FfiConverterString.lower(`reason`),
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Atomic persistence: the manifest appears only here, together with the
+     * Recorded phase. `sha256_hex(bytes)` provides the content hash.
+     */override fun `onPersisted`(`id`: kotlin.String, `createdAtMs`: kotlin.ULong, `durationMs`: kotlin.ULong, `format`: kotlin.String, `byteSize`: kotlin.ULong, `sha256Hex`: kotlin.String, `nowMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_persisted(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterULong.lower(`createdAtMs`),
+        FfiConverterULong.lower(`durationMs`),
+        FfiConverterString.lower(`format`),
+        FfiConverterULong.lower(`byteSize`),
+        FfiConverterString.lower(`sha256Hex`),
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Playback starts from Recorded only.
+     */override fun `onPlayStart`(`nowMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_play_start(
+        it,
+        
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The second action stops playback.
+     */override fun `onPlayStop`(`nowMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_play_stop(
+        it,
+        
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Record is reachable ONLY from Ready or Recorded (a new take).
+     * From PermissionDenied this is a rejected no-op: no state change,
+     * no file, no entry — the shell shows the explanation.
+     */override fun `onRecordStart`(`nowMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_record_start(
+        it,
+        
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `onRecordStop`(`nowMs`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_on_record_stop(
+        it,
+        
+        FfiConverterULong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `phase`(): RecordingPhase {
+            return FfiConverterTypeRecordingPhase.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_phase(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Read-only. Never mutates lifecycle state.
+     */override fun `snapshot`(): AudioSnapshot {
+            return FfiConverterTypeAudioSnapshot.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_method_audiolifecycle_snapshot(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    companion object {
+        
+    /**
+     * Restart path: reload previously persisted manifests. Phase stays Idle
+     * (never a phantom Recording); permission must be re-reported.
+     */ fun `withManifests`(`manifests`: List<RecordingManifest>): AudioLifecycle {
+            return FfiConverterTypeAudioLifecycle.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_constructor_audiolifecycle_with_manifests(
+    
+        
+        FfiConverterSequenceTypeRecordingManifest.lower(`manifests`),_status)
+}
+    )
+    }
+    
+
+        
+    }
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAudioLifecycle: FfiConverter<AudioLifecycle, Long> {
+    override fun lower(value: AudioLifecycle): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): AudioLifecycle {
+        return AudioLifecycle(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): AudioLifecycle {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: AudioLifecycle) = 8UL
+
+    override fun write(value: AudioLifecycle, buf: ByteBuffer) {
+        buf.putLong(lower(value))
     }
 }
 
@@ -1726,6 +2386,106 @@ public object FfiConverterTypeStreamMonitor: FfiConverter<StreamMonitor, Long> {
 
 
 
+data class AudioSnapshot (
+    var `phase`: RecordingPhase
+    , 
+    var `manifests`: List<RecordingManifest>
+    , 
+    var `transitions`: List<AudioTransition>
+    , 
+    /**
+     * True while an unfinalized recording exists (Recording/Persisting/
+     * Interrupted-from-Recording). Shells use it to warn before discarding.
+     */
+    var `hasUnfinalizedRecording`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAudioSnapshot: FfiConverterRustBuffer<AudioSnapshot> {
+    override fun read(buf: ByteBuffer): AudioSnapshot {
+        return AudioSnapshot(
+            FfiConverterTypeRecordingPhase.read(buf),
+            FfiConverterSequenceTypeRecordingManifest.read(buf),
+            FfiConverterSequenceTypeAudioTransition.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AudioSnapshot) = (
+            FfiConverterTypeRecordingPhase.allocationSize(value.`phase`) +
+            FfiConverterSequenceTypeRecordingManifest.allocationSize(value.`manifests`) +
+            FfiConverterSequenceTypeAudioTransition.allocationSize(value.`transitions`) +
+            FfiConverterBoolean.allocationSize(value.`hasUnfinalizedRecording`)
+    )
+
+    override fun write(value: AudioSnapshot, buf: ByteBuffer) {
+            FfiConverterTypeRecordingPhase.write(value.`phase`, buf)
+            FfiConverterSequenceTypeRecordingManifest.write(value.`manifests`, buf)
+            FfiConverterSequenceTypeAudioTransition.write(value.`transitions`, buf)
+            FfiConverterBoolean.write(value.`hasUnfinalizedRecording`, buf)
+    }
+}
+
+
+
+data class AudioTransition (
+    var `from`: RecordingPhase
+    , 
+    var `to`: RecordingPhase
+    , 
+    var `event`: kotlin.String
+    , 
+    var `atMs`: kotlin.ULong
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAudioTransition: FfiConverterRustBuffer<AudioTransition> {
+    override fun read(buf: ByteBuffer): AudioTransition {
+        return AudioTransition(
+            FfiConverterTypeRecordingPhase.read(buf),
+            FfiConverterTypeRecordingPhase.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AudioTransition) = (
+            FfiConverterTypeRecordingPhase.allocationSize(value.`from`) +
+            FfiConverterTypeRecordingPhase.allocationSize(value.`to`) +
+            FfiConverterString.allocationSize(value.`event`) +
+            FfiConverterULong.allocationSize(value.`atMs`)
+    )
+
+    override fun write(value: AudioTransition, buf: ByteBuffer) {
+            FfiConverterTypeRecordingPhase.write(value.`from`, buf)
+            FfiConverterTypeRecordingPhase.write(value.`to`, buf)
+            FfiConverterString.write(value.`event`, buf)
+            FfiConverterULong.write(value.`atMs`, buf)
+    }
+}
+
+
+
 /**
  * Channel display data. Cached samples survive reconnects on purpose (the
  * UI may keep showing the last traces) — but cached data never influences
@@ -1901,6 +2661,69 @@ public object FfiConverterTypePresentation: FfiConverterRustBuffer<Presentation>
             FfiConverterOptionalULong.write(value.`ageS`, buf)
             FfiConverterBoolean.write(value.`showSilentBanner`, buf)
             FfiConverterBoolean.write(value.`showDisconnectedBanner`, buf)
+    }
+}
+
+
+
+/**
+ * Portable, platform-neutral recording manifest. `created_at_ms` is
+ * shell-supplied display metadata (wall clock allowed); every DECISION in
+ * this module uses only event ordering, never clocks.
+ */
+data class RecordingManifest (
+    var `id`: kotlin.String
+    , 
+    var `createdAtMs`: kotlin.ULong
+    , 
+    var `durationMs`: kotlin.ULong
+    , 
+    var `format`: kotlin.String
+    , 
+    var `byteSize`: kotlin.ULong
+    , 
+    var `sha256Hex`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRecordingManifest: FfiConverterRustBuffer<RecordingManifest> {
+    override fun read(buf: ByteBuffer): RecordingManifest {
+        return RecordingManifest(
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RecordingManifest) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterULong.allocationSize(value.`createdAtMs`) +
+            FfiConverterULong.allocationSize(value.`durationMs`) +
+            FfiConverterString.allocationSize(value.`format`) +
+            FfiConverterULong.allocationSize(value.`byteSize`) +
+            FfiConverterString.allocationSize(value.`sha256Hex`)
+    )
+
+    override fun write(value: RecordingManifest, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterULong.write(value.`createdAtMs`, buf)
+            FfiConverterULong.write(value.`durationMs`, buf)
+            FfiConverterString.write(value.`format`, buf)
+            FfiConverterULong.write(value.`byteSize`, buf)
+            FfiConverterString.write(value.`sha256Hex`, buf)
     }
 }
 
@@ -2128,6 +2951,180 @@ public object FfiConverterTypeReconnectDecision : FfiConverterRustBuffer<Reconne
             }
             is ReconnectDecision.GiveUp -> {
                 buf.putInt(2)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * The operator-specified phase set.
+ */
+sealed class RecordingPhase {
+    
+    object Idle : RecordingPhase()
+    
+    
+    object PermissionDenied : RecordingPhase()
+    
+    
+    object Ready : RecordingPhase()
+    
+    
+    object Recording : RecordingPhase()
+    
+    
+    object Persisting : RecordingPhase()
+    
+    
+    object Recorded : RecordingPhase()
+    
+    
+    object Playing : RecordingPhase()
+    
+    
+    object Interrupted : RecordingPhase()
+    
+    
+    data class Failed(
+        val `reason`: kotlin.String) : RecordingPhase()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRecordingPhase : FfiConverterRustBuffer<RecordingPhase>{
+    override fun read(buf: ByteBuffer): RecordingPhase {
+        return when(buf.getInt()) {
+            1 -> RecordingPhase.Idle
+            2 -> RecordingPhase.PermissionDenied
+            3 -> RecordingPhase.Ready
+            4 -> RecordingPhase.Recording
+            5 -> RecordingPhase.Persisting
+            6 -> RecordingPhase.Recorded
+            7 -> RecordingPhase.Playing
+            8 -> RecordingPhase.Interrupted
+            9 -> RecordingPhase.Failed(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: RecordingPhase): ULong = when(value) {
+        is RecordingPhase.Idle -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RecordingPhase.PermissionDenied -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RecordingPhase.Ready -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RecordingPhase.Recording -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RecordingPhase.Persisting -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RecordingPhase.Recorded -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RecordingPhase.Playing -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RecordingPhase.Interrupted -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is RecordingPhase.Failed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: RecordingPhase, buf: ByteBuffer) {
+        when(value) {
+            is RecordingPhase.Idle -> {
+                buf.putInt(1)
+                Unit
+            }
+            is RecordingPhase.PermissionDenied -> {
+                buf.putInt(2)
+                Unit
+            }
+            is RecordingPhase.Ready -> {
+                buf.putInt(3)
+                Unit
+            }
+            is RecordingPhase.Recording -> {
+                buf.putInt(4)
+                Unit
+            }
+            is RecordingPhase.Persisting -> {
+                buf.putInt(5)
+                Unit
+            }
+            is RecordingPhase.Recorded -> {
+                buf.putInt(6)
+                Unit
+            }
+            is RecordingPhase.Playing -> {
+                buf.putInt(7)
+                Unit
+            }
+            is RecordingPhase.Interrupted -> {
+                buf.putInt(8)
+                Unit
+            }
+            is RecordingPhase.Failed -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.`reason`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -2438,6 +3435,62 @@ public object FfiConverterSequenceDouble: FfiConverterRustBuffer<List<kotlin.Dou
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeAudioTransition: FfiConverterRustBuffer<List<AudioTransition>> {
+    override fun read(buf: ByteBuffer): List<AudioTransition> {
+        val len = buf.getInt()
+        return List<AudioTransition>(len) {
+            FfiConverterTypeAudioTransition.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<AudioTransition>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeAudioTransition.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<AudioTransition>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeAudioTransition.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeRecordingManifest: FfiConverterRustBuffer<List<RecordingManifest>> {
+    override fun read(buf: ByteBuffer): List<RecordingManifest> {
+        val len = buf.getInt()
+        return List<RecordingManifest>(len) {
+            FfiConverterTypeRecordingManifest.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<RecordingManifest>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeRecordingManifest.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<RecordingManifest>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeRecordingManifest.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<List<kotlin.Double>>> {
     override fun read(buf: ByteBuffer): List<List<kotlin.Double>> {
         val len = buf.getInt()
@@ -2459,6 +3512,21 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
         }
     }
 }
+        /**
+         * Deterministic content hash for recording bytes — the portable half of the
+         * manifest. Shells may hash natively instead; results must match this.
+         */ fun `sha256Hex`(`bytes`: kotlin.ByteArray): kotlin.String {
+            return FfiConverterString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_sha256_hex(
+    
+        
+        FfiConverterByteArray.lower(`bytes`),_status)
+}
+    )
+    }
+    
+
         /**
          * Derive the ws(s):// stream URL from the HTTP server URL when not given.
          */ fun `deriveWsUrl`(`serverUrl`: kotlin.String): kotlin.String {

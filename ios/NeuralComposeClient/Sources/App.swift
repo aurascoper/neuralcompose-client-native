@@ -35,7 +35,7 @@ struct ContentView: View {
             Placeholder(title: "Dialectic", note: "Live Dialectic session (server-gated).")
                 .tabItem { Label("Dialectic", systemImage: "bubble.left.and.bubble.right") }
 
-            Placeholder(title: "Journal", note: "Local-only dream journal (phone-local storage).")
+            JournalScreen()
                 .tabItem { Label("Journal", systemImage: "square.and.pencil") }
         }
     }
