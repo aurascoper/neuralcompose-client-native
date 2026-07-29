@@ -117,7 +117,7 @@ fn metrics(mode: RunMode) -> RunMetrics {
 
 fn protocol() -> EvaluationProtocol {
     EvaluationProtocol {
-        protocol_version: 4,
+        protocol_version: 5,
         corpus_id: "m7b-sanitized-v1".into(),
         corpus_sha256_hex: sha(0xa1),
         prompt_count: 1,
@@ -135,7 +135,60 @@ fn protocol() -> EvaluationProtocol {
             semantic_prompt_hash: corpus_hash(),
         }],
         run_plan: run_plan(),
+        quality_plan: quality_plan(),
+        blinding_manifest_digest: sha(0xbd),
     }
+}
+
+/// Exactly one scored output per candidate x frozen prompt x frozen seed,
+/// taken from that seed's timed warm run — declared here, not inferred.
+fn quality_plan() -> Vec<QualityPlanEntry> {
+    let mut plan = Vec::new();
+    let mut idx = 0u32;
+    for cand in [A, B] {
+        for seed in [11u64, 22, 33] {
+            let run = run_plan()
+                .into_iter()
+                .find(|e| e.candidate_id == cand && e.mode == RunMode::Warm && e.seed == seed)
+                .unwrap();
+            plan.push(QualityPlanEntry {
+                index: idx,
+                candidate_id: cand.into(),
+                run_id: format!("{cand}-{}", run.index),
+                prompt_id: "p1".into(),
+                seed,
+                blinded_output_id: format!("out-{idx}"),
+            });
+            idx += 1;
+        }
+    }
+    plan
+}
+
+fn quality_observations(id: &str, score: f64) -> Vec<PromptQualityObservation> {
+    let cand = candidate(id);
+    let tag = if id == B { 0x80u8 } else { 0x70u8 };
+    quality_plan()
+        .into_iter()
+        .filter(|e| e.candidate_id == id)
+        .map(|e| PromptQualityObservation {
+            blinded_output_id: e.blinded_output_id.clone(),
+            run_id: e.run_id.clone(),
+            candidate_id: id.into(),
+            prompt_id: e.prompt_id.clone(),
+            seed: e.seed,
+            semantic_prompt_hash: corpus_hash(),
+            rendered_prompt_hash: cand.prompt_bindings[0].rendered_prompt_hash.clone(),
+            input_token_ids_hash: cand.prompt_bindings[0].input_token_ids_hash.clone(),
+            output_text_sha256: sha(tag.wrapping_add(3)),
+            output_token_ids_sha256: sha(tag.wrapping_add(4)),
+            rubric_id: "m7b-rubric-v1".into(),
+            blinding_manifest_digest: sha(0xbd),
+            scorer_identity: "blinded-panel-v1".into(),
+            scores: panel(score),
+            disposition: QualityDisposition::Admissible,
+        })
+        .collect()
 }
 
 fn conversion() -> ConversionRecord {
@@ -279,11 +332,9 @@ fn result(id: &str, score: f64, installed_bytes: u64) -> CandidateResult {
             semantic_prompt_hash: corpus_hash(),
             rendered_prompt_hash: sha(tag),
             input_token_ids_hash: sha(tag.wrapping_add(1)),
-            output_hash: sha(tag.wrapping_add(2)),
         }],
         installed_bytes,
-        quality_rubric_id: "m7b-rubric-v1".into(),
-        quality: panel(score),
+        quality_observations: quality_observations(id, score),
         disposition: RunDisposition::Admissible,
         observations: runs
             .iter()
@@ -930,4 +981,110 @@ fn revalidation_evidence_must_be_fresh_per_run() {
         admit_result(wrong_artifact, candidate(A), p),
         Some(AdmissionFailure::RunLedgerMismatch { .. })
     ));
+}
+
+// v5: quality is derived from the raw ledger, not supplied.
+#[test]
+fn the_quality_panel_is_derived_and_cannot_be_asserted() {
+    let p = protocol();
+    // The frozen plan derives the expected macro panel.
+    match derive_quality_panel(p.clone(), candidate(A), quality_observations(A, 0.8)) {
+        QualityDerivation::Derived { panel } => {
+            assert!((quality_score(panel).unwrap() - 0.8).abs() < 1e-9)
+        }
+        other => panic!("expected a derived panel, got {other:?}"),
+    }
+    // Declaration order does not change the derived panel.
+    let mut shuffled = quality_observations(A, 0.8);
+    shuffled.reverse();
+    let ordered = derive_quality_panel(p.clone(), candidate(A), quality_observations(A, 0.8));
+    assert_eq!(
+        derive_quality_panel(p.clone(), candidate(A), shuffled),
+        ordered
+    );
+    // One candidate's ledger cannot be admitted for the other.
+    assert!(matches!(
+        derive_quality_panel(p.clone(), candidate(B), quality_observations(A, 0.8)),
+        QualityDerivation::Rejected { .. }
+    ));
+    // Missing, duplicated or extra observations reject.
+    let mut short = quality_observations(A, 0.8);
+    short.pop();
+    assert!(matches!(
+        derive_quality_panel(p.clone(), candidate(A), short),
+        QualityDerivation::Rejected {
+            failure: QualityAdmissionFailure::PlanCoverageMismatch { .. }
+        }
+    ));
+    let mut extra = quality_observations(A, 0.8);
+    extra.push(extra[0].clone());
+    assert!(matches!(
+        derive_quality_panel(p.clone(), candidate(A), extra),
+        QualityDerivation::Rejected { .. }
+    ));
+    // Swapped output parity, wrong rubric, wrong blinding manifest all reject.
+    type M = fn(&mut PromptQualityObservation);
+    let cases: Vec<(&str, M)> = vec![
+        ("rendered parity", |o| o.rendered_prompt_hash = sha(0x01)),
+        ("token parity", |o| o.input_token_ids_hash = sha(0x02)),
+        ("semantic parity", |o| o.semantic_prompt_hash = sha(0x03)),
+        ("rubric", |o| o.rubric_id = "other".into()),
+        ("blinding manifest", |o| {
+            o.blinding_manifest_digest = sha(0x04)
+        }),
+        ("seed", |o| o.seed = 99),
+        ("run", |o| o.run_id = "elsewhere".into()),
+    ];
+    for (name, mutate) in cases {
+        let mut obs = quality_observations(A, 0.8);
+        mutate(&mut obs[0]);
+        assert!(
+            matches!(
+                derive_quality_panel(p.clone(), candidate(A), obs),
+                QualityDerivation::Rejected { .. }
+            ),
+            "{name} must reject"
+        );
+    }
+    // A hard-invalid generation cannot enter the average as a low score.
+    for d in [
+        QualityDisposition::ReasoningLeakage {
+            detector: "frozen-prose-v1".into(),
+        },
+        QualityDisposition::ParityFailure,
+        QualityDisposition::MissingOutput,
+        QualityDisposition::TimeoutWithoutScorableContinuation,
+        QualityDisposition::MalformedRequiredStructure,
+    ] {
+        let mut obs = quality_observations(A, 0.8);
+        obs[0].disposition = d;
+        assert!(matches!(
+            derive_quality_panel(p.clone(), candidate(A), obs),
+            QualityDerivation::Rejected {
+                failure: QualityAdmissionFailure::Inadmissible { .. }
+            }
+        ));
+    }
+    // Out-of-range or non-finite axes reject rather than skew the mean.
+    for bad in [-0.1, 1.1, f64::NAN, f64::INFINITY] {
+        let mut obs = quality_observations(A, 0.8);
+        obs[0].scores.avoids_repetition = bad;
+        assert!(matches!(
+            derive_quality_panel(p.clone(), candidate(A), obs),
+            QualityDerivation::Rejected {
+                failure: QualityAdmissionFailure::MalformedScores { .. }
+            }
+        ));
+    }
+    // Altering one raw score moves only the legitimately derived result.
+    let mut nudged = quality_observations(A, 0.8);
+    nudged[0].scores.instruction_adherence = 0.2;
+    match derive_quality_panel(p, candidate(A), nudged) {
+        QualityDerivation::Derived { panel } => {
+            // One of three seeds on the single prompt: (0.2+0.8+0.8)/3.
+            assert!((panel.instruction_adherence - 0.6).abs() < 1e-9);
+            assert!((panel.avoids_repetition - 0.8).abs() < 1e-9);
+        }
+        other => panic!("expected a derived panel, got {other:?}"),
+    }
 }

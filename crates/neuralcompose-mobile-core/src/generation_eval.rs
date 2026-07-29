@@ -116,9 +116,6 @@ pub struct BenchmarkPrompt {
     pub rendered_prompt_hash: String,
     /// Token ids the runtime actually fed the model, hashed.
     pub input_token_ids_hash: String,
-    /// v4: the generated continuation, hashed. Binds the quality panel to
-    /// outputs that actually exist.
-    pub output_hash: String,
 }
 
 #[cfg_attr(feature = "uniffi", uniffi::export)]
@@ -353,6 +350,10 @@ pub struct EvaluationProtocol {
     pub expected_prompts: Vec<ExpectedPrompt>,
     /// v3: the exact run schedule, not merely the alternating property.
     pub run_plan: Vec<RunPlanEntry>,
+    /// v5: which outputs are scored, declared rather than inferred.
+    pub quality_plan: Vec<QualityPlanEntry>,
+    /// v5: the blinding manifest scorers worked under.
+    pub blinding_manifest_digest: String,
 }
 
 /// Canonical protocol identity. Any change to the corpus, rubric, sampler,
@@ -628,9 +629,8 @@ pub struct CandidateResult {
     pub prompts: Vec<BenchmarkPrompt>,
     /// The installed artifact size — a pack fact, not a per-run measurement.
     pub installed_bytes: u64,
-    /// v4: the rubric the panel was scored under; must be the frozen one.
-    pub quality_rubric_id: String,
-    pub quality: QualityPanel,
+    /// v5: the raw scored-output ledger. The panel is DERIVED from this.
+    pub quality_observations: Vec<PromptQualityObservation>,
     /// v2: why this run is or is not a usable measurement.
     pub disposition: RunDisposition,
     /// v3: one entry per planned run, as observed.
@@ -643,8 +643,8 @@ pub struct CandidateResult {
 pub fn validate_evaluation_protocol(protocol: EvaluationProtocol) -> Vec<String> {
     let mut e = validate_run_environment(protocol.environment.clone());
     let mut bad = |m: &str| e.push(m.to_string());
-    if protocol.protocol_version != 4 {
-        bad("unsupported protocolVersion (v4 expected)");
+    if protocol.protocol_version != 5 {
+        bad("unsupported protocolVersion (v5 expected)");
     }
     if protocol.corpus_id.trim().is_empty() || protocol.quality_rubric_id.trim().is_empty() {
         bad("corpusId and qualityRubricId must be non-empty");
@@ -850,6 +850,234 @@ pub fn derive_cost_observation(
     })
 }
 
+/// v5: which output is scored. Declared, never inferred from RunMode —
+/// otherwise warmups, cancellation and sustained runs would silently gain
+/// scoring weight.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct QualityPlanEntry {
+    pub index: u32,
+    pub candidate_id: String,
+    pub run_id: String,
+    pub prompt_id: String,
+    pub seed: u64,
+    pub blinded_output_id: String,
+}
+
+/// Why a scored output is or is not usable. Hard-invalid events stay OUTSIDE
+/// the average rather than becoming a low score that can be averaged away.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum QualityDisposition {
+    Admissible,
+    ReasoningLeakage { detector: String },
+    ParityFailure,
+    MissingOutput,
+    TimeoutWithoutScorableContinuation,
+    MalformedRequiredStructure,
+}
+
+/// One scored output. The hashes describe the assembled UTF-8 continuation
+/// AFTER runtime stop-token handling and BEFORE any UI trimming, Markdown
+/// rewriting or normalization — produced by the runtime, never supplied by
+/// the shell as a claim.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct PromptQualityObservation {
+    pub blinded_output_id: String,
+    pub run_id: String,
+    pub candidate_id: String,
+    pub prompt_id: String,
+    pub seed: u64,
+    pub semantic_prompt_hash: String,
+    pub rendered_prompt_hash: String,
+    pub input_token_ids_hash: String,
+    pub output_text_sha256: String,
+    pub output_token_ids_sha256: String,
+    pub rubric_id: String,
+    pub blinding_manifest_digest: String,
+    pub scorer_identity: String,
+    pub scores: QualityPanel,
+    pub disposition: QualityDisposition,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum QualityAdmissionFailure {
+    PlanCoverageMismatch { reason: String },
+    DuplicateObservation { blinded_output_id: String },
+    WrongCandidate { blinded_output_id: String },
+    RubricMismatch,
+    BlindingManifestMismatch,
+    ParityMismatch { blinded_output_id: String },
+    Inadmissible { blinded_output_id: String },
+    MalformedScores { blinded_output_id: String },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum QualityDerivation {
+    Derived { panel: QualityPanel },
+    Rejected { failure: QualityAdmissionFailure },
+}
+
+fn axes_of(p: &QualityPanel) -> [f64; 10] {
+    [
+        p.instruction_adherence,
+        p.required_output_structure,
+        p.avoids_unsupported_invention,
+        p.appropriate_uncertainty,
+        p.avoids_false_refusal,
+        p.substantive_position_retention,
+        p.avoids_repetition,
+        p.truncation_behavior,
+        p.language_preservation,
+        p.prompt_profile_fidelity,
+    ]
+}
+
+/// Derive the panel from the raw ledger under the FROZEN macro weighting:
+/// average each axis across seeds within one prompt, then average those
+/// prompt-level values equally across prompts. Never weighted by output
+/// length, token count, run count or prompt frequency — so a prompt with more
+/// observations cannot dominate the candidate score.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn derive_quality_panel(
+    protocol: EvaluationProtocol,
+    candidate: EvaluationCandidate,
+    observations: Vec<PromptQualityObservation>,
+) -> QualityDerivation {
+    let reject = |failure| QualityDerivation::Rejected { failure };
+    let planned: Vec<&QualityPlanEntry> = protocol
+        .quality_plan
+        .iter()
+        .filter(|e| e.candidate_id == candidate.candidate_id)
+        .collect();
+    if observations.len() != planned.len() {
+        return reject(QualityAdmissionFailure::PlanCoverageMismatch {
+            reason: format!(
+                "expected {} outputs, got {}",
+                planned.len(),
+                observations.len()
+            ),
+        });
+    }
+    let mut seen = std::collections::HashSet::new();
+    // prompt_id -> per-axis sums across seeds
+    let mut per_prompt: std::collections::BTreeMap<String, (usize, [f64; 10])> =
+        std::collections::BTreeMap::new();
+
+    for entry in &planned {
+        let obs = match observations
+            .iter()
+            .find(|o| o.blinded_output_id == entry.blinded_output_id)
+        {
+            None => {
+                return reject(QualityAdmissionFailure::PlanCoverageMismatch {
+                    reason: format!("no output for {}", entry.blinded_output_id),
+                })
+            }
+            Some(o) => o,
+        };
+        if !seen.insert(obs.blinded_output_id.clone()) {
+            return reject(QualityAdmissionFailure::DuplicateObservation {
+                blinded_output_id: obs.blinded_output_id.clone(),
+            });
+        }
+        // The scored output must be the one the plan named, for this
+        // candidate, prompt, seed and run.
+        if obs.candidate_id != candidate.candidate_id {
+            return reject(QualityAdmissionFailure::WrongCandidate {
+                blinded_output_id: obs.blinded_output_id.clone(),
+            });
+        }
+        if obs.prompt_id != entry.prompt_id || obs.seed != entry.seed || obs.run_id != entry.run_id
+        {
+            return reject(QualityAdmissionFailure::PlanCoverageMismatch {
+                reason: format!("{} does not match its plan entry", obs.blinded_output_id),
+            });
+        }
+        if obs.rubric_id != protocol.quality_rubric_id {
+            return reject(QualityAdmissionFailure::RubricMismatch);
+        }
+        if obs.blinding_manifest_digest != protocol.blinding_manifest_digest {
+            return reject(QualityAdmissionFailure::BlindingManifestMismatch);
+        }
+        // Parity: the scored output must come from the frozen prompt as this
+        // candidate renders it — swapping hashes between candidates,
+        // prompts, seeds or runs fails here.
+        let expected_semantic = protocol
+            .expected_prompts
+            .iter()
+            .find(|e| e.prompt_id == obs.prompt_id)
+            .map(|e| e.semantic_prompt_hash.clone());
+        let binding = candidate
+            .prompt_bindings
+            .iter()
+            .find(|b| b.prompt_id == obs.prompt_id);
+        match (expected_semantic, binding) {
+            (Some(sem), Some(b))
+                if sem == obs.semantic_prompt_hash
+                    && b.rendered_prompt_hash == obs.rendered_prompt_hash
+                    && b.input_token_ids_hash == obs.input_token_ids_hash => {}
+            _ => {
+                return reject(QualityAdmissionFailure::ParityMismatch {
+                    blinded_output_id: obs.blinded_output_id.clone(),
+                })
+            }
+        }
+        if obs.disposition != QualityDisposition::Admissible {
+            return reject(QualityAdmissionFailure::Inadmissible {
+                blinded_output_id: obs.blinded_output_id.clone(),
+            });
+        }
+        let axes = axes_of(&obs.scores);
+        if axes.iter().any(|v| !v.is_finite() || *v < 0.0 || *v > 1.0) {
+            return reject(QualityAdmissionFailure::MalformedScores {
+                blinded_output_id: obs.blinded_output_id.clone(),
+            });
+        }
+        let slot = per_prompt
+            .entry(obs.prompt_id.clone())
+            .or_insert((0, [0.0; 10]));
+        slot.0 += 1;
+        for (i, v) in axes.iter().enumerate() {
+            slot.1[i] += v;
+        }
+    }
+    if per_prompt.is_empty() {
+        return reject(QualityAdmissionFailure::PlanCoverageMismatch {
+            reason: "no prompts scored".into(),
+        });
+    }
+    // Seeds within a prompt, then prompts equally.
+    let mut totals = [0.0f64; 10];
+    for (count, sums) in per_prompt.values() {
+        for i in 0..10 {
+            totals[i] += sums[i] / *count as f64;
+        }
+    }
+    let n = per_prompt.len() as f64;
+    let m: Vec<f64> = totals.iter().map(|t| t / n).collect();
+    QualityDerivation::Derived {
+        panel: QualityPanel {
+            instruction_adherence: m[0],
+            required_output_structure: m[1],
+            avoids_unsupported_invention: m[2],
+            appropriate_uncertainty: m[3],
+            avoids_false_refusal: m[4],
+            substantive_position_retention: m[5],
+            avoids_repetition: m[6],
+            truncation_behavior: m[7],
+            language_preservation: m[8],
+            prompt_profile_fidelity: m[9],
+        },
+    }
+}
+
 // ---------- admission and promotion ----------
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -875,6 +1103,7 @@ pub enum AdmissionFailure {
     ChatTemplateIdentityMismatch,
     SemanticPromptMismatch,
     MalformedQualityPanel,
+    QualityLedgerRejected { reason: String },
     ThermallyThrottled,
     Disqualified { reason: String },
 }
@@ -1148,13 +1377,16 @@ pub fn admit_result(
     if result.observations.iter().any(|o| o.metrics.throttled) {
         return Some(AdmissionFailure::ThermallyThrottled);
     }
-    if result.quality_rubric_id != protocol.quality_rubric_id {
-        return Some(AdmissionFailure::EnvironmentDeviation {
-            reason: "quality panel scored under a different rubric".into(),
+    // The panel is derived, never supplied — so admission checks that the
+    // raw ledger yields one at all.
+    if let QualityDerivation::Rejected { failure } = derive_quality_panel(
+        protocol.clone(),
+        candidate.clone(),
+        result.quality_observations.clone(),
+    ) {
+        return Some(AdmissionFailure::QualityLedgerRejected {
+            reason: format!("{failure:?}"),
         });
-    }
-    if quality_score(result.quality).is_none() {
-        return Some(AdmissionFailure::MalformedQualityPanel);
     }
     // The aggregate must be derivable from the ledger; if it is not, there is
     // nothing legitimate to evaluate thresholds against.
@@ -1329,12 +1561,21 @@ pub fn evaluate_promotion(
         return nothing(format!("global ledger invalid: {}", global.join("; ")));
     }
 
+    // Both aggregates are derived here; neither is accepted from the caller.
+    let panel_of = |cand: &EvaluationCandidate, r: &CandidateResult| match derive_quality_panel(
+        protocol.clone(),
+        cand.clone(),
+        r.quality_observations.clone(),
+    ) {
+        QualityDerivation::Derived { panel } => quality_score(panel),
+        QualityDerivation::Rejected { .. } => None,
+    };
     let (sa, sb) = match (
-        quality_score(result_a.quality),
-        quality_score(result_b.quality),
+        panel_of(&candidate_a, &result_a),
+        panel_of(&candidate_b, &result_b),
     ) {
         (Some(x), Some(y)) => (x, y),
-        _ => return nothing("a quality panel was malformed".into()),
+        _ => return nothing("a quality ledger did not yield a panel".into()),
     };
     let thresholds = protocol.thresholds.clone();
     // The aggregate is DERIVED from each ledger, never accepted from the

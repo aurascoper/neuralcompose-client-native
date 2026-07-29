@@ -2184,11 +2184,6 @@ public struct BenchmarkPrompt: Equatable, Hashable {
      * Token ids the runtime actually fed the model, hashed.
      */
     public var inputTokenIdsHash: String
-    /**
-     * v4: the generated continuation, hashed. Binds the quality panel to
-     * outputs that actually exist.
-     */
-    public var outputHash: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -2201,17 +2196,12 @@ public struct BenchmarkPrompt: Equatable, Hashable {
          */renderedPromptHash: String, 
         /**
          * Token ids the runtime actually fed the model, hashed.
-         */inputTokenIdsHash: String, 
-        /**
-         * v4: the generated continuation, hashed. Binds the quality panel to
-         * outputs that actually exist.
-         */outputHash: String) {
+         */inputTokenIdsHash: String) {
         self.promptId = promptId
         self.promptProfile = promptProfile
         self.semanticPromptHash = semanticPromptHash
         self.renderedPromptHash = renderedPromptHash
         self.inputTokenIdsHash = inputTokenIdsHash
-        self.outputHash = outputHash
     }
 
     
@@ -2234,8 +2224,7 @@ public struct FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer {
                 promptProfile: FfiConverterString.read(from: &buf), 
                 semanticPromptHash: FfiConverterString.read(from: &buf), 
                 renderedPromptHash: FfiConverterString.read(from: &buf), 
-                inputTokenIdsHash: FfiConverterString.read(from: &buf), 
-                outputHash: FfiConverterString.read(from: &buf)
+                inputTokenIdsHash: FfiConverterString.read(from: &buf)
         )
     }
 
@@ -2245,7 +2234,6 @@ public struct FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer {
         FfiConverterString.write(value.semanticPromptHash, into: &buf)
         FfiConverterString.write(value.renderedPromptHash, into: &buf)
         FfiConverterString.write(value.inputTokenIdsHash, into: &buf)
-        FfiConverterString.write(value.outputHash, into: &buf)
     }
 }
 
@@ -2284,10 +2272,9 @@ public struct CandidateResult: Equatable, Hashable {
      */
     public var installedBytes: UInt64
     /**
-     * v4: the rubric the panel was scored under; must be the frozen one.
+     * v5: the raw scored-output ledger. The panel is DERIVED from this.
      */
-    public var qualityRubricId: String
-    public var quality: QualityPanel
+    public var qualityObservations: [PromptQualityObservation]
     /**
      * v2: why this run is or is not a usable measurement.
      */
@@ -2307,8 +2294,8 @@ public struct CandidateResult: Equatable, Hashable {
          * The installed artifact size — a pack fact, not a per-run measurement.
          */installedBytes: UInt64, 
         /**
-         * v4: the rubric the panel was scored under; must be the frozen one.
-         */qualityRubricId: String, quality: QualityPanel, 
+         * v5: the raw scored-output ledger. The panel is DERIVED from this.
+         */qualityObservations: [PromptQualityObservation], 
         /**
          * v2: why this run is or is not a usable measurement.
          */disposition: RunDisposition, 
@@ -2323,8 +2310,7 @@ public struct CandidateResult: Equatable, Hashable {
         self.runtimeIdentity = runtimeIdentity
         self.prompts = prompts
         self.installedBytes = installedBytes
-        self.qualityRubricId = qualityRubricId
-        self.quality = quality
+        self.qualityObservations = qualityObservations
         self.disposition = disposition
         self.observations = observations
     }
@@ -2353,8 +2339,7 @@ public struct FfiConverterTypeCandidateResult: FfiConverterRustBuffer {
                 runtimeIdentity: FfiConverterString.read(from: &buf), 
                 prompts: FfiConverterSequenceTypeBenchmarkPrompt.read(from: &buf), 
                 installedBytes: FfiConverterUInt64.read(from: &buf), 
-                qualityRubricId: FfiConverterString.read(from: &buf), 
-                quality: FfiConverterTypeQualityPanel.read(from: &buf), 
+                qualityObservations: FfiConverterSequenceTypePromptQualityObservation.read(from: &buf), 
                 disposition: FfiConverterTypeRunDisposition.read(from: &buf), 
                 observations: FfiConverterSequenceTypeRunObservation.read(from: &buf)
         )
@@ -2369,8 +2354,7 @@ public struct FfiConverterTypeCandidateResult: FfiConverterRustBuffer {
         FfiConverterString.write(value.runtimeIdentity, into: &buf)
         FfiConverterSequenceTypeBenchmarkPrompt.write(value.prompts, into: &buf)
         FfiConverterUInt64.write(value.installedBytes, into: &buf)
-        FfiConverterString.write(value.qualityRubricId, into: &buf)
-        FfiConverterTypeQualityPanel.write(value.quality, into: &buf)
+        FfiConverterSequenceTypePromptQualityObservation.write(value.qualityObservations, into: &buf)
         FfiConverterTypeRunDisposition.write(value.disposition, into: &buf)
         FfiConverterSequenceTypeRunObservation.write(value.observations, into: &buf)
     }
@@ -3347,6 +3331,14 @@ public struct EvaluationProtocol: Equatable, Hashable {
      * v3: the exact run schedule, not merely the alternating property.
      */
     public var runPlan: [RunPlanEntry]
+    /**
+     * v5: which outputs are scored, declared rather than inferred.
+     */
+    public var qualityPlan: [QualityPlanEntry]
+    /**
+     * v5: the blinding manifest scorers worked under.
+     */
+    public var blindingManifestDigest: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -3366,7 +3358,13 @@ public struct EvaluationProtocol: Equatable, Hashable {
          */expectedPrompts: [ExpectedPrompt], 
         /**
          * v3: the exact run schedule, not merely the alternating property.
-         */runPlan: [RunPlanEntry]) {
+         */runPlan: [RunPlanEntry], 
+        /**
+         * v5: which outputs are scored, declared rather than inferred.
+         */qualityPlan: [QualityPlanEntry], 
+        /**
+         * v5: the blinding manifest scorers worked under.
+         */blindingManifestDigest: String) {
         self.protocolVersion = protocolVersion
         self.corpusId = corpusId
         self.corpusSha256Hex = corpusSha256Hex
@@ -3382,6 +3380,8 @@ public struct EvaluationProtocol: Equatable, Hashable {
         self.environment = environment
         self.expectedPrompts = expectedPrompts
         self.runPlan = runPlan
+        self.qualityPlan = qualityPlan
+        self.blindingManifestDigest = blindingManifestDigest
     }
 
     
@@ -3414,7 +3414,9 @@ public struct FfiConverterTypeEvaluationProtocol: FfiConverterRustBuffer {
                 thresholds: FfiConverterTypePromotionThresholds.read(from: &buf), 
                 environment: FfiConverterTypeRunEnvironment.read(from: &buf), 
                 expectedPrompts: FfiConverterSequenceTypeExpectedPrompt.read(from: &buf), 
-                runPlan: FfiConverterSequenceTypeRunPlanEntry.read(from: &buf)
+                runPlan: FfiConverterSequenceTypeRunPlanEntry.read(from: &buf), 
+                qualityPlan: FfiConverterSequenceTypeQualityPlanEntry.read(from: &buf), 
+                blindingManifestDigest: FfiConverterString.read(from: &buf)
         )
     }
 
@@ -3434,6 +3436,8 @@ public struct FfiConverterTypeEvaluationProtocol: FfiConverterRustBuffer {
         FfiConverterTypeRunEnvironment.write(value.environment, into: &buf)
         FfiConverterSequenceTypeExpectedPrompt.write(value.expectedPrompts, into: &buf)
         FfiConverterSequenceTypeRunPlanEntry.write(value.runPlan, into: &buf)
+        FfiConverterSequenceTypeQualityPlanEntry.write(value.qualityPlan, into: &buf)
+        FfiConverterString.write(value.blindingManifestDigest, into: &buf)
     }
 }
 
@@ -4632,6 +4636,118 @@ public func FfiConverterTypePromptBinding_lower(_ value: PromptBinding) -> RustB
 }
 
 
+/**
+ * One scored output. The hashes describe the assembled UTF-8 continuation
+ * AFTER runtime stop-token handling and BEFORE any UI trimming, Markdown
+ * rewriting or normalization — produced by the runtime, never supplied by
+ * the shell as a claim.
+ */
+public struct PromptQualityObservation: Equatable, Hashable {
+    public var blindedOutputId: String
+    public var runId: String
+    public var candidateId: String
+    public var promptId: String
+    public var seed: UInt64
+    public var semanticPromptHash: String
+    public var renderedPromptHash: String
+    public var inputTokenIdsHash: String
+    public var outputTextSha256: String
+    public var outputTokenIdsSha256: String
+    public var rubricId: String
+    public var blindingManifestDigest: String
+    public var scorerIdentity: String
+    public var scores: QualityPanel
+    public var disposition: QualityDisposition
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(blindedOutputId: String, runId: String, candidateId: String, promptId: String, seed: UInt64, semanticPromptHash: String, renderedPromptHash: String, inputTokenIdsHash: String, outputTextSha256: String, outputTokenIdsSha256: String, rubricId: String, blindingManifestDigest: String, scorerIdentity: String, scores: QualityPanel, disposition: QualityDisposition) {
+        self.blindedOutputId = blindedOutputId
+        self.runId = runId
+        self.candidateId = candidateId
+        self.promptId = promptId
+        self.seed = seed
+        self.semanticPromptHash = semanticPromptHash
+        self.renderedPromptHash = renderedPromptHash
+        self.inputTokenIdsHash = inputTokenIdsHash
+        self.outputTextSha256 = outputTextSha256
+        self.outputTokenIdsSha256 = outputTokenIdsSha256
+        self.rubricId = rubricId
+        self.blindingManifestDigest = blindingManifestDigest
+        self.scorerIdentity = scorerIdentity
+        self.scores = scores
+        self.disposition = disposition
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PromptQualityObservation: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePromptQualityObservation: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PromptQualityObservation {
+        return
+            try PromptQualityObservation(
+                blindedOutputId: FfiConverterString.read(from: &buf), 
+                runId: FfiConverterString.read(from: &buf), 
+                candidateId: FfiConverterString.read(from: &buf), 
+                promptId: FfiConverterString.read(from: &buf), 
+                seed: FfiConverterUInt64.read(from: &buf), 
+                semanticPromptHash: FfiConverterString.read(from: &buf), 
+                renderedPromptHash: FfiConverterString.read(from: &buf), 
+                inputTokenIdsHash: FfiConverterString.read(from: &buf), 
+                outputTextSha256: FfiConverterString.read(from: &buf), 
+                outputTokenIdsSha256: FfiConverterString.read(from: &buf), 
+                rubricId: FfiConverterString.read(from: &buf), 
+                blindingManifestDigest: FfiConverterString.read(from: &buf), 
+                scorerIdentity: FfiConverterString.read(from: &buf), 
+                scores: FfiConverterTypeQualityPanel.read(from: &buf), 
+                disposition: FfiConverterTypeQualityDisposition.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PromptQualityObservation, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.blindedOutputId, into: &buf)
+        FfiConverterString.write(value.runId, into: &buf)
+        FfiConverterString.write(value.candidateId, into: &buf)
+        FfiConverterString.write(value.promptId, into: &buf)
+        FfiConverterUInt64.write(value.seed, into: &buf)
+        FfiConverterString.write(value.semanticPromptHash, into: &buf)
+        FfiConverterString.write(value.renderedPromptHash, into: &buf)
+        FfiConverterString.write(value.inputTokenIdsHash, into: &buf)
+        FfiConverterString.write(value.outputTextSha256, into: &buf)
+        FfiConverterString.write(value.outputTokenIdsSha256, into: &buf)
+        FfiConverterString.write(value.rubricId, into: &buf)
+        FfiConverterString.write(value.blindingManifestDigest, into: &buf)
+        FfiConverterString.write(value.scorerIdentity, into: &buf)
+        FfiConverterTypeQualityPanel.write(value.scores, into: &buf)
+        FfiConverterTypeQualityDisposition.write(value.disposition, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePromptQualityObservation_lift(_ buf: RustBuffer) throws -> PromptQualityObservation {
+    return try FfiConverterTypePromptQualityObservation.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePromptQualityObservation_lower(_ value: PromptQualityObservation) -> RustBuffer {
+    return FfiConverterTypePromptQualityObservation.lower(value)
+}
+
+
 public struct ProviderAvailability: Equatable, Hashable {
     public var providerId: String
     public var credentialState: CredentialState
@@ -4923,6 +5039,81 @@ public func FfiConverterTypeQualityPanel_lift(_ buf: RustBuffer) throws -> Quali
 #endif
 public func FfiConverterTypeQualityPanel_lower(_ value: QualityPanel) -> RustBuffer {
     return FfiConverterTypeQualityPanel.lower(value)
+}
+
+
+/**
+ * v5: which output is scored. Declared, never inferred from RunMode —
+ * otherwise warmups, cancellation and sustained runs would silently gain
+ * scoring weight.
+ */
+public struct QualityPlanEntry: Equatable, Hashable {
+    public var index: UInt32
+    public var candidateId: String
+    public var runId: String
+    public var promptId: String
+    public var seed: UInt64
+    public var blindedOutputId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(index: UInt32, candidateId: String, runId: String, promptId: String, seed: UInt64, blindedOutputId: String) {
+        self.index = index
+        self.candidateId = candidateId
+        self.runId = runId
+        self.promptId = promptId
+        self.seed = seed
+        self.blindedOutputId = blindedOutputId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension QualityPlanEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeQualityPlanEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QualityPlanEntry {
+        return
+            try QualityPlanEntry(
+                index: FfiConverterUInt32.read(from: &buf), 
+                candidateId: FfiConverterString.read(from: &buf), 
+                runId: FfiConverterString.read(from: &buf), 
+                promptId: FfiConverterString.read(from: &buf), 
+                seed: FfiConverterUInt64.read(from: &buf), 
+                blindedOutputId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: QualityPlanEntry, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.index, into: &buf)
+        FfiConverterString.write(value.candidateId, into: &buf)
+        FfiConverterString.write(value.runId, into: &buf)
+        FfiConverterString.write(value.promptId, into: &buf)
+        FfiConverterUInt64.write(value.seed, into: &buf)
+        FfiConverterString.write(value.blindedOutputId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualityPlanEntry_lift(_ buf: RustBuffer) throws -> QualityPlanEntry {
+    return try FfiConverterTypeQualityPlanEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualityPlanEntry_lower(_ value: QualityPlanEntry) -> RustBuffer {
+    return FfiConverterTypeQualityPlanEntry.lower(value)
 }
 
 
@@ -6712,6 +6903,8 @@ public enum AdmissionFailure: Equatable, Hashable {
     case chatTemplateIdentityMismatch
     case semanticPromptMismatch
     case malformedQualityPanel
+    case qualityLedgerRejected(reason: String
+    )
     case thermallyThrottled
     case disqualified(reason: String
     )
@@ -6784,9 +6977,12 @@ public struct FfiConverterTypeAdmissionFailure: FfiConverterRustBuffer {
         
         case 20: return .malformedQualityPanel
         
-        case 21: return .thermallyThrottled
+        case 21: return .qualityLedgerRejected(reason: try FfiConverterString.read(from: &buf)
+        )
         
-        case 22: return .disqualified(reason: try FfiConverterString.read(from: &buf)
+        case 22: return .thermallyThrottled
+        
+        case 23: return .disqualified(reason: try FfiConverterString.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -6885,12 +7081,17 @@ public struct FfiConverterTypeAdmissionFailure: FfiConverterRustBuffer {
             writeInt(&buf, Int32(20))
         
         
-        case .thermallyThrottled:
+        case let .qualityLedgerRejected(reason):
             writeInt(&buf, Int32(21))
+            FfiConverterString.write(reason, into: &buf)
+            
+        
+        case .thermallyThrottled:
+            writeInt(&buf, Int32(22))
         
         
         case let .disqualified(reason):
-            writeInt(&buf, Int32(22))
+            writeInt(&buf, Int32(23))
             FfiConverterString.write(reason, into: &buf)
             
         }
@@ -9526,6 +9727,305 @@ public func FfiConverterTypeProviderTransport_lower(_ value: ProviderTransport) 
 
 
 
+public enum QualityAdmissionFailure: Equatable, Hashable {
+    
+    case planCoverageMismatch(reason: String
+    )
+    case duplicateObservation(blindedOutputId: String
+    )
+    case wrongCandidate(blindedOutputId: String
+    )
+    case rubricMismatch
+    case blindingManifestMismatch
+    case parityMismatch(blindedOutputId: String
+    )
+    case inadmissible(blindedOutputId: String
+    )
+    case malformedScores(blindedOutputId: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension QualityAdmissionFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeQualityAdmissionFailure: FfiConverterRustBuffer {
+    typealias SwiftType = QualityAdmissionFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QualityAdmissionFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .planCoverageMismatch(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .duplicateObservation(blindedOutputId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .wrongCandidate(blindedOutputId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .rubricMismatch
+        
+        case 5: return .blindingManifestMismatch
+        
+        case 6: return .parityMismatch(blindedOutputId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .inadmissible(blindedOutputId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 8: return .malformedScores(blindedOutputId: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: QualityAdmissionFailure, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .planCoverageMismatch(reason):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(reason, into: &buf)
+            
+        
+        case let .duplicateObservation(blindedOutputId):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(blindedOutputId, into: &buf)
+            
+        
+        case let .wrongCandidate(blindedOutputId):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(blindedOutputId, into: &buf)
+            
+        
+        case .rubricMismatch:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .blindingManifestMismatch:
+            writeInt(&buf, Int32(5))
+        
+        
+        case let .parityMismatch(blindedOutputId):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(blindedOutputId, into: &buf)
+            
+        
+        case let .inadmissible(blindedOutputId):
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(blindedOutputId, into: &buf)
+            
+        
+        case let .malformedScores(blindedOutputId):
+            writeInt(&buf, Int32(8))
+            FfiConverterString.write(blindedOutputId, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualityAdmissionFailure_lift(_ buf: RustBuffer) throws -> QualityAdmissionFailure {
+    return try FfiConverterTypeQualityAdmissionFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualityAdmissionFailure_lower(_ value: QualityAdmissionFailure) -> RustBuffer {
+    return FfiConverterTypeQualityAdmissionFailure.lower(value)
+}
+
+
+
+
+public enum QualityDerivation: Equatable, Hashable {
+    
+    case derived(panel: QualityPanel
+    )
+    case rejected(failure: QualityAdmissionFailure
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension QualityDerivation: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeQualityDerivation: FfiConverterRustBuffer {
+    typealias SwiftType = QualityDerivation
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QualityDerivation {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .derived(panel: try FfiConverterTypeQualityPanel.read(from: &buf)
+        )
+        
+        case 2: return .rejected(failure: try FfiConverterTypeQualityAdmissionFailure.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: QualityDerivation, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .derived(panel):
+            writeInt(&buf, Int32(1))
+            FfiConverterTypeQualityPanel.write(panel, into: &buf)
+            
+        
+        case let .rejected(failure):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypeQualityAdmissionFailure.write(failure, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualityDerivation_lift(_ buf: RustBuffer) throws -> QualityDerivation {
+    return try FfiConverterTypeQualityDerivation.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualityDerivation_lower(_ value: QualityDerivation) -> RustBuffer {
+    return FfiConverterTypeQualityDerivation.lower(value)
+}
+
+
+
+/**
+ * Why a scored output is or is not usable. Hard-invalid events stay OUTSIDE
+ * the average rather than becoming a low score that can be averaged away.
+ */
+
+public enum QualityDisposition: Equatable, Hashable {
+    
+    case admissible
+    case reasoningLeakage(detector: String
+    )
+    case parityFailure
+    case missingOutput
+    case timeoutWithoutScorableContinuation
+    case malformedRequiredStructure
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension QualityDisposition: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeQualityDisposition: FfiConverterRustBuffer {
+    typealias SwiftType = QualityDisposition
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QualityDisposition {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .admissible
+        
+        case 2: return .reasoningLeakage(detector: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .parityFailure
+        
+        case 4: return .missingOutput
+        
+        case 5: return .timeoutWithoutScorableContinuation
+        
+        case 6: return .malformedRequiredStructure
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: QualityDisposition, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .admissible:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .reasoningLeakage(detector):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(detector, into: &buf)
+            
+        
+        case .parityFailure:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .missingOutput:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .timeoutWithoutScorableContinuation:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .malformedRequiredStructure:
+            writeInt(&buf, Int32(6))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualityDisposition_lift(_ buf: RustBuffer) throws -> QualityDisposition {
+    return try FfiConverterTypeQualityDisposition.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualityDisposition_lower(_ value: QualityDisposition) -> RustBuffer {
+    return FfiConverterTypeQualityDisposition.lower(value)
+}
+
+
+
+
 public enum ReconnectDecision: Equatable, Hashable {
     
     case retryAfterMs(delayMs: UInt64
@@ -11757,6 +12257,31 @@ fileprivate struct FfiConverterSequenceTypePromptBinding: FfiConverterRustBuffer
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypePromptQualityObservation: FfiConverterRustBuffer {
+    typealias SwiftType = [PromptQualityObservation]
+
+    public static func write(_ value: [PromptQualityObservation], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePromptQualityObservation.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PromptQualityObservation] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PromptQualityObservation]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePromptQualityObservation.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeProviderAvailability: FfiConverterRustBuffer {
     typealias SwiftType = [ProviderAvailability]
 
@@ -11799,6 +12324,31 @@ fileprivate struct FfiConverterSequenceTypeProviderDescriptor: FfiConverterRustB
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeProviderDescriptor.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeQualityPlanEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [QualityPlanEntry]
+
+    public static func write(_ value: [QualityPlanEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeQualityPlanEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [QualityPlanEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [QualityPlanEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeQualityPlanEntry.read(from: &buf))
         }
         return seq
     }
@@ -12213,6 +12763,23 @@ public func deriveCostObservation(observations: [RunObservation], installedBytes
     uniffi_neuralcompose_mobile_core_fn_func_derive_cost_observation(
         FfiConverterSequenceTypeRunObservation.lower(observations),
         FfiConverterUInt64.lower(installedBytes),uniffiCallStatus
+    )
+})
+}
+/**
+ * Derive the panel from the raw ledger under the FROZEN macro weighting:
+ * average each axis across seeds within one prompt, then average those
+ * prompt-level values equally across prompts. Never weighted by output
+ * length, token count, run count or prompt frequency — so a prompt with more
+ * observations cannot dominate the candidate score.
+ */
+public func deriveQualityPanel(`protocol`: EvaluationProtocol, candidate: EvaluationCandidate, observations: [PromptQualityObservation]) -> QualityDerivation  {
+    return try!  FfiConverterTypeQualityDerivation_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_derive_quality_panel(
+        FfiConverterTypeEvaluationProtocol_lower(`protocol`),
+        FfiConverterTypeEvaluationCandidate_lower(candidate),
+        FfiConverterSequenceTypePromptQualityObservation.lower(observations),uniffiCallStatus
     )
 })
 }
@@ -12757,6 +13324,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation() != 50431) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_derive_quality_panel() != 65083) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion() != 42781) {

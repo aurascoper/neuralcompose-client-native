@@ -711,6 +711,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_derive_quality_panel(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_evaluation_protocol_identity(
@@ -1031,6 +1033,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_derive_cost_observation(`observations`: RustBuffer.ByValue,`installedBytes`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_derive_quality_panel(`protocol`: RustBuffer.ByValue,`candidate`: RustBuffer.ByValue,`observations`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_evaluate_promotion(`protocol`: RustBuffer.ByValue,`candidateA`: RustBuffer.ByValue,`resultA`: RustBuffer.ByValue,`candidateB`: RustBuffer.ByValue,`resultB`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_evaluation_protocol_identity(`protocol`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1277,6 +1281,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation() != 50431) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_derive_quality_panel() != 65083) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion() != 42781) {
@@ -4081,12 +4088,6 @@ data class BenchmarkPrompt (
      * Token ids the runtime actually fed the model, hashed.
      */
     var `inputTokenIdsHash`: kotlin.String
-    , 
-    /**
-     * v4: the generated continuation, hashed. Binds the quality panel to
-     * outputs that actually exist.
-     */
-    var `outputHash`: kotlin.String
     
 ){
     
@@ -4108,7 +4109,6 @@ public object FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer<BenchmarkP
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
-            FfiConverterString.read(buf),
         )
     }
 
@@ -4117,8 +4117,7 @@ public object FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer<BenchmarkP
             FfiConverterString.allocationSize(value.`promptProfile`) +
             FfiConverterString.allocationSize(value.`semanticPromptHash`) +
             FfiConverterString.allocationSize(value.`renderedPromptHash`) +
-            FfiConverterString.allocationSize(value.`inputTokenIdsHash`) +
-            FfiConverterString.allocationSize(value.`outputHash`)
+            FfiConverterString.allocationSize(value.`inputTokenIdsHash`)
     )
 
     override fun write(value: BenchmarkPrompt, buf: ByteBuffer) {
@@ -4127,7 +4126,6 @@ public object FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer<BenchmarkP
             FfiConverterString.write(value.`semanticPromptHash`, buf)
             FfiConverterString.write(value.`renderedPromptHash`, buf)
             FfiConverterString.write(value.`inputTokenIdsHash`, buf)
-            FfiConverterString.write(value.`outputHash`, buf)
     }
 }
 
@@ -4160,11 +4158,9 @@ data class CandidateResult (
     var `installedBytes`: kotlin.ULong
     , 
     /**
-     * v4: the rubric the panel was scored under; must be the frozen one.
+     * v5: the raw scored-output ledger. The panel is DERIVED from this.
      */
-    var `qualityRubricId`: kotlin.String
-    , 
-    var `quality`: QualityPanel
+    var `qualityObservations`: List<PromptQualityObservation>
     , 
     /**
      * v2: why this run is or is not a usable measurement.
@@ -4199,8 +4195,7 @@ public object FfiConverterTypeCandidateResult: FfiConverterRustBuffer<CandidateR
             FfiConverterString.read(buf),
             FfiConverterSequenceTypeBenchmarkPrompt.read(buf),
             FfiConverterULong.read(buf),
-            FfiConverterString.read(buf),
-            FfiConverterTypeQualityPanel.read(buf),
+            FfiConverterSequenceTypePromptQualityObservation.read(buf),
             FfiConverterTypeRunDisposition.read(buf),
             FfiConverterSequenceTypeRunObservation.read(buf),
         )
@@ -4215,8 +4210,7 @@ public object FfiConverterTypeCandidateResult: FfiConverterRustBuffer<CandidateR
             FfiConverterString.allocationSize(value.`runtimeIdentity`) +
             FfiConverterSequenceTypeBenchmarkPrompt.allocationSize(value.`prompts`) +
             FfiConverterULong.allocationSize(value.`installedBytes`) +
-            FfiConverterString.allocationSize(value.`qualityRubricId`) +
-            FfiConverterTypeQualityPanel.allocationSize(value.`quality`) +
+            FfiConverterSequenceTypePromptQualityObservation.allocationSize(value.`qualityObservations`) +
             FfiConverterTypeRunDisposition.allocationSize(value.`disposition`) +
             FfiConverterSequenceTypeRunObservation.allocationSize(value.`observations`)
     )
@@ -4230,8 +4224,7 @@ public object FfiConverterTypeCandidateResult: FfiConverterRustBuffer<CandidateR
             FfiConverterString.write(value.`runtimeIdentity`, buf)
             FfiConverterSequenceTypeBenchmarkPrompt.write(value.`prompts`, buf)
             FfiConverterULong.write(value.`installedBytes`, buf)
-            FfiConverterString.write(value.`qualityRubricId`, buf)
-            FfiConverterTypeQualityPanel.write(value.`quality`, buf)
+            FfiConverterSequenceTypePromptQualityObservation.write(value.`qualityObservations`, buf)
             FfiConverterTypeRunDisposition.write(value.`disposition`, buf)
             FfiConverterSequenceTypeRunObservation.write(value.`observations`, buf)
     }
@@ -5057,6 +5050,16 @@ data class EvaluationProtocol (
      * v3: the exact run schedule, not merely the alternating property.
      */
     var `runPlan`: List<RunPlanEntry>
+    , 
+    /**
+     * v5: which outputs are scored, declared rather than inferred.
+     */
+    var `qualityPlan`: List<QualityPlanEntry>
+    , 
+    /**
+     * v5: the blinding manifest scorers worked under.
+     */
+    var `blindingManifestDigest`: kotlin.String
     
 ){
     
@@ -5088,6 +5091,8 @@ public object FfiConverterTypeEvaluationProtocol: FfiConverterRustBuffer<Evaluat
             FfiConverterTypeRunEnvironment.read(buf),
             FfiConverterSequenceTypeExpectedPrompt.read(buf),
             FfiConverterSequenceTypeRunPlanEntry.read(buf),
+            FfiConverterSequenceTypeQualityPlanEntry.read(buf),
+            FfiConverterString.read(buf),
         )
     }
 
@@ -5106,7 +5111,9 @@ public object FfiConverterTypeEvaluationProtocol: FfiConverterRustBuffer<Evaluat
             FfiConverterTypePromotionThresholds.allocationSize(value.`thresholds`) +
             FfiConverterTypeRunEnvironment.allocationSize(value.`environment`) +
             FfiConverterSequenceTypeExpectedPrompt.allocationSize(value.`expectedPrompts`) +
-            FfiConverterSequenceTypeRunPlanEntry.allocationSize(value.`runPlan`)
+            FfiConverterSequenceTypeRunPlanEntry.allocationSize(value.`runPlan`) +
+            FfiConverterSequenceTypeQualityPlanEntry.allocationSize(value.`qualityPlan`) +
+            FfiConverterString.allocationSize(value.`blindingManifestDigest`)
     )
 
     override fun write(value: EvaluationProtocol, buf: ByteBuffer) {
@@ -5125,6 +5132,8 @@ public object FfiConverterTypeEvaluationProtocol: FfiConverterRustBuffer<Evaluat
             FfiConverterTypeRunEnvironment.write(value.`environment`, buf)
             FfiConverterSequenceTypeExpectedPrompt.write(value.`expectedPrompts`, buf)
             FfiConverterSequenceTypeRunPlanEntry.write(value.`runPlan`, buf)
+            FfiConverterSequenceTypeQualityPlanEntry.write(value.`qualityPlan`, buf)
+            FfiConverterString.write(value.`blindingManifestDigest`, buf)
     }
 }
 
@@ -6068,6 +6077,115 @@ public object FfiConverterTypePromptBinding: FfiConverterRustBuffer<PromptBindin
 
 
 
+/**
+ * One scored output. The hashes describe the assembled UTF-8 continuation
+ * AFTER runtime stop-token handling and BEFORE any UI trimming, Markdown
+ * rewriting or normalization — produced by the runtime, never supplied by
+ * the shell as a claim.
+ */
+data class PromptQualityObservation (
+    var `blindedOutputId`: kotlin.String
+    , 
+    var `runId`: kotlin.String
+    , 
+    var `candidateId`: kotlin.String
+    , 
+    var `promptId`: kotlin.String
+    , 
+    var `seed`: kotlin.ULong
+    , 
+    var `semanticPromptHash`: kotlin.String
+    , 
+    var `renderedPromptHash`: kotlin.String
+    , 
+    var `inputTokenIdsHash`: kotlin.String
+    , 
+    var `outputTextSha256`: kotlin.String
+    , 
+    var `outputTokenIdsSha256`: kotlin.String
+    , 
+    var `rubricId`: kotlin.String
+    , 
+    var `blindingManifestDigest`: kotlin.String
+    , 
+    var `scorerIdentity`: kotlin.String
+    , 
+    var `scores`: QualityPanel
+    , 
+    var `disposition`: QualityDisposition
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePromptQualityObservation: FfiConverterRustBuffer<PromptQualityObservation> {
+    override fun read(buf: ByteBuffer): PromptQualityObservation {
+        return PromptQualityObservation(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeQualityPanel.read(buf),
+            FfiConverterTypeQualityDisposition.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: PromptQualityObservation) = (
+            FfiConverterString.allocationSize(value.`blindedOutputId`) +
+            FfiConverterString.allocationSize(value.`runId`) +
+            FfiConverterString.allocationSize(value.`candidateId`) +
+            FfiConverterString.allocationSize(value.`promptId`) +
+            FfiConverterULong.allocationSize(value.`seed`) +
+            FfiConverterString.allocationSize(value.`semanticPromptHash`) +
+            FfiConverterString.allocationSize(value.`renderedPromptHash`) +
+            FfiConverterString.allocationSize(value.`inputTokenIdsHash`) +
+            FfiConverterString.allocationSize(value.`outputTextSha256`) +
+            FfiConverterString.allocationSize(value.`outputTokenIdsSha256`) +
+            FfiConverterString.allocationSize(value.`rubricId`) +
+            FfiConverterString.allocationSize(value.`blindingManifestDigest`) +
+            FfiConverterString.allocationSize(value.`scorerIdentity`) +
+            FfiConverterTypeQualityPanel.allocationSize(value.`scores`) +
+            FfiConverterTypeQualityDisposition.allocationSize(value.`disposition`)
+    )
+
+    override fun write(value: PromptQualityObservation, buf: ByteBuffer) {
+            FfiConverterString.write(value.`blindedOutputId`, buf)
+            FfiConverterString.write(value.`runId`, buf)
+            FfiConverterString.write(value.`candidateId`, buf)
+            FfiConverterString.write(value.`promptId`, buf)
+            FfiConverterULong.write(value.`seed`, buf)
+            FfiConverterString.write(value.`semanticPromptHash`, buf)
+            FfiConverterString.write(value.`renderedPromptHash`, buf)
+            FfiConverterString.write(value.`inputTokenIdsHash`, buf)
+            FfiConverterString.write(value.`outputTextSha256`, buf)
+            FfiConverterString.write(value.`outputTokenIdsSha256`, buf)
+            FfiConverterString.write(value.`rubricId`, buf)
+            FfiConverterString.write(value.`blindingManifestDigest`, buf)
+            FfiConverterString.write(value.`scorerIdentity`, buf)
+            FfiConverterTypeQualityPanel.write(value.`scores`, buf)
+            FfiConverterTypeQualityDisposition.write(value.`disposition`, buf)
+    }
+}
+
+
+
 data class ProviderAvailability (
     var `providerId`: kotlin.String
     , 
@@ -6298,6 +6416,69 @@ public object FfiConverterTypeQualityPanel: FfiConverterRustBuffer<QualityPanel>
             FfiConverterDouble.write(value.`truncationBehavior`, buf)
             FfiConverterDouble.write(value.`languagePreservation`, buf)
             FfiConverterDouble.write(value.`promptProfileFidelity`, buf)
+    }
+}
+
+
+
+/**
+ * v5: which output is scored. Declared, never inferred from RunMode —
+ * otherwise warmups, cancellation and sustained runs would silently gain
+ * scoring weight.
+ */
+data class QualityPlanEntry (
+    var `index`: kotlin.UInt
+    , 
+    var `candidateId`: kotlin.String
+    , 
+    var `runId`: kotlin.String
+    , 
+    var `promptId`: kotlin.String
+    , 
+    var `seed`: kotlin.ULong
+    , 
+    var `blindedOutputId`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityPlanEntry: FfiConverterRustBuffer<QualityPlanEntry> {
+    override fun read(buf: ByteBuffer): QualityPlanEntry {
+        return QualityPlanEntry(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: QualityPlanEntry) = (
+            FfiConverterUInt.allocationSize(value.`index`) +
+            FfiConverterString.allocationSize(value.`candidateId`) +
+            FfiConverterString.allocationSize(value.`runId`) +
+            FfiConverterString.allocationSize(value.`promptId`) +
+            FfiConverterULong.allocationSize(value.`seed`) +
+            FfiConverterString.allocationSize(value.`blindedOutputId`)
+    )
+
+    override fun write(value: QualityPlanEntry, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`index`, buf)
+            FfiConverterString.write(value.`candidateId`, buf)
+            FfiConverterString.write(value.`runId`, buf)
+            FfiConverterString.write(value.`promptId`, buf)
+            FfiConverterULong.write(value.`seed`, buf)
+            FfiConverterString.write(value.`blindedOutputId`, buf)
     }
 }
 
@@ -7942,6 +8123,15 @@ sealed class AdmissionFailure {
     object MalformedQualityPanel : AdmissionFailure()
     
     
+    data class QualityLedgerRejected(
+        val `reason`: kotlin.String) : AdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
     object ThermallyThrottled : AdmissionFailure()
     
     
@@ -8006,8 +8196,11 @@ public object FfiConverterTypeAdmissionFailure : FfiConverterRustBuffer<Admissio
             18 -> AdmissionFailure.ChatTemplateIdentityMismatch
             19 -> AdmissionFailure.SemanticPromptMismatch
             20 -> AdmissionFailure.MalformedQualityPanel
-            21 -> AdmissionFailure.ThermallyThrottled
-            22 -> AdmissionFailure.Disqualified(
+            21 -> AdmissionFailure.QualityLedgerRejected(
+                FfiConverterString.read(buf),
+                )
+            22 -> AdmissionFailure.ThermallyThrottled
+            23 -> AdmissionFailure.Disqualified(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
@@ -8143,6 +8336,13 @@ public object FfiConverterTypeAdmissionFailure : FfiConverterRustBuffer<Admissio
                 4UL
             )
         }
+        is AdmissionFailure.QualityLedgerRejected -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
         is AdmissionFailure.ThermallyThrottled -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
@@ -8248,12 +8448,17 @@ public object FfiConverterTypeAdmissionFailure : FfiConverterRustBuffer<Admissio
                 buf.putInt(20)
                 Unit
             }
-            is AdmissionFailure.ThermallyThrottled -> {
+            is AdmissionFailure.QualityLedgerRejected -> {
                 buf.putInt(21)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is AdmissionFailure.ThermallyThrottled -> {
+                buf.putInt(22)
                 Unit
             }
             is AdmissionFailure.Disqualified -> {
-                buf.putInt(22)
+                buf.putInt(23)
                 FfiConverterString.write(value.`reason`, buf)
                 Unit
             }
@@ -10694,6 +10899,429 @@ public object FfiConverterTypeProviderTransport: FfiConverterRustBuffer<Provider
 
     override fun write(value: ProviderTransport, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class QualityAdmissionFailure {
+    
+    data class PlanCoverageMismatch(
+        val `reason`: kotlin.String) : QualityAdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class DuplicateObservation(
+        val `blindedOutputId`: kotlin.String) : QualityAdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class WrongCandidate(
+        val `blindedOutputId`: kotlin.String) : QualityAdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object RubricMismatch : QualityAdmissionFailure()
+    
+    
+    object BlindingManifestMismatch : QualityAdmissionFailure()
+    
+    
+    data class ParityMismatch(
+        val `blindedOutputId`: kotlin.String) : QualityAdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Inadmissible(
+        val `blindedOutputId`: kotlin.String) : QualityAdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class MalformedScores(
+        val `blindedOutputId`: kotlin.String) : QualityAdmissionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityAdmissionFailure : FfiConverterRustBuffer<QualityAdmissionFailure>{
+    override fun read(buf: ByteBuffer): QualityAdmissionFailure {
+        return when(buf.getInt()) {
+            1 -> QualityAdmissionFailure.PlanCoverageMismatch(
+                FfiConverterString.read(buf),
+                )
+            2 -> QualityAdmissionFailure.DuplicateObservation(
+                FfiConverterString.read(buf),
+                )
+            3 -> QualityAdmissionFailure.WrongCandidate(
+                FfiConverterString.read(buf),
+                )
+            4 -> QualityAdmissionFailure.RubricMismatch
+            5 -> QualityAdmissionFailure.BlindingManifestMismatch
+            6 -> QualityAdmissionFailure.ParityMismatch(
+                FfiConverterString.read(buf),
+                )
+            7 -> QualityAdmissionFailure.Inadmissible(
+                FfiConverterString.read(buf),
+                )
+            8 -> QualityAdmissionFailure.MalformedScores(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: QualityAdmissionFailure): ULong = when(value) {
+        is QualityAdmissionFailure.PlanCoverageMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+        is QualityAdmissionFailure.DuplicateObservation -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`blindedOutputId`)
+            )
+        }
+        is QualityAdmissionFailure.WrongCandidate -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`blindedOutputId`)
+            )
+        }
+        is QualityAdmissionFailure.RubricMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is QualityAdmissionFailure.BlindingManifestMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is QualityAdmissionFailure.ParityMismatch -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`blindedOutputId`)
+            )
+        }
+        is QualityAdmissionFailure.Inadmissible -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`blindedOutputId`)
+            )
+        }
+        is QualityAdmissionFailure.MalformedScores -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`blindedOutputId`)
+            )
+        }
+    }
+
+    override fun write(value: QualityAdmissionFailure, buf: ByteBuffer) {
+        when(value) {
+            is QualityAdmissionFailure.PlanCoverageMismatch -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is QualityAdmissionFailure.DuplicateObservation -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`blindedOutputId`, buf)
+                Unit
+            }
+            is QualityAdmissionFailure.WrongCandidate -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`blindedOutputId`, buf)
+                Unit
+            }
+            is QualityAdmissionFailure.RubricMismatch -> {
+                buf.putInt(4)
+                Unit
+            }
+            is QualityAdmissionFailure.BlindingManifestMismatch -> {
+                buf.putInt(5)
+                Unit
+            }
+            is QualityAdmissionFailure.ParityMismatch -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`blindedOutputId`, buf)
+                Unit
+            }
+            is QualityAdmissionFailure.Inadmissible -> {
+                buf.putInt(7)
+                FfiConverterString.write(value.`blindedOutputId`, buf)
+                Unit
+            }
+            is QualityAdmissionFailure.MalformedScores -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`blindedOutputId`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+sealed class QualityDerivation {
+    
+    data class Derived(
+        val `panel`: uniffi.neuralcompose_mobile_core.QualityPanel) : QualityDerivation()
+        
+    {
+        
+
+        companion object
+    }
+    
+    data class Rejected(
+        val `failure`: uniffi.neuralcompose_mobile_core.QualityAdmissionFailure) : QualityDerivation()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityDerivation : FfiConverterRustBuffer<QualityDerivation>{
+    override fun read(buf: ByteBuffer): QualityDerivation {
+        return when(buf.getInt()) {
+            1 -> QualityDerivation.Derived(
+                FfiConverterTypeQualityPanel.read(buf),
+                )
+            2 -> QualityDerivation.Rejected(
+                FfiConverterTypeQualityAdmissionFailure.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: QualityDerivation): ULong = when(value) {
+        is QualityDerivation.Derived -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeQualityPanel.allocationSize(value.`panel`)
+            )
+        }
+        is QualityDerivation.Rejected -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeQualityAdmissionFailure.allocationSize(value.`failure`)
+            )
+        }
+    }
+
+    override fun write(value: QualityDerivation, buf: ByteBuffer) {
+        when(value) {
+            is QualityDerivation.Derived -> {
+                buf.putInt(1)
+                FfiConverterTypeQualityPanel.write(value.`panel`, buf)
+                Unit
+            }
+            is QualityDerivation.Rejected -> {
+                buf.putInt(2)
+                FfiConverterTypeQualityAdmissionFailure.write(value.`failure`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * Why a scored output is or is not usable. Hard-invalid events stay OUTSIDE
+ * the average rather than becoming a low score that can be averaged away.
+ */
+sealed class QualityDisposition {
+    
+    object Admissible : QualityDisposition()
+    
+    
+    data class ReasoningLeakage(
+        val `detector`: kotlin.String) : QualityDisposition()
+        
+    {
+        
+
+        companion object
+    }
+    
+    object ParityFailure : QualityDisposition()
+    
+    
+    object MissingOutput : QualityDisposition()
+    
+    
+    object TimeoutWithoutScorableContinuation : QualityDisposition()
+    
+    
+    object MalformedRequiredStructure : QualityDisposition()
+    
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityDisposition : FfiConverterRustBuffer<QualityDisposition>{
+    override fun read(buf: ByteBuffer): QualityDisposition {
+        return when(buf.getInt()) {
+            1 -> QualityDisposition.Admissible
+            2 -> QualityDisposition.ReasoningLeakage(
+                FfiConverterString.read(buf),
+                )
+            3 -> QualityDisposition.ParityFailure
+            4 -> QualityDisposition.MissingOutput
+            5 -> QualityDisposition.TimeoutWithoutScorableContinuation
+            6 -> QualityDisposition.MalformedRequiredStructure
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: QualityDisposition): ULong = when(value) {
+        is QualityDisposition.Admissible -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is QualityDisposition.ReasoningLeakage -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`detector`)
+            )
+        }
+        is QualityDisposition.ParityFailure -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is QualityDisposition.MissingOutput -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is QualityDisposition.TimeoutWithoutScorableContinuation -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is QualityDisposition.MalformedRequiredStructure -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: QualityDisposition, buf: ByteBuffer) {
+        when(value) {
+            is QualityDisposition.Admissible -> {
+                buf.putInt(1)
+                Unit
+            }
+            is QualityDisposition.ReasoningLeakage -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`detector`, buf)
+                Unit
+            }
+            is QualityDisposition.ParityFailure -> {
+                buf.putInt(3)
+                Unit
+            }
+            is QualityDisposition.MissingOutput -> {
+                buf.putInt(4)
+                Unit
+            }
+            is QualityDisposition.TimeoutWithoutScorableContinuation -> {
+                buf.putInt(5)
+                Unit
+            }
+            is QualityDisposition.MalformedRequiredStructure -> {
+                buf.putInt(6)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 }
 
@@ -13366,6 +13994,34 @@ public object FfiConverterSequenceTypePromptBinding: FfiConverterRustBuffer<List
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypePromptQualityObservation: FfiConverterRustBuffer<List<PromptQualityObservation>> {
+    override fun read(buf: ByteBuffer): List<PromptQualityObservation> {
+        val len = buf.getInt()
+        return List<PromptQualityObservation>(len) {
+            FfiConverterTypePromptQualityObservation.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<PromptQualityObservation>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypePromptQualityObservation.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<PromptQualityObservation>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypePromptQualityObservation.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeProviderAvailability: FfiConverterRustBuffer<List<ProviderAvailability>> {
     override fun read(buf: ByteBuffer): List<ProviderAvailability> {
         val len = buf.getInt()
@@ -13412,6 +14068,34 @@ public object FfiConverterSequenceTypeProviderDescriptor: FfiConverterRustBuffer
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeProviderDescriptor.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeQualityPlanEntry: FfiConverterRustBuffer<List<QualityPlanEntry>> {
+    override fun read(buf: ByteBuffer): List<QualityPlanEntry> {
+        val len = buf.getInt()
+        return List<QualityPlanEntry>(len) {
+            FfiConverterTypeQualityPlanEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<QualityPlanEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeQualityPlanEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<QualityPlanEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeQualityPlanEntry.write(it, buf)
         }
     }
 }
@@ -13901,6 +14585,26 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
         
         FfiConverterSequenceTypeRunObservation.lower(`observations`),
         FfiConverterULong.lower(`installedBytes`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Derive the panel from the raw ledger under the FROZEN macro weighting:
+         * average each axis across seeds within one prompt, then average those
+         * prompt-level values equally across prompts. Never weighted by output
+         * length, token count, run count or prompt frequency — so a prompt with more
+         * observations cannot dominate the candidate score.
+         */ fun `deriveQualityPanel`(`protocol`: EvaluationProtocol, `candidate`: EvaluationCandidate, `observations`: List<PromptQualityObservation>): QualityDerivation {
+            return FfiConverterTypeQualityDerivation.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_derive_quality_panel(
+    
+        
+        FfiConverterTypeEvaluationProtocol.lower(`protocol`),
+        FfiConverterTypeEvaluationCandidate.lower(`candidate`),
+        FfiConverterSequenceTypePromptQualityObservation.lower(`observations`),_status)
 }
     )
     }
