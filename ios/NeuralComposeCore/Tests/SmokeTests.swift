@@ -236,7 +236,7 @@ final class SmokeTests: XCTestCase {
             modelPackId: "local-dialogue-basic",
             runtimeTarget: m7a2Target(backend: backend, accelerator: accelerator),
             quantization: "q4_k_m", artifactFormat: "gguf",
-            numericalContractId: "nc-gguf-q4-v1")
+            numericalContractId: String(repeating: "c0", count: 32))
     }
 
     func testM7a2SelectionNeverFallsBackThroughBindings() throws {
@@ -248,7 +248,8 @@ final class SmokeTests: XCTestCase {
             os: "ios", architecture: "arm64",
             installedBackendIds: ["llama-cpp-cpu"], supportedRuntimeAbis: ["nc-gguf-v1"])
         let none = RequiredCapabilities(
-            streaming: false, cancellation: false, structuredOutput: false)
+            generation: false, embeddings: false, streaming: false,
+            cancellation: false, structuredOutput: false)
 
         // Explicitly required backend is absent → Unavailable, never CPU.
         let denied = selectRuntimeVariant(
@@ -270,12 +271,40 @@ final class SmokeTests: XCTestCase {
 
         // A required capability no variant offers fails closed.
         let needsStructured = RequiredCapabilities(
-            streaming: false, cancellation: false, structuredOutput: true)
+            generation: false, embeddings: false, streaming: false,
+            cancellation: false, structuredOutput: true)
         XCTAssertEqual(
             selectRuntimeVariant(
                 logicalModelId: "qwen2.5-0.5b-instruct", variants: variants, device: device,
                 requirement: .anySupported, required: needsStructured),
             .unavailable(failure: .requiredCapabilityUnavailable(capability: "structuredOutput")))
+
+        // The workload itself is a capability: these variants generate but do
+        // not embed, so an embedding request must not resolve to them.
+        let needsEmbeddings = RequiredCapabilities(
+            generation: false, embeddings: true, streaming: false,
+            cancellation: false, structuredOutput: false)
+        XCTAssertEqual(
+            selectRuntimeVariant(
+                logicalModelId: "qwen2.5-0.5b-instruct", variants: variants, device: device,
+                requirement: .anySupported, required: needsEmbeddings),
+            .unavailable(failure: .requiredCapabilityUnavailable(capability: "embeddings")))
+
+        // Two variants of ONE backend are never separated by a name sort.
+        var q8 = m7a2Variant(id: "cpu-q8", backend: "llama-cpp-cpu", accelerator: .cpu)
+        q8.quantization = "q8_0"
+        XCTAssertEqual(
+            selectRuntimeVariant(
+                logicalModelId: "qwen2.5-0.5b-instruct", variants: [variants[0], q8],
+                device: device, requirement: .anySupported, required: none),
+            .unavailable(failure: .ambiguousVariantsForBackend(backendId: "llama-cpp-cpu")))
+        // Naming the variant resolves it.
+        guard case let .selected(named) = selectRuntimeVariant(
+            logicalModelId: "qwen2.5-0.5b-instruct", variants: [variants[0], q8],
+            device: device, requirement: .explicitVariant(variantId: "cpu-q8"),
+            required: none)
+        else { return XCTFail("explicit variant must resolve") }
+        XCTAssertEqual(named.variantId, "cpu-q8")
     }
 
     func testM7a2SupportPromotionAndPropertyLawThroughBindings() throws {

@@ -81,6 +81,41 @@ and promotes no target.
    and backend versions. `docs/support-matrix.md` is the register, and no row
    is promoted by preference.
 
+## Review amendments (PR #3, 2026-07-29)
+
+**A1 — The workload is a required capability.** `RequiredCapabilities` gains
+`generation` and `embeddings`. Without them an embedding-only backend could
+be selected to generate text: the target declared both capability flags but
+selection only consulted streaming, cancellation, and structured output.
+
+**A2 — Two variants of one backend must be named.** `AnySupported` and an
+explicit *backend* requirement both refuse to choose between two eligible
+variants of the same backend (`AmbiguousVariantsForBackend`): q4 vs q8, or
+two numerical contracts, are the caller's decision and were previously
+settled by a lexicographic sort on `variant_id`. The new
+`BackendRequirement::ExplicitVariant` is the only way to disambiguate. The
+CPU-first preference survives only *across* backends, where one variant per
+backend makes it a documented preference rather than a hidden tie-break.
+
+**A3 — The numerical-contract identity is sealed, not asserted.**
+`numerical_contract_identity` now hashes the substantive terms and
+**excludes** the declared `numerical_contract_id`; hashing the caller's own
+label into its digest made the identity self-referential. A policy is valid
+only when its declared id **equals** the seal its terms derive, so a
+tolerance cannot be loosened while keeping the name. `ModelVariant`
+`numerical_contract_id` must be a 64-hex seal rather than a free label, and
+`variant_binds_to_contract` is the only legitimate way for a variant to
+claim conformance to a policy.
+
+**A4 — Measurement scope follows the contract kind.** `logits_tolerance` and
+`embedding_tolerance` are `Option`; at least one must be declared. A
+declared tolerance must be measured (missing or non-finite → non-conformant),
+an **undeclared** one must not be measured
+(`MeasurementOutOfScope`, visible rather than silently dropped), and
+`ExactUnderGreedy` requires a logits scope to be meaningful. Previously every
+conformance run demanded both, which contradicted the generation-only vs
+embedding-only separation this ADR establishes.
+
 ## Consequences
 
 `crates/neuralcompose-mobile-core/src/runtime_target.rs`,

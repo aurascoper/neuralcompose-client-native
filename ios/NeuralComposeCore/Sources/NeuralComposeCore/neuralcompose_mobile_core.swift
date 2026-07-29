@@ -1776,24 +1776,30 @@ public struct BackendConformancePolicy: Equatable, Hashable {
     public var contextCap: UInt32
     public var deterministicTestMode: Bool
     /**
-     * Maximum absolute logit divergence. Must be finite and >= 0.
+     * Maximum absolute logit divergence, or `None` when logits are out of
+     * scope — an embedding-only runtime exposes none, and demanding them
+     * would make every embedding contract unsatisfiable.
      */
-    public var logitsTolerance: Double
+    public var logitsTolerance: Double?
     /**
-     * Maximum embedding divergence under the declared metric.
+     * Maximum embedding divergence, or `None` for a generation-only
+     * contract. At least one of the two must be declared.
      */
-    public var embeddingTolerance: Double
+    public var embeddingTolerance: Double?
     public var generatedTokenPolicy: GeneratedTokenPolicy
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(numericalContractId: String, tokenizerIdentity: String, promptByteIdentity: String, stopTokenIdentity: String, contextCap: UInt32, deterministicTestMode: Bool, 
         /**
-         * Maximum absolute logit divergence. Must be finite and >= 0.
-         */logitsTolerance: Double, 
+         * Maximum absolute logit divergence, or `None` when logits are out of
+         * scope — an embedding-only runtime exposes none, and demanding them
+         * would make every embedding contract unsatisfiable.
+         */logitsTolerance: Double?, 
         /**
-         * Maximum embedding divergence under the declared metric.
-         */embeddingTolerance: Double, generatedTokenPolicy: GeneratedTokenPolicy) {
+         * Maximum embedding divergence, or `None` for a generation-only
+         * contract. At least one of the two must be declared.
+         */embeddingTolerance: Double?, generatedTokenPolicy: GeneratedTokenPolicy) {
         self.numericalContractId = numericalContractId
         self.tokenizerIdentity = tokenizerIdentity
         self.promptByteIdentity = promptByteIdentity
@@ -1827,8 +1833,8 @@ public struct FfiConverterTypeBackendConformancePolicy: FfiConverterRustBuffer {
                 stopTokenIdentity: FfiConverterString.read(from: &buf), 
                 contextCap: FfiConverterUInt32.read(from: &buf), 
                 deterministicTestMode: FfiConverterBool.read(from: &buf), 
-                logitsTolerance: FfiConverterDouble.read(from: &buf), 
-                embeddingTolerance: FfiConverterDouble.read(from: &buf), 
+                logitsTolerance: FfiConverterOptionDouble.read(from: &buf), 
+                embeddingTolerance: FfiConverterOptionDouble.read(from: &buf), 
                 generatedTokenPolicy: FfiConverterTypeGeneratedTokenPolicy.read(from: &buf)
         )
     }
@@ -1840,8 +1846,8 @@ public struct FfiConverterTypeBackendConformancePolicy: FfiConverterRustBuffer {
         FfiConverterString.write(value.stopTokenIdentity, into: &buf)
         FfiConverterUInt32.write(value.contextCap, into: &buf)
         FfiConverterBool.write(value.deterministicTestMode, into: &buf)
-        FfiConverterDouble.write(value.logitsTolerance, into: &buf)
-        FfiConverterDouble.write(value.embeddingTolerance, into: &buf)
+        FfiConverterOptionDouble.write(value.logitsTolerance, into: &buf)
+        FfiConverterOptionDouble.write(value.embeddingTolerance, into: &buf)
         FfiConverterTypeGeneratedTokenPolicy.write(value.generatedTokenPolicy, into: &buf)
     }
 }
@@ -3451,16 +3457,22 @@ public func FfiConverterTypeRecordingManifest_lower(_ value: RecordingManifest) 
 
 /**
  * Capabilities the caller *requires*. Anything true here that the backend
- * cannot do makes the selection fail closed.
+ * cannot do makes the selection fail closed. `generation` and `embeddings`
+ * are the workload itself: without them an embedding-only backend could be
+ * selected to generate text.
  */
 public struct RequiredCapabilities: Equatable, Hashable {
+    public var generation: Bool
+    public var embeddings: Bool
     public var streaming: Bool
     public var cancellation: Bool
     public var structuredOutput: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(streaming: Bool, cancellation: Bool, structuredOutput: Bool) {
+    public init(generation: Bool, embeddings: Bool, streaming: Bool, cancellation: Bool, structuredOutput: Bool) {
+        self.generation = generation
+        self.embeddings = embeddings
         self.streaming = streaming
         self.cancellation = cancellation
         self.structuredOutput = structuredOutput
@@ -3482,6 +3494,8 @@ public struct FfiConverterTypeRequiredCapabilities: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RequiredCapabilities {
         return
             try RequiredCapabilities(
+                generation: FfiConverterBool.read(from: &buf), 
+                embeddings: FfiConverterBool.read(from: &buf), 
                 streaming: FfiConverterBool.read(from: &buf), 
                 cancellation: FfiConverterBool.read(from: &buf), 
                 structuredOutput: FfiConverterBool.read(from: &buf)
@@ -3489,6 +3503,8 @@ public struct FfiConverterTypeRequiredCapabilities: FfiConverterRustBuffer {
     }
 
     public static func write(_ value: RequiredCapabilities, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.generation, into: &buf)
+        FfiConverterBool.write(value.embeddings, into: &buf)
         FfiConverterBool.write(value.streaming, into: &buf)
         FfiConverterBool.write(value.cancellation, into: &buf)
         FfiConverterBool.write(value.structuredOutput, into: &buf)
@@ -4651,13 +4667,20 @@ public func FfiConverterTypeAvailabilityProbe_lower(_ value: AvailabilityProbe) 
 public enum BackendRequirement: Equatable, Hashable {
     
     /**
-     * Any variant the device can actually run is acceptable.
+     * Any variant the device can actually run is acceptable. Still refuses
+     * to choose between two variants of the SAME backend.
      */
     case anySupported
     /**
      * Only this backend. Absent or unusable → Unavailable, never a swap.
      */
     case explicit(backendId: String
+    )
+    /**
+     * Exactly this variant — the only way to choose between two variants of
+     * one backend (q4 vs q8, or two numerical contracts).
+     */
+    case explicitVariant(variantId: String
     )
 
 
@@ -4685,6 +4708,9 @@ public struct FfiConverterTypeBackendRequirement: FfiConverterRustBuffer {
         case 2: return .explicit(backendId: try FfiConverterString.read(from: &buf)
         )
         
+        case 3: return .explicitVariant(variantId: try FfiConverterString.read(from: &buf)
+        )
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -4700,6 +4726,11 @@ public struct FfiConverterTypeBackendRequirement: FfiConverterRustBuffer {
         case let .explicit(backendId):
             writeInt(&buf, Int32(2))
             FfiConverterString.write(backendId, into: &buf)
+            
+        
+        case let .explicitVariant(variantId):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(variantId, into: &buf)
             
         }
     }
@@ -4976,6 +5007,16 @@ public enum ConformanceFailure: Equatable, Hashable {
     case generatedTokensDiverged
     case missingMeasurement(measurement: String
     )
+    /**
+     * The backend reported a measurement this contract does not cover.
+     * Accepting it silently would let an out-of-scope number look verified.
+     */
+    case measurementOutOfScope(measurement: String
+    )
+    /**
+     * The declared id is not the seal this policy derives.
+     */
+    case contractIdentityNotSealed
     case malformedPolicy(reason: String
     )
 
@@ -5016,7 +5057,12 @@ public struct FfiConverterTypeConformanceFailure: FfiConverterRustBuffer {
         case 8: return .missingMeasurement(measurement: try FfiConverterString.read(from: &buf)
         )
         
-        case 9: return .malformedPolicy(reason: try FfiConverterString.read(from: &buf)
+        case 9: return .measurementOutOfScope(measurement: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 10: return .contractIdentityNotSealed
+        
+        case 11: return .malformedPolicy(reason: try FfiConverterString.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -5060,8 +5106,17 @@ public struct FfiConverterTypeConformanceFailure: FfiConverterRustBuffer {
             FfiConverterString.write(measurement, into: &buf)
             
         
-        case let .malformedPolicy(reason):
+        case let .measurementOutOfScope(measurement):
             writeInt(&buf, Int32(9))
+            FfiConverterString.write(measurement, into: &buf)
+            
+        
+        case .contractIdentityNotSealed:
+            writeInt(&buf, Int32(10))
+        
+        
+        case let .malformedPolicy(reason):
+            writeInt(&buf, Int32(11))
             FfiConverterString.write(reason, into: &buf)
             
         }
@@ -6831,7 +6886,16 @@ public enum SelectionFailure: Equatable, Hashable {
     )
     case requiredCapabilityUnavailable(capability: String
     )
+    case requestedVariantNotPublished(variantId: String
+    )
     case ambiguousVariants(variantId: String
+    )
+    /**
+     * Two eligible variants of one backend. Quantization and numerical
+     * contract are not tie-breakers a name sort may decide — the caller
+     * must name the variant.
+     */
+    case ambiguousVariantsForBackend(backendId: String
     )
     case invalidVariant(reason: String
     )
@@ -6870,10 +6934,16 @@ public struct FfiConverterTypeSelectionFailure: FfiConverterRustBuffer {
         case 5: return .requiredCapabilityUnavailable(capability: try FfiConverterString.read(from: &buf)
         )
         
-        case 6: return .ambiguousVariants(variantId: try FfiConverterString.read(from: &buf)
+        case 6: return .requestedVariantNotPublished(variantId: try FfiConverterString.read(from: &buf)
         )
         
-        case 7: return .invalidVariant(reason: try FfiConverterString.read(from: &buf)
+        case 7: return .ambiguousVariants(variantId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 8: return .ambiguousVariantsForBackend(backendId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 9: return .invalidVariant(reason: try FfiConverterString.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -6908,13 +6978,23 @@ public struct FfiConverterTypeSelectionFailure: FfiConverterRustBuffer {
             FfiConverterString.write(capability, into: &buf)
             
         
-        case let .ambiguousVariants(variantId):
+        case let .requestedVariantNotPublished(variantId):
             writeInt(&buf, Int32(6))
             FfiConverterString.write(variantId, into: &buf)
             
         
-        case let .invalidVariant(reason):
+        case let .ambiguousVariants(variantId):
             writeInt(&buf, Int32(7))
+            FfiConverterString.write(variantId, into: &buf)
+            
+        
+        case let .ambiguousVariantsForBackend(backendId):
+            writeInt(&buf, Int32(8))
+            FfiConverterString.write(backendId, into: &buf)
+            
+        
+        case let .invalidVariant(reason):
+            writeInt(&buf, Int32(9))
             FfiConverterString.write(reason, into: &buf)
             
         }
@@ -8097,9 +8177,13 @@ public func mayShareNumericalContract(policy: BackendConformancePolicy, a: Backe
 })
 }
 /**
- * Canonical identity of a numerical contract. Any tolerance, policy, or
- * identity change yields a different contract — silently loosening a
- * tolerance cannot preserve the id.
+ * Canonical identity of a numerical contract, derived from the substantive
+ * TERMS and never from the declared label. Hashing the caller-supplied id
+ * into its own digest would make the identity self-referential — an
+ * assertion rather than a seal. Loosening any tolerance, changing the
+ * tokenizer, the prompt identity, the stop tokens, the context cap, or the
+ * token policy yields a different seal, so a contract cannot be quietly
+ * widened while keeping its name.
  */
 public func numericalContractIdentity(policy: BackendConformancePolicy) -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
@@ -8126,6 +8210,19 @@ public func validateConformancePolicy(policy: BackendConformancePolicy) -> [Stri
     return try!  FfiConverterSequenceString.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_validate_conformance_policy(
+        FfiConverterTypeBackendConformancePolicy_lower(policy),uniffiCallStatus
+    )
+})
+}
+/**
+ * Does a variant's claimed contract id actually seal this policy? The only
+ * legitimate way for a `ModelVariant` to claim conformance.
+ */
+public func variantBindsToContract(variant: ModelVariant, policy: BackendConformancePolicy) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_variant_binds_to_contract(
+        FfiConverterTypeModelVariant_lower(variant),
         FfiConverterTypeBackendConformancePolicy_lower(policy),uniffiCallStatus
     )
 })
@@ -8521,13 +8618,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_func_may_share_numerical_contract() != 2412) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_numerical_contract_identity() != 9889) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_numerical_contract_identity() != 43953) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_prompt_byte_identity() != 17750) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_validate_conformance_policy() != 35341) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_variant_binds_to_contract() != 55408) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest() != 27683) {

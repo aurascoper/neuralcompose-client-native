@@ -234,7 +234,7 @@ class Gate4Test {
             schemaVersion = 1u, logicalModelId = "qwen2.5-0.5b-instruct", variantId = id,
             modelPackId = "local-dialogue-basic", runtimeTarget = m7a2Target(backend, accel),
             quantization = "q4_k_m", artifactFormat = "gguf",
-            numericalContractId = "nc-gguf-q4-v1",
+            numericalContractId = "c0".repeat(32),
         )
 
     @Test
@@ -248,7 +248,9 @@ class Gate4Test {
             installedBackendIds = listOf("llama-cpp-cpu"),
             supportedRuntimeAbis = listOf("nc-gguf-v1"),
         )
-        val none = uniffi.neuralcompose_mobile_core.RequiredCapabilities(false, false, false)
+        val none = uniffi.neuralcompose_mobile_core.RequiredCapabilities(
+            false, false, false, false, false,
+        )
 
         // Explicit backend absent → Unavailable, never a silent swap to CPU.
         val denied = uniffi.neuralcompose_mobile_core.selectRuntimeVariant(
@@ -272,6 +274,46 @@ class Gate4Test {
             true,
             allowed is uniffi.neuralcompose_mobile_core.RuntimeSelection.Selected &&
                 allowed.variant.runtimeTarget.backendId == "llama-cpp-cpu",
+        )
+
+        // The workload is a capability: these variants generate, not embed.
+        val needsEmbeddings = uniffi.neuralcompose_mobile_core.RequiredCapabilities(
+            false, true, false, false, false,
+        )
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.RuntimeSelection.Unavailable(
+                uniffi.neuralcompose_mobile_core.SelectionFailure.RequiredCapabilityUnavailable(
+                    "embeddings",
+                ),
+            ),
+            uniffi.neuralcompose_mobile_core.selectRuntimeVariant(
+                "qwen2.5-0.5b-instruct", variants, device,
+                uniffi.neuralcompose_mobile_core.BackendRequirement.AnySupported, needsEmbeddings,
+            ),
+        )
+
+        // Two variants of ONE backend must be named, never sorted.
+        val q8 = m7a2Variant("cpu-q8", "llama-cpp-cpu", uniffi.neuralcompose_mobile_core.AcceleratorClass.CPU)
+        val pair = listOf(variants[0], q8)
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.RuntimeSelection.Unavailable(
+                uniffi.neuralcompose_mobile_core.SelectionFailure.AmbiguousVariantsForBackend(
+                    "llama-cpp-cpu",
+                ),
+            ),
+            uniffi.neuralcompose_mobile_core.selectRuntimeVariant(
+                "qwen2.5-0.5b-instruct", pair, device,
+                uniffi.neuralcompose_mobile_core.BackendRequirement.AnySupported, none,
+            ),
+        )
+        val named = uniffi.neuralcompose_mobile_core.selectRuntimeVariant(
+            "qwen2.5-0.5b-instruct", pair, device,
+            uniffi.neuralcompose_mobile_core.BackendRequirement.ExplicitVariant("cpu-q8"), none,
+        )
+        assertEquals(
+            true,
+            named is uniffi.neuralcompose_mobile_core.RuntimeSelection.Selected &&
+                named.variant.variantId == "cpu-q8",
         )
     }
 

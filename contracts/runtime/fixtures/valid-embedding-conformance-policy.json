@@ -1,0 +1,11 @@
+{
+  "numericalContractId": "f4f0c88a028cac05b4695316a204e5b0d78be938a1ba55c48596d0074e261c43",
+  "tokenizerIdentity": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "promptByteIdentity": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "stopTokenIdentity": "stop-none-v1",
+  "contextCap": 512,
+  "deterministicTestMode": false,
+  "logitsTolerance": null,
+  "embeddingTolerance": 0.0001,
+  "generatedTokenPolicy": "distributionOnly"
+}

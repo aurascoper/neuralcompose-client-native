@@ -431,6 +431,12 @@ pub fn validate_model_variant(variant: ModelVariant) -> Vec<String> {
             errs.push("quantization present but empty".into());
         }
     }
+    // The contract id is a SEAL, not a label: it must be the digest a
+    // conformance policy derives (see conformance::numerical_contract_identity),
+    // so a variant cannot assert conformance it never measured.
+    if !valid_sha256(&variant.numerical_contract_id) {
+        errs.push("numericalContractId must be a sealed 64-hex digest, not a free label".into());
+    }
     errs
 }
 
@@ -441,10 +447,14 @@ pub fn validate_model_variant(variant: ModelVariant) -> Vec<String> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum BackendRequirement {
-    /// Any variant the device can actually run is acceptable.
+    /// Any variant the device can actually run is acceptable. Still refuses
+    /// to choose between two variants of the SAME backend.
     AnySupported,
     /// Only this backend. Absent or unusable → Unavailable, never a swap.
     Explicit { backend_id: String },
+    /// Exactly this variant — the only way to choose between two variants of
+    /// one backend (q4 vs q8, or two numerical contracts).
+    ExplicitVariant { variant_id: String },
 }
 
 /// What the device can actually provide right now, as reported by the shell.
@@ -462,12 +472,33 @@ pub struct DeviceRuntimeProfile {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum SelectionFailure {
     NoVariantForOsArchitecture,
-    RequestedBackendNotPublished { backend_id: String },
-    RequestedBackendNotInstalled { backend_id: String },
-    RuntimeAbiUnsupported { backend_id: String },
-    RequiredCapabilityUnavailable { capability: String },
-    AmbiguousVariants { variant_id: String },
-    InvalidVariant { reason: String },
+    RequestedBackendNotPublished {
+        backend_id: String,
+    },
+    RequestedBackendNotInstalled {
+        backend_id: String,
+    },
+    RuntimeAbiUnsupported {
+        backend_id: String,
+    },
+    RequiredCapabilityUnavailable {
+        capability: String,
+    },
+    RequestedVariantNotPublished {
+        variant_id: String,
+    },
+    AmbiguousVariants {
+        variant_id: String,
+    },
+    /// Two eligible variants of one backend. Quantization and numerical
+    /// contract are not tie-breakers a name sort may decide — the caller
+    /// must name the variant.
+    AmbiguousVariantsForBackend {
+        backend_id: String,
+    },
+    InvalidVariant {
+        reason: String,
+    },
 }
 
 // The size asymmetry is inherent to the FFI contract shape: a selection
@@ -482,10 +513,14 @@ pub enum RuntimeSelection {
 }
 
 /// Capabilities the caller *requires*. Anything true here that the backend
-/// cannot do makes the selection fail closed.
+/// cannot do makes the selection fail closed. `generation` and `embeddings`
+/// are the workload itself: without them an embedding-only backend could be
+/// selected to generate text.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct RequiredCapabilities {
+    pub generation: bool,
+    pub embeddings: bool,
     pub streaming: bool,
     pub cancellation: bool,
     pub structured_output: bool,
@@ -546,9 +581,21 @@ pub fn select_runtime_variant(
             }
             matching
         }
+        BackendRequirement::ExplicitVariant { variant_id } => {
+            let matching: Vec<&&ModelVariant> = on_device
+                .into_iter()
+                .filter(|v| &v.variant_id == variant_id)
+                .collect();
+            if matching.is_empty() {
+                return unavailable(SelectionFailure::RequestedVariantNotPublished {
+                    variant_id: variant_id.clone(),
+                });
+            }
+            matching
+        }
     };
 
-    let explicit = matches!(requirement, BackendRequirement::Explicit { .. });
+    let explicit = !matches!(requirement, BackendRequirement::AnySupported);
     // When several candidates fail for different reasons, report the one that
     // got furthest through the checks: "this backend cannot cancel" is
     // actionable, "some other backend is not installed" is noise.
@@ -557,10 +604,12 @@ pub fn select_runtime_variant(
             SelectionFailure::NoVariantForOsArchitecture => 0,
             SelectionFailure::InvalidVariant { .. } => 1,
             SelectionFailure::RequestedBackendNotPublished { .. } => 2,
+            SelectionFailure::RequestedVariantNotPublished { .. } => 2,
             SelectionFailure::RequestedBackendNotInstalled { .. } => 3,
             SelectionFailure::RuntimeAbiUnsupported { .. } => 4,
             SelectionFailure::RequiredCapabilityUnavailable { .. } => 5,
             SelectionFailure::AmbiguousVariants { .. } => 6,
+            SelectionFailure::AmbiguousVariantsForBackend { .. } => 6,
         }
     }
     let mut best_failure = SelectionFailure::NoVariantForOsArchitecture;
@@ -569,15 +618,9 @@ pub fn select_runtime_variant(
             *best = f;
         }
     };
-    // Deterministic order: CPU first among equals, then by variant id, so
-    // AnySupported never depends on declaration order.
-    let mut ordered: Vec<&&ModelVariant> = candidates;
-    ordered.sort_by(|a, b| {
-        (a.runtime_target.accelerator_class, &a.variant_id)
-            .cmp(&(b.runtime_target.accelerator_class, &b.variant_id))
-    });
 
-    for v in ordered {
+    let mut eligible: Vec<&ModelVariant> = Vec::new();
+    for v in candidates {
         if !validate_model_variant((**v).clone()).is_empty() {
             record(
                 SelectionFailure::InvalidVariant {
@@ -607,6 +650,8 @@ pub fn select_runtime_variant(
         }
         let caps = &v.runtime_target.capabilities;
         let missing = [
+            (required.generation && !caps.generation, "generation"),
+            (required.embeddings && !caps.embeddings, "embeddings"),
             (required.streaming && !caps.streaming, "streaming"),
             (required.cancellation && !caps.cancellation, "cancellation"),
             (
@@ -621,15 +666,41 @@ pub fn select_runtime_variant(
                 capability: capability.to_string(),
             };
             // A required capability the backend lacks is fatal for an
-            // explicit request; for AnySupported, keep looking.
+            // explicit request; otherwise keep looking.
             if explicit {
                 return unavailable(failure);
             }
             record(failure, &mut best_failure);
             continue;
         }
+        eligible.push(v);
+    }
+
+    // Two eligible variants of ONE backend cannot be separated by anything
+    // this function knows — quantization and numerical contract are the
+    // caller's decision, never a name sort's.
+    for v in &eligible {
+        let same_backend = eligible
+            .iter()
+            .filter(|o| o.runtime_target.backend_id == v.runtime_target.backend_id)
+            .count();
+        if same_backend > 1 {
+            return unavailable(SelectionFailure::AmbiguousVariantsForBackend {
+                backend_id: v.runtime_target.backend_id.clone(),
+            });
+        }
+    }
+
+    // One variant per backend now, so this is a documented preference
+    // (CPU first) rather than a tie-break: deterministic and independent of
+    // declaration order.
+    eligible.sort_by(|a, b| {
+        (a.runtime_target.accelerator_class, &a.variant_id)
+            .cmp(&(b.runtime_target.accelerator_class, &b.variant_id))
+    });
+    if let Some(v) = eligible.first() {
         return RuntimeSelection::Selected {
-            variant: (**v).clone(),
+            variant: (*v).clone(),
         };
     }
     unavailable(best_failure)

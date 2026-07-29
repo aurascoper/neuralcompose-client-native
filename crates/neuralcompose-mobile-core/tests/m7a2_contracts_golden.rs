@@ -4,7 +4,7 @@
 // directions so the marker table cannot drift unnoticed.
 
 use neuralcompose_mobile_core::conformance::{
-    validate_conformance_policy, BackendConformancePolicy,
+    validate_conformance_policy, variant_binds_to_contract, BackendConformancePolicy,
 };
 use neuralcompose_mobile_core::runtime_target::{
     validate_model_variant, validate_runtime_pack_manifest, ModelVariant, RuntimePackManifest,
@@ -77,6 +77,33 @@ fn conformance_policy_fixture_validates_and_round_trips() {
     let typed: BackendConformancePolicy = serde_json::from_value(v.clone()).expect("typed");
     assert!(validate_conformance_policy(typed.clone()).is_empty());
     assert_eq!(serde_json::to_value(&typed).unwrap(), v);
+}
+
+#[test]
+fn embedding_conformance_policy_fixture_validates_and_round_trips() {
+    // An embedding-only contract declares no logits tolerance at all.
+    let v = read("fixtures/valid-embedding-conformance-policy.json");
+    assert_valid("backend-conformance-policy.schema.json", &v);
+    let typed: BackendConformancePolicy = serde_json::from_value(v.clone()).expect("typed");
+    assert!(typed.logits_tolerance.is_none());
+    assert!(validate_conformance_policy(typed.clone()).is_empty());
+    assert_eq!(serde_json::to_value(&typed).unwrap(), v);
+}
+
+#[test]
+fn the_variant_fixture_is_sealed_to_the_policy_fixture() {
+    let policy: BackendConformancePolicy =
+        serde_json::from_value(read("fixtures/valid-conformance-policy.json")).unwrap();
+    let variant: ModelVariant =
+        serde_json::from_value(read("fixtures/valid-model-variant-cpu.json")).unwrap();
+    assert!(
+        variant_binds_to_contract(variant.clone(), policy.clone()),
+        "the frozen variant must carry the seal its frozen policy derives"
+    );
+    // Polarity: the embedding contract is a different seal entirely.
+    let other: BackendConformancePolicy =
+        serde_json::from_value(read("fixtures/valid-embedding-conformance-policy.json")).unwrap();
+    assert!(!variant_binds_to_contract(variant, other));
 }
 
 #[test]

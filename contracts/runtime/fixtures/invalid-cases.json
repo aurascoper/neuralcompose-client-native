@@ -1,20 +1,131 @@
 {
-  "comment": "Each case mutates the named valid fixture. schemaInvalid records whether the JSON Schema alone rejects it; Rust is authoritative for reference integrity, uniqueness, and cross-field coherence.",
+  "comment": "Each case mutates the named valid fixture. schemaInvalid records whether the JSON Schema alone rejects it; Rust is authoritative for reference integrity, uniqueness, cross-field coherence, and contract sealing.",
   "cases": [
-    { "name": "manifest abi disagrees with target abi", "base": "runtime-pack", "pointer": "/runtimeAbi", "value": "nc-onnx-v1", "schemaInvalid": false },
-    { "name": "entrypoint references undeclared library", "base": "runtime-pack", "pointer": "/entrypoints/0/libraryId", "value": "nonexistent", "schemaInvalid": false },
-    { "name": "absolute library path", "base": "runtime-pack", "pointer": "/libraries/0/relativePath", "value": "/usr/lib/llama.so", "schemaInvalid": true },
-    { "name": "traversal library path", "base": "runtime-pack", "pointer": "/libraries/0/relativePath", "value": "../escape.dll", "schemaInvalid": true },
-    { "name": "uppercase library digest", "base": "runtime-pack", "pointer": "/libraries/0/sha256Hex", "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "schemaInvalid": true },
-    { "name": "zero-byte library", "base": "runtime-pack", "pointer": "/libraries/0/byteSize", "value": 0, "schemaInvalid": true },
-    { "name": "unsupported manifest schema version", "base": "runtime-pack", "pointer": "/schemaVersion", "value": 2, "schemaInvalid": true },
-    { "name": "malformed semver version", "base": "runtime-pack", "pointer": "/version", "value": "one", "schemaInvalid": false },
-    { "name": "variant format not loadable by its target", "base": "model-variant", "pointer": "/artifactFormat", "value": "onnx", "schemaInvalid": false },
-    { "name": "unsupported variant schema version", "base": "model-variant", "pointer": "/schemaVersion", "value": 2, "schemaInvalid": true },
-    { "name": "empty numerical contract id", "base": "model-variant", "pointer": "/numericalContractId", "value": "", "schemaInvalid": true },
-    { "name": "unknown accelerator class", "base": "model-variant", "pointer": "/runtimeTarget/acceleratorClass", "value": "quantum", "schemaInvalid": true },
-    { "name": "greedy exactness without deterministic mode", "base": "conformance-policy", "pointer": "/deterministicTestMode", "value": false, "schemaInvalid": true },
-    { "name": "negative logits tolerance", "base": "conformance-policy", "pointer": "/logitsTolerance", "value": -1.0, "schemaInvalid": true },
-    { "name": "zero context cap", "base": "conformance-policy", "pointer": "/contextCap", "value": 0, "schemaInvalid": true }
+    {
+      "name": "manifest abi disagrees with target abi",
+      "base": "runtime-pack",
+      "pointer": "/runtimeAbi",
+      "value": "nc-onnx-v1",
+      "schemaInvalid": false
+    },
+    {
+      "name": "entrypoint references undeclared library",
+      "base": "runtime-pack",
+      "pointer": "/entrypoints/0/libraryId",
+      "value": "nonexistent",
+      "schemaInvalid": false
+    },
+    {
+      "name": "absolute library path",
+      "base": "runtime-pack",
+      "pointer": "/libraries/0/relativePath",
+      "value": "/usr/lib/llama.so",
+      "schemaInvalid": true
+    },
+    {
+      "name": "traversal library path",
+      "base": "runtime-pack",
+      "pointer": "/libraries/0/relativePath",
+      "value": "../escape.dll",
+      "schemaInvalid": true
+    },
+    {
+      "name": "uppercase library digest",
+      "base": "runtime-pack",
+      "pointer": "/libraries/0/sha256Hex",
+      "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "schemaInvalid": true
+    },
+    {
+      "name": "zero-byte library",
+      "base": "runtime-pack",
+      "pointer": "/libraries/0/byteSize",
+      "value": 0,
+      "schemaInvalid": true
+    },
+    {
+      "name": "unsupported manifest schema version",
+      "base": "runtime-pack",
+      "pointer": "/schemaVersion",
+      "value": 2,
+      "schemaInvalid": true
+    },
+    {
+      "name": "malformed semver version",
+      "base": "runtime-pack",
+      "pointer": "/version",
+      "value": "one",
+      "schemaInvalid": false
+    },
+    {
+      "name": "variant format not loadable by its target",
+      "base": "model-variant",
+      "pointer": "/artifactFormat",
+      "value": "onnx",
+      "schemaInvalid": false
+    },
+    {
+      "name": "unsupported variant schema version",
+      "base": "model-variant",
+      "pointer": "/schemaVersion",
+      "value": 2,
+      "schemaInvalid": true
+    },
+    {
+      "name": "unknown accelerator class",
+      "base": "model-variant",
+      "pointer": "/runtimeTarget/acceleratorClass",
+      "value": "quantum",
+      "schemaInvalid": true
+    },
+    {
+      "name": "greedy exactness without deterministic mode",
+      "base": "conformance-policy",
+      "pointer": "/deterministicTestMode",
+      "value": false,
+      "schemaInvalid": true
+    },
+    {
+      "name": "negative logits tolerance",
+      "base": "conformance-policy",
+      "pointer": "/logitsTolerance",
+      "value": -1.0,
+      "schemaInvalid": true
+    },
+    {
+      "name": "zero context cap",
+      "base": "conformance-policy",
+      "pointer": "/contextCap",
+      "value": 0,
+      "schemaInvalid": true
+    },
+    {
+      "name": "variant contract id is a free label, not a seal",
+      "base": "model-variant",
+      "pointer": "/numericalContractId",
+      "value": "nc-gguf-q4-v1",
+      "schemaInvalid": true
+    },
+    {
+      "name": "policy id relabelled without resealing",
+      "base": "conformance-policy",
+      "pointer": "/numericalContractId",
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "schemaInvalid": false
+    },
+    {
+      "name": "tolerance loosened while keeping the seal",
+      "base": "conformance-policy",
+      "pointer": "/logitsTolerance",
+      "value": 0.5,
+      "schemaInvalid": false
+    },
+    {
+      "name": "contract measuring nothing at all",
+      "base": "conformance-policy",
+      "pointer": "/logitsTolerance",
+      "value": null,
+      "schemaInvalid": true
+    }
   ]
 }

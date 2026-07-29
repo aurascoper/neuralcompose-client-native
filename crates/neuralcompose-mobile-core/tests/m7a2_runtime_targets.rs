@@ -74,7 +74,7 @@ fn variant(id: &str, backend: &str, class: AcceleratorClass) -> ModelVariant {
         runtime_target: target(backend, class),
         quantization: Some("q4_k_m".into()),
         artifact_format: "gguf".into(),
-        numerical_contract_id: "nc-gguf-q4-v1".into(),
+        numerical_contract_id: sha(0xc0),
     }
 }
 
@@ -89,6 +89,8 @@ fn device(installed: &[&str]) -> DeviceRuntimeProfile {
 
 fn no_required() -> RequiredCapabilities {
     RequiredCapabilities {
+        generation: false,
+        embeddings: false,
         streaming: false,
         cancellation: false,
         structured_output: false,
@@ -340,9 +342,8 @@ fn explicit_backend_requirement_never_falls_back() {
 #[test]
 fn selection_fails_closed_on_missing_capability_abi_and_ambiguity() {
     let need_structured = RequiredCapabilities {
-        streaming: false,
-        cancellation: false,
         structured_output: true, // no variant offers it
+        ..no_required()
     };
     let variants = vec![variant("cpu", "llama-cpp-cpu", AcceleratorClass::Cpu)];
     let sel = select_runtime_variant(
@@ -364,7 +365,7 @@ fn selection_fails_closed_on_missing_capability_abi_and_ambiguity() {
     let need_cancel = RequiredCapabilities {
         streaming: true,
         cancellation: true,
-        structured_output: false,
+        ..no_required()
     };
     assert!(matches!(
         select_runtime_variant(
@@ -430,9 +431,8 @@ fn the_furthest_progressed_failure_is_reported() {
         variant("qnn", "windows-ml-qnn", AcceleratorClass::Npu),
     ];
     let need_structured = RequiredCapabilities {
-        streaming: false,
-        cancellation: false,
         structured_output: true,
+        ..no_required()
     };
     // CPU is installed but lacks the capability; QNN is simply absent.
     // "cannot do structured output" is the useful answer.
@@ -576,4 +576,165 @@ fn support_promotion_requires_its_own_evidence() {
     };
     assert_eq!(attained_support_status(broken.clone()), None);
     assert!(!supports_claim(broken, SupportStatus::Contracted));
+}
+
+// ROUND-2 FINDING 1: the workload itself is a required capability.
+#[test]
+fn an_embedding_only_backend_is_never_selected_for_generation() {
+    let mut embed_only = variant("embed", "coreml-embed", AcceleratorClass::Npu);
+    embed_only.runtime_target.capabilities = RuntimeCapabilities {
+        generation: false,
+        embeddings: true,
+        streaming: false,
+        cancellation: true,
+        structured_output: false,
+    };
+    let device = DeviceRuntimeProfile {
+        os: "windows".into(),
+        architecture: "x86_64".into(),
+        installed_backend_ids: vec!["coreml-embed".into()],
+        supported_runtime_abis: vec!["nc-gguf-v1".into()],
+    };
+    let need_generation = RequiredCapabilities {
+        generation: true,
+        ..no_required()
+    };
+    assert_eq!(
+        select_runtime_variant(
+            "qwen2.5-0.5b-instruct".into(),
+            vec![embed_only.clone()],
+            device.clone(),
+            BackendRequirement::AnySupported,
+            need_generation.clone(),
+        ),
+        RuntimeSelection::Unavailable {
+            failure: SelectionFailure::RequiredCapabilityUnavailable {
+                capability: "generation".into()
+            }
+        },
+        "an embedding-only backend must never be selected to generate"
+    );
+    // Polarity: the same backend IS selectable for embeddings.
+    let need_embeddings = RequiredCapabilities {
+        embeddings: true,
+        ..no_required()
+    };
+    assert!(matches!(
+        select_runtime_variant(
+            "qwen2.5-0.5b-instruct".into(),
+            vec![embed_only],
+            device.clone(),
+            BackendRequirement::AnySupported,
+            need_embeddings.clone(),
+        ),
+        RuntimeSelection::Selected { .. }
+    ));
+    // ...and a generation-only backend is refused for embeddings.
+    let gen_only = variant("gen", "llama-cpp-cpu", AcceleratorClass::Cpu);
+    assert!(!gen_only.runtime_target.capabilities.embeddings);
+    assert_eq!(
+        select_runtime_variant(
+            "qwen2.5-0.5b-instruct".into(),
+            vec![gen_only],
+            device_for("llama-cpp-cpu"),
+            BackendRequirement::AnySupported,
+            need_embeddings,
+        ),
+        RuntimeSelection::Unavailable {
+            failure: SelectionFailure::RequiredCapabilityUnavailable {
+                capability: "embeddings".into()
+            }
+        }
+    );
+}
+
+fn device_for(backend: &str) -> DeviceRuntimeProfile {
+    DeviceRuntimeProfile {
+        os: "windows".into(),
+        architecture: "x86_64".into(),
+        installed_backend_ids: vec![backend.into()],
+        supported_runtime_abis: vec!["nc-gguf-v1".into()],
+    }
+}
+
+// ROUND-2 FINDING 2: two variants of one backend must be named, never sorted.
+#[test]
+fn two_variants_of_one_backend_must_be_named_explicitly() {
+    let mut q4 = variant("gguf-q4-cpu", "llama-cpp-cpu", AcceleratorClass::Cpu);
+    q4.quantization = Some("q4_k_m".into());
+    let mut q8 = variant("gguf-q8-cpu", "llama-cpp-cpu", AcceleratorClass::Cpu);
+    q8.quantization = Some("q8_0".into());
+    q8.numerical_contract_id = sha(0xc8); // a different numerical contract
+    let both = vec![q4.clone(), q8.clone()];
+    let d = device_for("llama-cpp-cpu");
+
+    // Neither AnySupported nor an explicit BACKEND may pick between them.
+    for requirement in [
+        BackendRequirement::AnySupported,
+        BackendRequirement::Explicit {
+            backend_id: "llama-cpp-cpu".into(),
+        },
+    ] {
+        assert_eq!(
+            select_runtime_variant(
+                "qwen2.5-0.5b-instruct".into(),
+                both.clone(),
+                d.clone(),
+                requirement.clone(),
+                no_required(),
+            ),
+            RuntimeSelection::Unavailable {
+                failure: SelectionFailure::AmbiguousVariantsForBackend {
+                    backend_id: "llama-cpp-cpu".into()
+                }
+            },
+            "q4 vs q8 is the caller's decision, not a name sort's"
+        );
+    }
+    // Naming the variant resolves it — in both directions.
+    for (wanted, quant) in [("gguf-q4-cpu", "q4_k_m"), ("gguf-q8-cpu", "q8_0")] {
+        match select_runtime_variant(
+            "qwen2.5-0.5b-instruct".into(),
+            both.clone(),
+            d.clone(),
+            BackendRequirement::ExplicitVariant {
+                variant_id: wanted.into(),
+            },
+            no_required(),
+        ) {
+            RuntimeSelection::Selected { variant } => {
+                assert_eq!(variant.variant_id, wanted);
+                assert_eq!(variant.quantization.as_deref(), Some(quant));
+            }
+            other => panic!("expected {wanted}, got {other:?}"),
+        }
+    }
+    // An unpublished variant name is refused, not approximated.
+    assert_eq!(
+        select_runtime_variant(
+            "qwen2.5-0.5b-instruct".into(),
+            both,
+            d.clone(),
+            BackendRequirement::ExplicitVariant {
+                variant_id: "gguf-q2-cpu".into()
+            },
+            no_required(),
+        ),
+        RuntimeSelection::Unavailable {
+            failure: SelectionFailure::RequestedVariantNotPublished {
+                variant_id: "gguf-q2-cpu".into()
+            }
+        }
+    );
+    // Polarity: one variant per backend still resolves without naming.
+    assert!(matches!(
+        select_runtime_variant(
+            "qwen2.5-0.5b-instruct".into(),
+            vec![q4],
+            d,
+            BackendRequirement::AnySupported,
+            no_required(),
+        ),
+        RuntimeSelection::Selected { .. }
+    ));
 }

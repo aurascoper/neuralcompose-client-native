@@ -2,23 +2,104 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "BackendConformancePolicy",
   "type": "object",
-  "required": ["numericalContractId", "tokenizerIdentity", "promptByteIdentity", "stopTokenIdentity", "contextCap", "deterministicTestMode", "logitsTolerance", "embeddingTolerance", "generatedTokenPolicy"],
+  "required": [
+    "numericalContractId",
+    "tokenizerIdentity",
+    "promptByteIdentity",
+    "stopTokenIdentity",
+    "contextCap",
+    "deterministicTestMode",
+    "generatedTokenPolicy"
+  ],
   "properties": {
-    "numericalContractId": { "type": "string", "minLength": 1 },
-    "tokenizerIdentity": { "type": "string", "minLength": 1 },
-    "promptByteIdentity": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "stopTokenIdentity": { "type": "string", "minLength": 1 },
-    "contextCap": { "type": "integer", "minimum": 1 },
-    "deterministicTestMode": { "type": "boolean" },
-    "logitsTolerance": { "type": "number", "minimum": 0 },
-    "embeddingTolerance": { "type": "number", "minimum": 0 },
-    "generatedTokenPolicy": { "enum": ["exactUnderGreedy", "distributionOnly"] }
+    "numericalContractId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "tokenizerIdentity": {
+      "type": "string",
+      "minLength": 1
+    },
+    "promptByteIdentity": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "stopTokenIdentity": {
+      "type": "string",
+      "minLength": 1
+    },
+    "contextCap": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "deterministicTestMode": {
+      "type": "boolean"
+    },
+    "logitsTolerance": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "embeddingTolerance": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "generatedTokenPolicy": {
+      "enum": [
+        "exactUnderGreedy",
+        "distributionOnly"
+      ]
+    }
   },
   "additionalProperties": false,
   "allOf": [
     {
-      "if": { "properties": { "generatedTokenPolicy": { "const": "exactUnderGreedy" } } },
-      "then": { "properties": { "deterministicTestMode": { "const": true } } }
+      "if": {
+        "properties": {
+          "generatedTokenPolicy": {
+            "const": "exactUnderGreedy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "deterministicTestMode": {
+            "const": true
+          },
+          "logitsTolerance": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "anyOf": [
+        {
+          "properties": {
+            "logitsTolerance": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "logitsTolerance"
+          ]
+        },
+        {
+          "properties": {
+            "embeddingTolerance": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "embeddingTolerance"
+          ]
+        }
+      ]
     }
   ]
 }

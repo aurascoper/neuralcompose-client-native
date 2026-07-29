@@ -39,10 +39,13 @@ pub struct BackendConformancePolicy {
     pub stop_token_identity: String,
     pub context_cap: u32,
     pub deterministic_test_mode: bool,
-    /// Maximum absolute logit divergence. Must be finite and >= 0.
-    pub logits_tolerance: f64,
-    /// Maximum embedding divergence under the declared metric.
-    pub embedding_tolerance: f64,
+    /// Maximum absolute logit divergence, or `None` when logits are out of
+    /// scope — an embedding-only runtime exposes none, and demanding them
+    /// would make every embedding contract unsatisfiable.
+    pub logits_tolerance: Option<f64>,
+    /// Maximum embedding divergence, or `None` for a generation-only
+    /// contract. At least one of the two must be declared.
+    pub embedding_tolerance: Option<f64>,
     pub generated_token_policy: GeneratedTokenPolicy,
 }
 
@@ -75,8 +78,19 @@ pub enum ConformanceFailure {
     OutputShapeUndeclared,
     GreedyDeterminismUnavailable,
     GeneratedTokensDiverged,
-    MissingMeasurement { measurement: String },
-    MalformedPolicy { reason: String },
+    MissingMeasurement {
+        measurement: String,
+    },
+    /// The backend reported a measurement this contract does not cover.
+    /// Accepting it silently would let an out-of-scope number look verified.
+    MeasurementOutOfScope {
+        measurement: String,
+    },
+    /// The declared id is not the seal this policy derives.
+    ContractIdentityNotSealed,
+    MalformedPolicy {
+        reason: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -115,22 +129,51 @@ pub fn prompt_byte_identity(prompt_profile: String, prompt: String) -> String {
     crate::audio::sha256_hex(serde_json::to_vec(&doc).expect("serialize"))
 }
 
-/// Canonical identity of a numerical contract. Any tolerance, policy, or
-/// identity change yields a different contract — silently loosening a
-/// tolerance cannot preserve the id.
+/// Canonical identity of a numerical contract, derived from the substantive
+/// TERMS and never from the declared label. Hashing the caller-supplied id
+/// into its own digest would make the identity self-referential — an
+/// assertion rather than a seal. Loosening any tolerance, changing the
+/// tokenizer, the prompt identity, the stop tokens, the context cap, or the
+/// token policy yields a different seal, so a contract cannot be quietly
+/// widened while keeping its name.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn numerical_contract_identity(policy: BackendConformancePolicy) -> String {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
-    struct Doc {
+    struct Terms {
         domain: &'static str,
-        policy: BackendConformancePolicy,
+        tokenizer_identity: String,
+        prompt_byte_identity: String,
+        stop_token_identity: String,
+        context_cap: u32,
+        deterministic_test_mode: bool,
+        logits_tolerance: Option<f64>,
+        embedding_tolerance: Option<f64>,
+        generated_token_policy: GeneratedTokenPolicy,
     }
-    let doc = Doc {
+    let terms = Terms {
         domain: NUMERICAL_CONTRACT_DOMAIN,
-        policy,
+        tokenizer_identity: policy.tokenizer_identity,
+        prompt_byte_identity: policy.prompt_byte_identity,
+        stop_token_identity: policy.stop_token_identity,
+        context_cap: policy.context_cap,
+        deterministic_test_mode: policy.deterministic_test_mode,
+        logits_tolerance: policy.logits_tolerance,
+        embedding_tolerance: policy.embedding_tolerance,
+        generated_token_policy: policy.generated_token_policy,
     };
-    crate::audio::sha256_hex(serde_json::to_vec(&doc).expect("serialize"))
+    crate::audio::sha256_hex(serde_json::to_vec(&terms).expect("serialize"))
+}
+
+/// Does a variant's claimed contract id actually seal this policy? The only
+/// legitimate way for a `ModelVariant` to claim conformance.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn variant_binds_to_contract(
+    variant: crate::runtime_target::ModelVariant,
+    policy: BackendConformancePolicy,
+) -> bool {
+    validate_conformance_policy(policy.clone()).is_empty()
+        && variant.numerical_contract_id == numerical_contract_identity(policy)
 }
 
 #[cfg_attr(feature = "uniffi", uniffi::export)]
@@ -153,15 +196,33 @@ pub fn validate_conformance_policy(policy: BackendConformancePolicy) -> Vec<Stri
         ("logitsTolerance", policy.logits_tolerance),
         ("embeddingTolerance", policy.embedding_tolerance),
     ] {
-        if !t.is_finite() || t < 0.0 {
-            errs.push(format!("{name} must be finite and non-negative"));
+        if let Some(t) = t {
+            if !t.is_finite() || t < 0.0 {
+                errs.push(format!("{name} must be finite and non-negative"));
+            }
         }
     }
-    // Exact-token claims are only meaningful in deterministic mode.
-    if policy.generated_token_policy == GeneratedTokenPolicy::ExactUnderGreedy
-        && !policy.deterministic_test_mode
+    // A contract that measures nothing verifies nothing.
+    if policy.logits_tolerance.is_none() && policy.embedding_tolerance.is_none() {
+        errs.push("at least one of logitsTolerance or embeddingTolerance must be declared".into());
+    }
+    // Exact-token claims are only meaningful in deterministic mode, and only
+    // for a contract whose scope includes generation at all.
+    if policy.generated_token_policy == GeneratedTokenPolicy::ExactUnderGreedy {
+        if !policy.deterministic_test_mode {
+            errs.push("exactUnderGreedy requires deterministicTestMode".into());
+        }
+        if policy.logits_tolerance.is_none() {
+            errs.push("exactUnderGreedy is meaningless without a logits tolerance".into());
+        }
+    }
+    // The id must BE the seal — see numerical_contract_identity.
+    if errs.is_empty()
+        && policy.numerical_contract_id != numerical_contract_identity(policy.clone())
     {
-        errs.push("exactUnderGreedy requires deterministicTestMode".into());
+        errs.push(
+            "numericalContractId is not the seal this policy derives (asserted, not sealed)".into(),
+        );
     }
     errs
 }
@@ -215,7 +276,10 @@ pub fn evaluate_backend_conformance(
         }
     }
 
-    // A tolerance the backend never measured is unsatisfied, not satisfied.
+    // Only measurements this contract covers are required — a generation
+    // contract does not demand embeddings, and vice versa. A declared
+    // tolerance the backend never measured is unsatisfied, not satisfied;
+    // a measurement outside scope is visible, not silently dropped.
     for (measurement, observed, tolerance) in [
         (
             "logits",
@@ -228,25 +292,31 @@ pub fn evaluate_backend_conformance(
             policy.embedding_tolerance,
         ),
     ] {
-        match observed {
-            None => {
+        match (tolerance, observed) {
+            (None, None) => {}
+            (None, Some(_)) => {
+                return fail(ConformanceFailure::MeasurementOutOfScope {
+                    measurement: measurement.to_string(),
+                })
+            }
+            (Some(_), None) => {
                 return fail(ConformanceFailure::MissingMeasurement {
                     measurement: measurement.to_string(),
                 })
             }
-            Some(v) if !v.is_finite() || v < 0.0 => {
+            (Some(_), Some(v)) if !v.is_finite() || v < 0.0 => {
                 return fail(ConformanceFailure::MissingMeasurement {
                     measurement: format!("{measurement} (non-finite)"),
                 })
             }
-            Some(v) if v > tolerance => {
+            (Some(t), Some(v)) if v > t => {
                 return ConformanceVerdict::RequiresSeparateNumericalContract {
                     measurement: measurement.to_string(),
                     observed: v,
-                    tolerance,
+                    tolerance: t,
                 }
             }
-            Some(_) => {}
+            (Some(_), Some(_)) => {}
         }
     }
 

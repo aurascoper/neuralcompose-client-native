@@ -691,6 +691,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_validate_conformance_policy(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_variant_binds_to_contract(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_embedding_space_identity(
@@ -949,6 +951,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_validate_conformance_policy(`policy`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_variant_binds_to_contract(`variant`: RustBuffer.ByValue,`policy`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_neuralcompose_mobile_core_fn_func_catalog_entry_digest(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_embedding_space_identity(`entry`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1140,13 +1144,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_may_share_numerical_contract() != 2412) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_numerical_contract_identity() != 9889) {
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_numerical_contract_identity() != 43953) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_prompt_byte_identity() != 17750) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_validate_conformance_policy() != 35341) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_variant_binds_to_contract() != 55408) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest() != 27683) {
@@ -3383,14 +3390,17 @@ data class BackendConformancePolicy (
     var `deterministicTestMode`: kotlin.Boolean
     , 
     /**
-     * Maximum absolute logit divergence. Must be finite and >= 0.
+     * Maximum absolute logit divergence, or `None` when logits are out of
+     * scope — an embedding-only runtime exposes none, and demanding them
+     * would make every embedding contract unsatisfiable.
      */
-    var `logitsTolerance`: kotlin.Double
+    var `logitsTolerance`: kotlin.Double?
     , 
     /**
-     * Maximum embedding divergence under the declared metric.
+     * Maximum embedding divergence, or `None` for a generation-only
+     * contract. At least one of the two must be declared.
      */
-    var `embeddingTolerance`: kotlin.Double
+    var `embeddingTolerance`: kotlin.Double?
     , 
     var `generatedTokenPolicy`: GeneratedTokenPolicy
     
@@ -3415,8 +3425,8 @@ public object FfiConverterTypeBackendConformancePolicy: FfiConverterRustBuffer<B
             FfiConverterString.read(buf),
             FfiConverterUInt.read(buf),
             FfiConverterBoolean.read(buf),
-            FfiConverterDouble.read(buf),
-            FfiConverterDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
             FfiConverterTypeGeneratedTokenPolicy.read(buf),
         )
     }
@@ -3428,8 +3438,8 @@ public object FfiConverterTypeBackendConformancePolicy: FfiConverterRustBuffer<B
             FfiConverterString.allocationSize(value.`stopTokenIdentity`) +
             FfiConverterUInt.allocationSize(value.`contextCap`) +
             FfiConverterBoolean.allocationSize(value.`deterministicTestMode`) +
-            FfiConverterDouble.allocationSize(value.`logitsTolerance`) +
-            FfiConverterDouble.allocationSize(value.`embeddingTolerance`) +
+            FfiConverterOptionalDouble.allocationSize(value.`logitsTolerance`) +
+            FfiConverterOptionalDouble.allocationSize(value.`embeddingTolerance`) +
             FfiConverterTypeGeneratedTokenPolicy.allocationSize(value.`generatedTokenPolicy`)
     )
 
@@ -3440,8 +3450,8 @@ public object FfiConverterTypeBackendConformancePolicy: FfiConverterRustBuffer<B
             FfiConverterString.write(value.`stopTokenIdentity`, buf)
             FfiConverterUInt.write(value.`contextCap`, buf)
             FfiConverterBoolean.write(value.`deterministicTestMode`, buf)
-            FfiConverterDouble.write(value.`logitsTolerance`, buf)
-            FfiConverterDouble.write(value.`embeddingTolerance`, buf)
+            FfiConverterOptionalDouble.write(value.`logitsTolerance`, buf)
+            FfiConverterOptionalDouble.write(value.`embeddingTolerance`, buf)
             FfiConverterTypeGeneratedTokenPolicy.write(value.`generatedTokenPolicy`, buf)
     }
 }
@@ -4711,9 +4721,15 @@ public object FfiConverterTypeRecordingManifest: FfiConverterRustBuffer<Recordin
 
 /**
  * Capabilities the caller *requires*. Anything true here that the backend
- * cannot do makes the selection fail closed.
+ * cannot do makes the selection fail closed. `generation` and `embeddings`
+ * are the workload itself: without them an embedding-only backend could be
+ * selected to generate text.
  */
 data class RequiredCapabilities (
+    var `generation`: kotlin.Boolean
+    , 
+    var `embeddings`: kotlin.Boolean
+    , 
     var `streaming`: kotlin.Boolean
     , 
     var `cancellation`: kotlin.Boolean
@@ -4738,16 +4754,22 @@ public object FfiConverterTypeRequiredCapabilities: FfiConverterRustBuffer<Requi
             FfiConverterBoolean.read(buf),
             FfiConverterBoolean.read(buf),
             FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
         )
     }
 
     override fun allocationSize(value: RequiredCapabilities) = (
+            FfiConverterBoolean.allocationSize(value.`generation`) +
+            FfiConverterBoolean.allocationSize(value.`embeddings`) +
             FfiConverterBoolean.allocationSize(value.`streaming`) +
             FfiConverterBoolean.allocationSize(value.`cancellation`) +
             FfiConverterBoolean.allocationSize(value.`structuredOutput`)
     )
 
     override fun write(value: RequiredCapabilities, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`generation`, buf)
+            FfiConverterBoolean.write(value.`embeddings`, buf)
             FfiConverterBoolean.write(value.`streaming`, buf)
             FfiConverterBoolean.write(value.`cancellation`, buf)
             FfiConverterBoolean.write(value.`structuredOutput`, buf)
@@ -5785,7 +5807,8 @@ public object FfiConverterTypeAvailabilityProbe : FfiConverterRustBuffer<Availab
 sealed class BackendRequirement {
     
     /**
-     * Any variant the device can actually run is acceptable.
+     * Any variant the device can actually run is acceptable. Still refuses
+     * to choose between two variants of the SAME backend.
      */
     object AnySupported : BackendRequirement()
     
@@ -5795,6 +5818,19 @@ sealed class BackendRequirement {
      */
     data class Explicit(
         val `backendId`: kotlin.String) : BackendRequirement()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Exactly this variant — the only way to choose between two variants of
+     * one backend (q4 vs q8, or two numerical contracts).
+     */
+    data class ExplicitVariant(
+        val `variantId`: kotlin.String) : BackendRequirement()
         
     {
         
@@ -5822,6 +5858,9 @@ public object FfiConverterTypeBackendRequirement : FfiConverterRustBuffer<Backen
             2 -> BackendRequirement.Explicit(
                 FfiConverterString.read(buf),
                 )
+            3 -> BackendRequirement.ExplicitVariant(
+                FfiConverterString.read(buf),
+                )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
         }
     }
@@ -5840,6 +5879,13 @@ public object FfiConverterTypeBackendRequirement : FfiConverterRustBuffer<Backen
                 + FfiConverterString.allocationSize(value.`backendId`)
             )
         }
+        is BackendRequirement.ExplicitVariant -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`variantId`)
+            )
+        }
     }
 
     override fun write(value: BackendRequirement, buf: ByteBuffer) {
@@ -5851,6 +5897,11 @@ public object FfiConverterTypeBackendRequirement : FfiConverterRustBuffer<Backen
             is BackendRequirement.Explicit -> {
                 buf.putInt(2)
                 FfiConverterString.write(value.`backendId`, buf)
+                Unit
+            }
+            is BackendRequirement.ExplicitVariant -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`variantId`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -6146,6 +6197,25 @@ sealed class ConformanceFailure {
         companion object
     }
     
+    /**
+     * The backend reported a measurement this contract does not cover.
+     * Accepting it silently would let an out-of-scope number look verified.
+     */
+    data class MeasurementOutOfScope(
+        val `measurement`: kotlin.String) : ConformanceFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The declared id is not the seal this policy derives.
+     */
+    object ContractIdentityNotSealed : ConformanceFailure()
+    
+    
     data class MalformedPolicy(
         val `reason`: kotlin.String) : ConformanceFailure()
         
@@ -6181,7 +6251,11 @@ public object FfiConverterTypeConformanceFailure : FfiConverterRustBuffer<Confor
             8 -> ConformanceFailure.MissingMeasurement(
                 FfiConverterString.read(buf),
                 )
-            9 -> ConformanceFailure.MalformedPolicy(
+            9 -> ConformanceFailure.MeasurementOutOfScope(
+                FfiConverterString.read(buf),
+                )
+            10 -> ConformanceFailure.ContractIdentityNotSealed
+            11 -> ConformanceFailure.MalformedPolicy(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
@@ -6238,6 +6312,19 @@ public object FfiConverterTypeConformanceFailure : FfiConverterRustBuffer<Confor
                 + FfiConverterString.allocationSize(value.`measurement`)
             )
         }
+        is ConformanceFailure.MeasurementOutOfScope -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`measurement`)
+            )
+        }
+        is ConformanceFailure.ContractIdentityNotSealed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
         is ConformanceFailure.MalformedPolicy -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
@@ -6282,8 +6369,17 @@ public object FfiConverterTypeConformanceFailure : FfiConverterRustBuffer<Confor
                 FfiConverterString.write(value.`measurement`, buf)
                 Unit
             }
-            is ConformanceFailure.MalformedPolicy -> {
+            is ConformanceFailure.MeasurementOutOfScope -> {
                 buf.putInt(9)
+                FfiConverterString.write(value.`measurement`, buf)
+                Unit
+            }
+            is ConformanceFailure.ContractIdentityNotSealed -> {
+                buf.putInt(10)
+                Unit
+            }
+            is ConformanceFailure.MalformedPolicy -> {
+                buf.putInt(11)
                 FfiConverterString.write(value.`reason`, buf)
                 Unit
             }
@@ -8075,8 +8171,31 @@ sealed class SelectionFailure {
         companion object
     }
     
+    data class RequestedVariantNotPublished(
+        val `variantId`: kotlin.String) : SelectionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
     data class AmbiguousVariants(
         val `variantId`: kotlin.String) : SelectionFailure()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Two eligible variants of one backend. Quantization and numerical
+     * contract are not tie-breakers a name sort may decide — the caller
+     * must name the variant.
+     */
+    data class AmbiguousVariantsForBackend(
+        val `backendId`: kotlin.String) : SelectionFailure()
         
     {
         
@@ -8122,10 +8241,16 @@ public object FfiConverterTypeSelectionFailure : FfiConverterRustBuffer<Selectio
             5 -> SelectionFailure.RequiredCapabilityUnavailable(
                 FfiConverterString.read(buf),
                 )
-            6 -> SelectionFailure.AmbiguousVariants(
+            6 -> SelectionFailure.RequestedVariantNotPublished(
                 FfiConverterString.read(buf),
                 )
-            7 -> SelectionFailure.InvalidVariant(
+            7 -> SelectionFailure.AmbiguousVariants(
+                FfiConverterString.read(buf),
+                )
+            8 -> SelectionFailure.AmbiguousVariantsForBackend(
+                FfiConverterString.read(buf),
+                )
+            9 -> SelectionFailure.InvalidVariant(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
@@ -8167,11 +8292,25 @@ public object FfiConverterTypeSelectionFailure : FfiConverterRustBuffer<Selectio
                 + FfiConverterString.allocationSize(value.`capability`)
             )
         }
+        is SelectionFailure.RequestedVariantNotPublished -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`variantId`)
+            )
+        }
         is SelectionFailure.AmbiguousVariants -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
                 4UL
                 + FfiConverterString.allocationSize(value.`variantId`)
+            )
+        }
+        is SelectionFailure.AmbiguousVariantsForBackend -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`backendId`)
             )
         }
         is SelectionFailure.InvalidVariant -> {
@@ -8209,13 +8348,23 @@ public object FfiConverterTypeSelectionFailure : FfiConverterRustBuffer<Selectio
                 FfiConverterString.write(value.`capability`, buf)
                 Unit
             }
-            is SelectionFailure.AmbiguousVariants -> {
+            is SelectionFailure.RequestedVariantNotPublished -> {
                 buf.putInt(6)
                 FfiConverterString.write(value.`variantId`, buf)
                 Unit
             }
-            is SelectionFailure.InvalidVariant -> {
+            is SelectionFailure.AmbiguousVariants -> {
                 buf.putInt(7)
+                FfiConverterString.write(value.`variantId`, buf)
+                Unit
+            }
+            is SelectionFailure.AmbiguousVariantsForBackend -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`backendId`, buf)
+                Unit
+            }
+            is SelectionFailure.InvalidVariant -> {
+                buf.putInt(9)
                 FfiConverterString.write(value.`reason`, buf)
                 Unit
             }
@@ -9452,9 +9601,13 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
 
         /**
-         * Canonical identity of a numerical contract. Any tolerance, policy, or
-         * identity change yields a different contract — silently loosening a
-         * tolerance cannot preserve the id.
+         * Canonical identity of a numerical contract, derived from the substantive
+         * TERMS and never from the declared label. Hashing the caller-supplied id
+         * into its own digest would make the identity self-referential — an
+         * assertion rather than a seal. Loosening any tolerance, changing the
+         * tokenizer, the prompt identity, the stop tokens, the context cap, or the
+         * token policy yields a different seal, so a contract cannot be quietly
+         * widened while keeping its name.
          */ fun `numericalContractIdentity`(`policy`: BackendConformancePolicy): kotlin.String {
             return FfiConverterString.lift(
     uniffiRustCall() { _status ->
@@ -9488,6 +9641,22 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_validate_conformance_policy(
     
         
+        FfiConverterTypeBackendConformancePolicy.lower(`policy`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Does a variant's claimed contract id actually seal this policy? The only
+         * legitimate way for a `ModelVariant` to claim conformance.
+         */ fun `variantBindsToContract`(`variant`: ModelVariant, `policy`: BackendConformancePolicy): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_variant_binds_to_contract(
+    
+        
+        FfiConverterTypeModelVariant.lower(`variant`),
         FfiConverterTypeBackendConformancePolicy.lower(`policy`),_status)
 }
     )

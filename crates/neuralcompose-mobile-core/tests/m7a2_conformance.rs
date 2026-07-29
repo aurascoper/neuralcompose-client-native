@@ -6,18 +6,41 @@ use neuralcompose_mobile_core::conformance::*;
 
 type Mutation<T> = Box<dyn Fn(&mut T)>;
 
+/// Seal a policy: the id is never a free label, it is the digest the terms
+/// derive. Tests build terms first, then stamp the seal.
+fn seal(mut p: BackendConformancePolicy) -> BackendConformancePolicy {
+    p.numerical_contract_id = numerical_contract_identity(p.clone());
+    p
+}
+
+/// Generation contract: logits in scope, embeddings out of scope.
 fn policy() -> BackendConformancePolicy {
-    BackendConformancePolicy {
-        numerical_contract_id: "nc-gguf-q4-v1".into(),
+    seal(BackendConformancePolicy {
+        numerical_contract_id: String::new(),
         tokenizer_identity: "tok-abc".into(),
         prompt_byte_identity: prompt_byte_identity("focused".into(), "hello".into()),
         stop_token_identity: "stop-v1".into(),
         context_cap: 4096,
         deterministic_test_mode: true,
-        logits_tolerance: 1e-3,
-        embedding_tolerance: 1e-4,
+        logits_tolerance: Some(1e-3),
+        embedding_tolerance: None,
         generated_token_policy: GeneratedTokenPolicy::ExactUnderGreedy,
-    }
+    })
+}
+
+/// Embedding contract: embeddings in scope, logits out of scope.
+fn embedding_policy() -> BackendConformancePolicy {
+    seal(BackendConformancePolicy {
+        numerical_contract_id: String::new(),
+        tokenizer_identity: "tok-emb".into(),
+        prompt_byte_identity: prompt_byte_identity("retrieve".into(), "hello".into()),
+        stop_token_identity: "stop-none".into(),
+        context_cap: 512,
+        deterministic_test_mode: false,
+        logits_tolerance: None,
+        embedding_tolerance: Some(1e-4),
+        generated_token_policy: GeneratedTokenPolicy::DistributionOnly,
+    })
 }
 
 fn observation() -> BackendObservation {
@@ -30,9 +53,26 @@ fn observation() -> BackendObservation {
         context_cap: p.context_cap,
         output_shape_declared: true,
         max_logit_divergence: Some(1e-5),
-        max_embedding_divergence: Some(1e-6),
+        max_embedding_divergence: None,
         greedy_determinism_available: true,
         generated_tokens_match_reference: Some(true),
+    }
+}
+
+/// An embedding-only backend: it exposes no logits at all.
+fn embedding_observation() -> BackendObservation {
+    let p = embedding_policy();
+    BackendObservation {
+        backend_id: "coreml".into(),
+        tokenizer_identity: p.tokenizer_identity,
+        prompt_byte_identity: p.prompt_byte_identity,
+        stop_token_identity: p.stop_token_identity,
+        context_cap: p.context_cap,
+        output_shape_declared: true,
+        max_logit_divergence: None,
+        max_embedding_divergence: Some(1e-6),
+        greedy_determinism_available: false,
+        generated_tokens_match_reference: None,
     }
 }
 
@@ -95,10 +135,10 @@ fn tolerance_excess_demands_a_separate_numerical_contract() {
     }
     let emb = BackendObservation {
         max_embedding_divergence: Some(0.1),
-        ..observation()
+        ..embedding_observation()
     };
     assert!(matches!(
-        evaluate_backend_conformance(policy(), emb),
+        evaluate_backend_conformance(embedding_policy(), emb),
         ConformanceVerdict::RequiresSeparateNumericalContract {
             measurement,
             ..
@@ -118,29 +158,23 @@ fn tolerance_excess_demands_a_separate_numerical_contract() {
 // An unmeasured tolerance is not a satisfied tolerance.
 #[test]
 fn absent_measurements_never_count_as_agreement() {
-    for (name, mutate) in [
-        (
-            "logits",
-            Box::new(|o: &mut BackendObservation| o.max_logit_divergence = None)
-                as Box<dyn Fn(&mut BackendObservation)>,
-        ),
-        (
-            "embeddings",
-            Box::new(|o: &mut BackendObservation| o.max_embedding_divergence = None),
-        ),
-    ] {
-        let mut o = observation();
-        mutate(&mut o);
-        assert!(
-            matches!(
-                evaluate_backend_conformance(policy(), o),
-                ConformanceVerdict::NonConformant {
-                    failure: ConformanceFailure::MissingMeasurement { .. }
-                }
-            ),
-            "missing {name} must not pass"
-        );
-    }
+    // A tolerance that IS in scope must be measured.
+    let mut o = observation();
+    o.max_logit_divergence = None;
+    assert!(matches!(
+        evaluate_backend_conformance(policy(), o),
+        ConformanceVerdict::NonConformant {
+            failure: ConformanceFailure::MissingMeasurement { .. }
+        }
+    ));
+    let mut e = embedding_observation();
+    e.max_embedding_divergence = None;
+    assert!(matches!(
+        evaluate_backend_conformance(embedding_policy(), e),
+        ConformanceVerdict::NonConformant {
+            failure: ConformanceFailure::MissingMeasurement { .. }
+        }
+    ));
     // NaN is not a measurement either.
     let nan = BackendObservation {
         max_logit_divergence: Some(f64::NAN),
@@ -206,11 +240,11 @@ fn identity_mismatches_are_never_tolerable() {
 // Sampled output is judged as a distribution, never by string equality.
 #[test]
 fn sampling_mode_does_not_require_token_equality() {
-    let sampling = BackendConformancePolicy {
+    let sampling = seal(BackendConformancePolicy {
         generated_token_policy: GeneratedTokenPolicy::DistributionOnly,
         deterministic_test_mode: false,
         ..policy()
-    };
+    });
     let sampled = BackendObservation {
         greedy_determinism_available: false,
         generated_tokens_match_reference: Some(false), // irrelevant here
@@ -233,11 +267,11 @@ fn sampling_mode_does_not_require_token_equality() {
         ConformanceVerdict::NonConformant { .. }
     ));
     // A greedy claim without deterministic mode is a malformed policy.
-    let incoherent = BackendConformancePolicy {
+    let incoherent = seal(BackendConformancePolicy {
         generated_token_policy: GeneratedTokenPolicy::ExactUnderGreedy,
         deterministic_test_mode: false,
         ..policy()
-    };
+    });
     assert!(!validate_conformance_policy(incoherent.clone()).is_empty());
     assert!(matches!(
         evaluate_backend_conformance(incoherent, observation()),
@@ -253,11 +287,11 @@ fn numerical_contract_identity_moves_with_every_term() {
     let mutations: Vec<(&str, Mutation<BackendConformancePolicy>)> = vec![
         (
             "logits tolerance",
-            Box::new(|p: &mut BackendConformancePolicy| p.logits_tolerance = 1e-2),
+            Box::new(|p: &mut BackendConformancePolicy| p.logits_tolerance = Some(1e-2)),
         ),
         (
-            "embedding tolerance",
-            Box::new(|p: &mut BackendConformancePolicy| p.embedding_tolerance = 1e-3),
+            "embedding scope",
+            Box::new(|p: &mut BackendConformancePolicy| p.embedding_tolerance = Some(1e-3)),
         ),
         (
             "tokenizer",
@@ -322,5 +356,132 @@ fn prompt_byte_identity_is_exact() {
     assert_ne!(
         prompt_byte_identity("focused".into(), "导出 \"quotes\"".into()),
         base
+    );
+}
+
+// ROUND-2 FINDING 4: a contract measures what it covers, and only that.
+#[test]
+fn measurement_scope_follows_the_contract_kind() {
+    // An embedding-only backend exposes no logits; that must not fail it.
+    assert_eq!(
+        evaluate_backend_conformance(embedding_policy(), embedding_observation()),
+        ConformanceVerdict::Conformant,
+        "an embedding contract must not demand logits"
+    );
+    // A generation-only contract likewise does not demand embeddings.
+    assert_eq!(
+        evaluate_backend_conformance(policy(), observation()),
+        ConformanceVerdict::Conformant
+    );
+    // Reporting an out-of-scope measurement is visible, never silently kept.
+    let noisy = BackendObservation {
+        max_embedding_divergence: Some(1e-9),
+        ..observation()
+    };
+    assert_eq!(
+        evaluate_backend_conformance(policy(), noisy),
+        ConformanceVerdict::NonConformant {
+            failure: ConformanceFailure::MeasurementOutOfScope {
+                measurement: "embeddings".into()
+            }
+        }
+    );
+    let noisy_logits = BackendObservation {
+        max_logit_divergence: Some(1e-9),
+        ..embedding_observation()
+    };
+    assert!(matches!(
+        evaluate_backend_conformance(embedding_policy(), noisy_logits),
+        ConformanceVerdict::NonConformant {
+            failure: ConformanceFailure::MeasurementOutOfScope { .. }
+        }
+    ));
+    // A contract that measures nothing verifies nothing.
+    let empty = seal(BackendConformancePolicy {
+        logits_tolerance: None,
+        embedding_tolerance: None,
+        generated_token_policy: GeneratedTokenPolicy::DistributionOnly,
+        deterministic_test_mode: false,
+        ..policy()
+    });
+    assert!(!validate_conformance_policy(empty).is_empty());
+    // Exact-token claims are meaningless without a logits scope.
+    let greedy_without_logits = seal(BackendConformancePolicy {
+        logits_tolerance: None,
+        embedding_tolerance: Some(1e-4),
+        generated_token_policy: GeneratedTokenPolicy::ExactUnderGreedy,
+        ..policy()
+    });
+    assert!(!validate_conformance_policy(greedy_without_logits).is_empty());
+}
+
+// ROUND-2 FINDING 3: the contract id is sealed, not asserted.
+#[test]
+fn contract_identity_is_sealed_by_its_terms() {
+    // The seal excludes the label: relabelling alone cannot change identity.
+    let a = policy();
+    let mut relabelled = a.clone();
+    relabelled.numerical_contract_id = "b".repeat(64);
+    assert_eq!(
+        numerical_contract_identity(a.clone()),
+        numerical_contract_identity(relabelled.clone()),
+        "the identity must derive from the terms, not from its own name"
+    );
+    // ...and a policy whose label is not its seal is invalid.
+    assert!(validate_conformance_policy(a.clone()).is_empty());
+    assert!(
+        !validate_conformance_policy(relabelled).is_empty(),
+        "an asserted id must be rejected"
+    );
+    // Loosening a tolerance while keeping the old id cannot survive.
+    let mut loosened = a.clone();
+    loosened.logits_tolerance = Some(0.5);
+    assert!(
+        !validate_conformance_policy(loosened.clone()).is_empty(),
+        "a widened contract cannot keep its seal"
+    );
+    assert!(validate_conformance_policy(seal(loosened)).is_empty());
+
+    // A variant binds only when it carries the seal this policy derives.
+    use neuralcompose_mobile_core::runtime_target::*;
+    let mut variant = ModelVariant {
+        schema_version: 1,
+        logical_model_id: "m".into(),
+        variant_id: "v".into(),
+        model_pack_id: "p".into(),
+        runtime_target: RuntimeTarget {
+            os: "linux".into(),
+            architecture: "x86_64".into(),
+            accelerator_class: AcceleratorClass::Cpu,
+            backend_id: "llama-cpp-cpu".into(),
+            runtime_abi: "nc-gguf-v1".into(),
+            model_formats: vec!["gguf".into()],
+            minimum_os_version: None,
+            minimum_backend_version: None,
+            minimum_driver_version: None,
+            capabilities: RuntimeCapabilities {
+                generation: true,
+                embeddings: false,
+                streaming: true,
+                cancellation: true,
+                structured_output: false,
+            },
+        },
+        quantization: Some("q4_k_m".into()),
+        artifact_format: "gguf".into(),
+        numerical_contract_id: numerical_contract_identity(a.clone()),
+    };
+    assert!(variant_binds_to_contract(variant.clone(), a.clone()));
+    assert!(validate_model_variant(variant.clone()).is_empty());
+    // A different contract, or a free label, binds to nothing.
+    assert!(!variant_binds_to_contract(
+        variant.clone(),
+        embedding_policy()
+    ));
+    variant.numerical_contract_id = "nc-gguf-q4-v1".into();
+    assert!(!variant_binds_to_contract(variant.clone(), a));
+    assert!(
+        !validate_model_variant(variant).is_empty(),
+        "a free-label contract id is not a seal"
     );
 }
