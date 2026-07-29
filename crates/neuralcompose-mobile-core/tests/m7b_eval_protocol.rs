@@ -63,32 +63,56 @@ fn environment() -> RunEnvironment {
 /// The promised sequence, not merely "alternating": A cold, B cold, B warm,
 /// A warm.
 fn run_plan() -> Vec<RunPlanEntry> {
-    vec![
-        RunPlanEntry {
-            index: 0,
-            candidate_id: A.into(),
-            mode: RunMode::Cold,
-            seed: 11,
+    // The plan EXPANDS the declaration: one warmup, every frozen seed in each
+    // timed mode, one sustained and one cancellation run per candidate, with
+    // candidates alternating.
+    let mut plan = Vec::new();
+    let mut idx = 0u32;
+    let push = |plan: &mut Vec<RunPlanEntry>, cand: &str, mode: RunMode, seed: u64, i: &mut u32| {
+        plan.push(RunPlanEntry {
+            index: *i,
+            candidate_id: cand.into(),
+            mode,
+            seed,
+        });
+        *i += 1;
+    };
+    for cand in [A, B] {
+        push(&mut plan, cand, RunMode::Warmup, 11, &mut idx);
+    }
+    for seed in [11u64, 22, 33] {
+        push(&mut plan, A, RunMode::Cold, seed, &mut idx);
+        push(&mut plan, B, RunMode::Cold, seed, &mut idx);
+        push(&mut plan, B, RunMode::Warm, seed, &mut idx);
+        push(&mut plan, A, RunMode::Warm, seed, &mut idx);
+    }
+    for cand in [A, B] {
+        push(&mut plan, cand, RunMode::Sustained, 11, &mut idx);
+        push(&mut plan, cand, RunMode::Cancellation, 11, &mut idx);
+    }
+    plan
+}
+
+fn metrics(mode: RunMode) -> RunMetrics {
+    RunMetrics {
+        load_ms: if mode == RunMode::Cold { 2200 } else { 400 },
+        time_to_first_token_ms: 700,
+        prompt_tokens: 120,
+        prompt_duration_ms: 1000,
+        generated_tokens: 140,
+        generation_duration_ms: 10_000,
+        peak_rss_mb: 900,
+        model_memory_mb: 500,
+        cancellation_latency_ms: if mode == RunMode::Cancellation {
+            Some(120)
+        } else {
+            None
         },
-        RunPlanEntry {
-            index: 1,
-            candidate_id: B.into(),
-            mode: RunMode::Cold,
-            seed: 11,
-        },
-        RunPlanEntry {
-            index: 2,
-            candidate_id: B.into(),
-            mode: RunMode::Warm,
-            seed: 11,
-        },
-        RunPlanEntry {
-            index: 3,
-            candidate_id: A.into(),
-            mode: RunMode::Warm,
-            seed: 11,
-        },
-    ]
+        peak_temperature_celsius_tenths: 400,
+        throttled: false,
+        battery_drop_tenths_percent: 2,
+        background_foreground_recovered: true,
+    }
 }
 
 fn protocol() -> EvaluationProtocol {
@@ -198,11 +222,16 @@ fn cost() -> CostObservation {
     }
 }
 
-fn observation(idx: u32, cand: &str, mode: RunMode) -> RunObservation {
+fn observation(idx: u32, cand: &str, mode: RunMode, seed: u64) -> RunObservation {
+    // A cold run must be a NEW process; warm runs continue the one before.
+    let proc = format!(
+        "{cand}-proc-{}",
+        if mode == RunMode::Cold { idx } else { 0 }
+    );
     RunObservation {
         run_id: format!("{cand}-{idx}"),
         candidate_id: cand.into(),
-        seed: 11,
+        seed,
         mode,
         sequence_index: idx,
         started_monotonic_ms: 1000,
@@ -211,10 +240,10 @@ fn observation(idx: u32, cand: &str, mode: RunMode) -> RunObservation {
         observed_screen_on: true,
         observed_brightness_percent: 20,
         observed_airplane_mode: true,
-        process_instance_id: format!("pid-{idx}"),
-        pack_integrity_receipt: sha(0x5a),
+        process_instance_id: proc.clone(),
+        pack_integrity_receipt: candidate(cand).artifact_sha256_hex,
         cold_evidence: ColdEvidence::ProcessCold {
-            process_instance_id: format!("pid-{idx}"),
+            process_instance_id: proc,
         },
         start_temperature_celsius_tenths: 350,
         cooldown_duration_ms: 200_000,
@@ -222,16 +251,17 @@ fn observation(idx: u32, cand: &str, mode: RunMode) -> RunObservation {
         thermal_sensor_identity: "thermal_zone0".into(),
         throttling_detector_identity: "detector-v1".into(),
         disposition: RunDisposition::Admissible,
+        metrics: metrics(mode),
     }
 }
 
-fn result(id: &str, score: f64, c: CostObservation) -> CandidateResult {
+fn result(id: &str, score: f64, installed_bytes: u64) -> CandidateResult {
     let cand = candidate(id);
     let tag = if id == B { 0x80u8 } else { 0x70u8 };
-    let runs: Vec<(u32, RunMode)> = run_plan()
+    let runs: Vec<(u32, RunMode, u64)> = run_plan()
         .iter()
         .filter(|e| e.candidate_id == id)
-        .map(|e| (e.index, e.mode))
+        .map(|e| (e.index, e.mode, e.seed))
         .collect();
     CandidateResult {
         candidate_id: id.into(),
@@ -246,11 +276,16 @@ fn result(id: &str, score: f64, c: CostObservation) -> CandidateResult {
             semantic_prompt_hash: corpus_hash(),
             rendered_prompt_hash: sha(tag),
             input_token_ids_hash: sha(tag.wrapping_add(1)),
+            output_hash: sha(tag.wrapping_add(2)),
         }],
-        cost: c,
+        installed_bytes,
+        quality_rubric_id: "m7b-rubric-v1".into(),
         quality: panel(score),
         disposition: RunDisposition::Admissible,
-        observations: runs.iter().map(|(i, m)| observation(*i, id, *m)).collect(),
+        observations: runs
+            .iter()
+            .map(|(i, m, sd)| observation(*i, id, *m, *sd))
+            .collect(),
     }
 }
 
@@ -361,7 +396,7 @@ fn an_invalid_protocol_is_rejected_however_it_hashes() {
 // There is no promotion path that skips admission.
 #[test]
 fn an_inadmissible_run_cannot_be_promoted() {
-    let mut leaked = result(B, 0.99, cost());
+    let mut leaked = result(B, 0.99, 400_000_000);
     leaked.disposition = RunDisposition::InadmissibleReasoningLeakage {
         detector: "frozen-prose-v1".into(),
     };
@@ -369,7 +404,7 @@ fn an_inadmissible_run_cannot_be_promoted() {
     match evaluate_promotion(
         protocol(),
         candidate(A),
-        result(A, 0.5, cost()),
+        result(A, 0.5, 400_000_000),
         candidate(B),
         leaked,
     ) {
@@ -387,13 +422,13 @@ fn an_inadmissible_run_cannot_be_promoted() {
             reason: "call".into(),
         },
     ] {
-        let mut r = result(B, 0.99, cost());
+        let mut r = result(B, 0.99, 400_000_000);
         r.disposition = d;
         assert!(matches!(
             evaluate_promotion(
                 protocol(),
                 candidate(A),
-                result(A, 0.5, cost()),
+                result(A, 0.5, 400_000_000),
                 candidate(B),
                 r
             ),
@@ -405,9 +440,9 @@ fn an_inadmissible_run_cannot_be_promoted() {
         evaluate_promotion(
             protocol(),
             candidate(A),
-            result(A, 0.5, cost()),
+            result(A, 0.5, 400_000_000),
             candidate(B),
-            result(B, 0.9, cost())
+            result(B, 0.9, 400_000_000)
         ),
         PromotionVerdict::PromoteNothing { .. }
     ));
@@ -418,48 +453,48 @@ fn an_inadmissible_run_cannot_be_promoted() {
 fn results_are_bound_to_their_candidate_and_prompts() {
     let p = protocol();
     assert_eq!(
-        admit_result(result(A, 0.8, cost()), candidate(A), p.clone()),
+        admit_result(result(A, 0.8, 400_000_000), candidate(A), p.clone()),
         None
     );
     // The same result cannot be admitted against the OTHER candidate.
     assert_eq!(
-        admit_result(result(A, 0.8, cost()), candidate(B), p.clone()),
+        admit_result(result(A, 0.8, 400_000_000), candidate(B), p.clone()),
         Some(AdmissionFailure::ResultCandidateMismatch)
     );
     // A forged identity is caught even when the id matches.
-    let mut forged = result(A, 0.8, cost());
+    let mut forged = result(A, 0.8, 400_000_000);
     forged.candidate_identity = sha(0x01);
     assert_eq!(
         admit_result(forged, candidate(A), p.clone()),
         Some(AdmissionFailure::CandidateIdentityMismatch)
     );
     // An empty prompt list is no longer admissible.
-    let mut no_prompts = result(A, 0.8, cost());
+    let mut no_prompts = result(A, 0.8, 400_000_000);
     no_prompts.prompts.clear();
     assert_eq!(
         admit_result(no_prompts, candidate(A), p.clone()),
         Some(AdmissionFailure::PromptCountMismatch)
     );
-    let mut dup = result(A, 0.8, cost());
+    let mut dup = result(A, 0.8, 400_000_000);
     dup.prompts.push(dup.prompts[0].clone());
     assert!(matches!(
         admit_result(dup, candidate(A), p.clone()),
         Some(AdmissionFailure::PromptCountMismatch)
     ));
-    let mut wrong_semantic = result(A, 0.8, cost());
+    let mut wrong_semantic = result(A, 0.8, 400_000_000);
     wrong_semantic.prompts[0].semantic_prompt_hash = sha(0x13);
     assert_eq!(
         admit_result(wrong_semantic, candidate(A), p.clone()),
         Some(AdmissionFailure::SemanticPromptMismatch)
     );
     // Rendered and token parity are candidate-specific and declared ahead.
-    let mut wrong_render = result(A, 0.8, cost());
+    let mut wrong_render = result(A, 0.8, 400_000_000);
     wrong_render.prompts[0].rendered_prompt_hash = sha(0x99);
     assert!(matches!(
         admit_result(wrong_render, candidate(A), p.clone()),
         Some(AdmissionFailure::RenderedPromptMismatch { .. })
     ));
-    let mut wrong_tokens = result(A, 0.8, cost());
+    let mut wrong_tokens = result(A, 0.8, 400_000_000);
     wrong_tokens.prompts[0].input_token_ids_hash = sha(0x98);
     assert!(matches!(
         admit_result(wrong_tokens, candidate(A), p),
@@ -471,33 +506,33 @@ fn results_are_bound_to_their_candidate_and_prompts() {
 #[test]
 fn runs_cannot_be_dropped_reordered_or_selectively_discarded() {
     let p = protocol();
-    let mut missing = result(A, 0.8, cost());
+    let mut missing = result(A, 0.8, 400_000_000);
     missing.observations.pop();
     assert!(matches!(
         admit_result(missing, candidate(A), p.clone()),
         Some(AdmissionFailure::RunLedgerMismatch { .. })
     ));
-    let mut reordered = result(A, 0.8, cost());
+    let mut reordered = result(A, 0.8, 400_000_000);
     reordered.observations.reverse();
     assert!(matches!(
         admit_result(reordered, candidate(A), p.clone()),
         Some(AdmissionFailure::RunLedgerMismatch { .. })
     ));
-    let mut wrong_seed = result(A, 0.8, cost());
+    let mut wrong_seed = result(A, 0.8, 400_000_000);
     wrong_seed.observations[0].seed = 99;
     assert!(matches!(
         admit_result(wrong_seed, candidate(A), p.clone()),
         Some(AdmissionFailure::RunLedgerMismatch { .. })
     ));
     // A run with no integrity receipt is not evidence.
-    let mut no_receipt = result(A, 0.8, cost());
+    let mut no_receipt = result(A, 0.8, 400_000_000);
     no_receipt.observations[0].pack_integrity_receipt = "  ".into();
     assert!(matches!(
         admit_result(no_receipt, candidate(A), p.clone()),
         Some(AdmissionFailure::RunLedgerMismatch { .. })
     ));
     // A single bad run poisons the candidate even if the aggregate looks fine.
-    let mut one_bad = result(A, 0.8, cost());
+    let mut one_bad = result(A, 0.8, 400_000_000);
     one_bad.observations[1].disposition = RunDisposition::ThermallyThrottled;
     assert!(matches!(
         admit_result(one_bad, candidate(A), p),
@@ -525,7 +560,7 @@ fn observed_conditions_must_match_the_frozen_environment() {
         ("cooldown too short", |o| o.cooldown_duration_ms = 1000),
     ];
     for (name, mutate) in deviations {
-        let mut r = result(A, 0.8, cost());
+        let mut r = result(A, 0.8, 400_000_000);
         mutate(&mut r.observations[0]);
         assert!(
             matches!(
@@ -538,7 +573,7 @@ fn observed_conditions_must_match_the_frozen_environment() {
     // A filesystem-cache-cold CLAIM needs external evidence, not an enum.
     let mut fs_cold = protocol();
     fs_cold.environment.cold_definition = ColdDefinition::FilesystemCacheCold;
-    let mut r = result(A, 0.8, cost());
+    let mut r = result(A, 0.8, 400_000_000);
     r.protocol_identity = evaluation_protocol_identity(fs_cold.clone());
     assert!(
         matches!(
@@ -589,17 +624,15 @@ fn a_plugged_in_battery_figure_cannot_gate_promotion() {
 
 #[test]
 fn promotion_requires_earning_it_not_being_newer_or_smaller() {
-    let mut small = cost();
-    small.installed_bytes = 300_000_000;
-    let mut large = cost();
-    large.installed_bytes = 600_000_000;
+    let small = 300_000_000u64;
+    let large = 600_000_000u64;
     // Equal quality, different size -> a tier split, not a winner.
     match evaluate_promotion(
         protocol(),
         candidate(A),
-        result(A, 0.80, small.clone()),
+        result(A, 0.80, small),
         candidate(B),
-        result(B, 0.80, large.clone()),
+        result(B, 0.80, large),
     ) {
         PromotionVerdict::SplitTiers {
             basic_candidate_id,
@@ -615,16 +648,16 @@ fn promotion_requires_earning_it_not_being_newer_or_smaller() {
         evaluate_promotion(
             protocol(),
             candidate(A),
-            result(A, 0.80, small.clone()),
+            result(A, 0.80, small),
             candidate(B),
-            result(B, 0.83, large.clone())
+            result(B, 0.83, large)
         ),
         PromotionVerdict::SplitTiers { .. }
     ));
     // A material margin promotes, in both directions.
     assert!(matches!(
-        evaluate_promotion(protocol(), candidate(A), result(A, 0.80, small.clone()),
-                           candidate(B), result(B, 0.90, large.clone())),
+        evaluate_promotion(protocol(), candidate(A), result(A, 0.80, small),
+                           candidate(B), result(B, 0.90, large)),
         PromotionVerdict::Promote { ref candidate_id, .. } if candidate_id == B
     ));
     assert!(matches!(
@@ -634,24 +667,32 @@ fn promotion_requires_earning_it_not_being_newer_or_smaller() {
     ));
 }
 
+/// A ceiling can now only be blown through the LEDGER — the aggregate is
+/// derived, so there is no way to inject a slow summary directly.
+fn slow_result(id: &str, score: f64) -> CandidateResult {
+    let mut r = result(id, score, 400_000_000);
+    for o in r.observations.iter_mut() {
+        o.metrics.time_to_first_token_ms = 9_000;
+    }
+    r
+}
+
 #[test]
 fn both_failing_promotes_nothing_and_a_ceiling_beats_a_score() {
-    let mut slow = cost();
-    slow.time_to_first_token_ms = 9_000;
     assert!(matches!(
         evaluate_promotion(
             protocol(),
             candidate(A),
-            result(A, 0.9, slow.clone()),
+            slow_result(A, 0.9),
             candidate(B),
-            result(B, 0.95, slow.clone())
+            slow_result(B, 0.95)
         ),
         PromotionVerdict::PromoteNothing { .. }
     ));
     // The passing candidate wins even with the LOWER score.
     assert!(matches!(
-        evaluate_promotion(protocol(), candidate(A), result(A, 0.60, cost()),
-                           candidate(B), result(B, 0.99, slow)),
+        evaluate_promotion(protocol(), candidate(A), result(A, 0.60, 400_000_000),
+                           candidate(B), slow_result(B, 0.99)),
         PromotionVerdict::Promote { ref candidate_id, .. } if candidate_id == A
     ));
 }
@@ -734,7 +775,7 @@ fn unreproducible_or_unproven_candidates_are_inadmissible() {
     // A derived artifact with no conversion record cannot be reproduced.
     let mut no_record = candidate(B);
     no_record.conversion = None;
-    let mut r = result(B, 0.8, cost());
+    let mut r = result(B, 0.8, 400_000_000);
     r.candidate_identity = candidate_identity(no_record.clone());
     assert_eq!(
         admit_result(r, no_record, p.clone()),
@@ -745,7 +786,7 @@ fn unreproducible_or_unproven_candidates_are_inadmissible() {
     let mut conv = conversion();
     conv.allow_requantize = true;
     requant.conversion = Some(conv);
-    let mut r2 = result(B, 0.8, cost());
+    let mut r2 = result(B, 0.8, 400_000_000);
     r2.candidate_identity = candidate_identity(requant.clone());
     assert_eq!(
         admit_result(r2, requant, p.clone()),
@@ -754,7 +795,7 @@ fn unreproducible_or_unproven_candidates_are_inadmissible() {
     // Qwen3 defaults to thinking mode: it must be PROVEN off.
     let mut thinking = candidate(B);
     thinking.thinking_mode_disabled = false;
-    let mut r3 = result(B, 0.8, cost());
+    let mut r3 = result(B, 0.8, 400_000_000);
     r3.candidate_identity = candidate_identity(thinking.clone());
     assert_eq!(
         admit_result(r3, thinking, p),

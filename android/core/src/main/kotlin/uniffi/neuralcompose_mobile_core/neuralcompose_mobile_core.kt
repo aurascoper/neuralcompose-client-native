@@ -709,6 +709,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_candidate_identity(
     ): Int
+    external fun uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation(
+    ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion(
     ): Int
     external fun uniffi_neuralcompose_mobile_core_checksum_func_evaluation_protocol_identity(
@@ -1025,6 +1027,8 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_neuralcompose_mobile_core_fn_func_candidate_identity(`candidate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_neuralcompose_mobile_core_fn_func_derive_cost_observation(`observations`: RustBuffer.ByValue,`installedBytes`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_evaluate_promotion(`protocol`: RustBuffer.ByValue,`candidateA`: RustBuffer.ByValue,`resultA`: RustBuffer.ByValue,`candidateB`: RustBuffer.ByValue,`resultB`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_neuralcompose_mobile_core_fn_func_evaluation_protocol_identity(`protocol`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1266,6 +1270,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_candidate_identity() != 36234) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation() != 33145) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion() != 42781) {
@@ -4067,6 +4074,12 @@ data class BenchmarkPrompt (
      * Token ids the runtime actually fed the model, hashed.
      */
     var `inputTokenIdsHash`: kotlin.String
+    , 
+    /**
+     * v4: the generated continuation, hashed. Binds the quality panel to
+     * outputs that actually exist.
+     */
+    var `outputHash`: kotlin.String
     
 ){
     
@@ -4088,6 +4101,7 @@ public object FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer<BenchmarkP
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
         )
     }
 
@@ -4096,7 +4110,8 @@ public object FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer<BenchmarkP
             FfiConverterString.allocationSize(value.`promptProfile`) +
             FfiConverterString.allocationSize(value.`semanticPromptHash`) +
             FfiConverterString.allocationSize(value.`renderedPromptHash`) +
-            FfiConverterString.allocationSize(value.`inputTokenIdsHash`)
+            FfiConverterString.allocationSize(value.`inputTokenIdsHash`) +
+            FfiConverterString.allocationSize(value.`outputHash`)
     )
 
     override fun write(value: BenchmarkPrompt, buf: ByteBuffer) {
@@ -4105,6 +4120,7 @@ public object FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer<BenchmarkP
             FfiConverterString.write(value.`semanticPromptHash`, buf)
             FfiConverterString.write(value.`renderedPromptHash`, buf)
             FfiConverterString.write(value.`inputTokenIdsHash`, buf)
+            FfiConverterString.write(value.`outputHash`, buf)
     }
 }
 
@@ -4131,7 +4147,15 @@ data class CandidateResult (
      */
     var `prompts`: List<BenchmarkPrompt>
     , 
-    var `cost`: CostObservation
+    /**
+     * The installed artifact size — a pack fact, not a per-run measurement.
+     */
+    var `installedBytes`: kotlin.ULong
+    , 
+    /**
+     * v4: the rubric the panel was scored under; must be the frozen one.
+     */
+    var `qualityRubricId`: kotlin.String
     , 
     var `quality`: QualityPanel
     , 
@@ -4167,7 +4191,8 @@ public object FfiConverterTypeCandidateResult: FfiConverterRustBuffer<CandidateR
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterSequenceTypeBenchmarkPrompt.read(buf),
-            FfiConverterTypeCostObservation.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
             FfiConverterTypeQualityPanel.read(buf),
             FfiConverterTypeRunDisposition.read(buf),
             FfiConverterSequenceTypeRunObservation.read(buf),
@@ -4182,7 +4207,8 @@ public object FfiConverterTypeCandidateResult: FfiConverterRustBuffer<CandidateR
             FfiConverterString.allocationSize(value.`osVersion`) +
             FfiConverterString.allocationSize(value.`runtimeIdentity`) +
             FfiConverterSequenceTypeBenchmarkPrompt.allocationSize(value.`prompts`) +
-            FfiConverterTypeCostObservation.allocationSize(value.`cost`) +
+            FfiConverterULong.allocationSize(value.`installedBytes`) +
+            FfiConverterString.allocationSize(value.`qualityRubricId`) +
             FfiConverterTypeQualityPanel.allocationSize(value.`quality`) +
             FfiConverterTypeRunDisposition.allocationSize(value.`disposition`) +
             FfiConverterSequenceTypeRunObservation.allocationSize(value.`observations`)
@@ -4196,7 +4222,8 @@ public object FfiConverterTypeCandidateResult: FfiConverterRustBuffer<CandidateR
             FfiConverterString.write(value.`osVersion`, buf)
             FfiConverterString.write(value.`runtimeIdentity`, buf)
             FfiConverterSequenceTypeBenchmarkPrompt.write(value.`prompts`, buf)
-            FfiConverterTypeCostObservation.write(value.`cost`, buf)
+            FfiConverterULong.write(value.`installedBytes`, buf)
+            FfiConverterString.write(value.`qualityRubricId`, buf)
             FfiConverterTypeQualityPanel.write(value.`quality`, buf)
             FfiConverterTypeRunDisposition.write(value.`disposition`, buf)
             FfiConverterSequenceTypeRunObservation.write(value.`observations`, buf)
@@ -6637,6 +6664,107 @@ public object FfiConverterTypeRunEnvironment: FfiConverterRustBuffer<RunEnvironm
 
 
 
+/**
+ * What a single planned run actually measured. The aggregate is derived
+ * from these in Rust — the shell never supplies both a ledger and an
+ * unrelated authoritative summary.
+ */
+data class RunMetrics (
+    var `loadMs`: kotlin.ULong
+    , 
+    var `timeToFirstTokenMs`: kotlin.ULong
+    , 
+    var `promptTokens`: kotlin.UInt
+    , 
+    var `promptDurationMs`: kotlin.ULong
+    , 
+    var `generatedTokens`: kotlin.UInt
+    , 
+    var `generationDurationMs`: kotlin.ULong
+    , 
+    var `peakRssMb`: kotlin.ULong
+    , 
+    var `modelMemoryMb`: kotlin.ULong
+    , 
+    /**
+     * Present only on a Cancellation run.
+     */
+    var `cancellationLatencyMs`: kotlin.ULong?
+    , 
+    var `peakTemperatureCelsiusTenths`: kotlin.UInt
+    , 
+    var `throttled`: kotlin.Boolean
+    , 
+    var `batteryDropTenthsPercent`: kotlin.UInt
+    , 
+    var `backgroundForegroundRecovered`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRunMetrics: FfiConverterRustBuffer<RunMetrics> {
+    override fun read(buf: ByteBuffer): RunMetrics {
+        return RunMetrics(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RunMetrics) = (
+            FfiConverterULong.allocationSize(value.`loadMs`) +
+            FfiConverterULong.allocationSize(value.`timeToFirstTokenMs`) +
+            FfiConverterUInt.allocationSize(value.`promptTokens`) +
+            FfiConverterULong.allocationSize(value.`promptDurationMs`) +
+            FfiConverterUInt.allocationSize(value.`generatedTokens`) +
+            FfiConverterULong.allocationSize(value.`generationDurationMs`) +
+            FfiConverterULong.allocationSize(value.`peakRssMb`) +
+            FfiConverterULong.allocationSize(value.`modelMemoryMb`) +
+            FfiConverterOptionalULong.allocationSize(value.`cancellationLatencyMs`) +
+            FfiConverterUInt.allocationSize(value.`peakTemperatureCelsiusTenths`) +
+            FfiConverterBoolean.allocationSize(value.`throttled`) +
+            FfiConverterUInt.allocationSize(value.`batteryDropTenthsPercent`) +
+            FfiConverterBoolean.allocationSize(value.`backgroundForegroundRecovered`)
+    )
+
+    override fun write(value: RunMetrics, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`loadMs`, buf)
+            FfiConverterULong.write(value.`timeToFirstTokenMs`, buf)
+            FfiConverterUInt.write(value.`promptTokens`, buf)
+            FfiConverterULong.write(value.`promptDurationMs`, buf)
+            FfiConverterUInt.write(value.`generatedTokens`, buf)
+            FfiConverterULong.write(value.`generationDurationMs`, buf)
+            FfiConverterULong.write(value.`peakRssMb`, buf)
+            FfiConverterULong.write(value.`modelMemoryMb`, buf)
+            FfiConverterOptionalULong.write(value.`cancellationLatencyMs`, buf)
+            FfiConverterUInt.write(value.`peakTemperatureCelsiusTenths`, buf)
+            FfiConverterBoolean.write(value.`throttled`, buf)
+            FfiConverterUInt.write(value.`batteryDropTenthsPercent`, buf)
+            FfiConverterBoolean.write(value.`backgroundForegroundRecovered`, buf)
+    }
+}
+
+
+
 data class RunObservation (
     var `runId`: kotlin.String
     , 
@@ -6680,6 +6808,11 @@ data class RunObservation (
     var `throttlingDetectorIdentity`: kotlin.String
     , 
     var `disposition`: RunDisposition
+    , 
+    /**
+     * v4: what this run measured. The promotion aggregate derives from here.
+     */
+    var `metrics`: RunMetrics
     
 ){
     
@@ -6716,6 +6849,7 @@ public object FfiConverterTypeRunObservation: FfiConverterRustBuffer<RunObservat
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterTypeRunDisposition.read(buf),
+            FfiConverterTypeRunMetrics.read(buf),
         )
     }
 
@@ -6739,7 +6873,8 @@ public object FfiConverterTypeRunObservation: FfiConverterRustBuffer<RunObservat
             FfiConverterUInt.allocationSize(value.`cooldownExitTemperatureCelsiusTenths`) +
             FfiConverterString.allocationSize(value.`thermalSensorIdentity`) +
             FfiConverterString.allocationSize(value.`throttlingDetectorIdentity`) +
-            FfiConverterTypeRunDisposition.allocationSize(value.`disposition`)
+            FfiConverterTypeRunDisposition.allocationSize(value.`disposition`) +
+            FfiConverterTypeRunMetrics.allocationSize(value.`metrics`)
     )
 
     override fun write(value: RunObservation, buf: ByteBuffer) {
@@ -6763,6 +6898,7 @@ public object FfiConverterTypeRunObservation: FfiConverterRustBuffer<RunObservat
             FfiConverterString.write(value.`thermalSensorIdentity`, buf)
             FfiConverterString.write(value.`throttlingDetectorIdentity`, buf)
             FfiConverterTypeRunDisposition.write(value.`disposition`, buf)
+            FfiConverterTypeRunMetrics.write(value.`metrics`, buf)
     }
 }
 
@@ -11596,6 +11732,7 @@ public object FfiConverterTypeRunDisposition : FfiConverterRustBuffer<RunDisposi
 
 enum class RunMode {
     
+    WARMUP,
     COLD,
     WARM,
     SUSTAINED,
@@ -12401,6 +12538,38 @@ public object FfiConverterOptionalTypeConversionRecord: FfiConverterRustBuffer<C
         } else {
             buf.put(1)
             FfiConverterTypeConversionRecord.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeCostObservation: FfiConverterRustBuffer<CostObservation?> {
+    override fun read(buf: ByteBuffer): CostObservation? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeCostObservation.read(buf)
+    }
+
+    override fun allocationSize(value: CostObservation?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeCostObservation.allocationSize(value)
+        }
+    }
+
+    override fun write(value: CostObservation?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeCostObservation.write(value, buf)
         }
     }
 }
@@ -13634,6 +13803,25 @@ public object FfiConverterSequenceSequenceDouble: FfiConverterRustBuffer<List<Li
     
         
         FfiConverterTypeEvaluationCandidate.lower(`candidate`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Derive the promotion aggregate from the ledger. The frozen rule: cold and
+         * warm loads come from their own modes, throughput and latency from the
+         * TIMED runs only (warmups excluded), memory and temperature are peaks
+         * across every run, cancellation latency comes from the cancellation run,
+         * and any throttled or unrecovered run poisons the aggregate.
+         */ fun `deriveCostObservation`(`observations`: List<RunObservation>, `installedBytes`: kotlin.ULong): CostObservation? {
+            return FfiConverterOptionalTypeCostObservation.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_neuralcompose_mobile_core_fn_func_derive_cost_observation(
+    
+        
+        FfiConverterSequenceTypeRunObservation.lower(`observations`),
+        FfiConverterULong.lower(`installedBytes`),_status)
 }
     )
     }

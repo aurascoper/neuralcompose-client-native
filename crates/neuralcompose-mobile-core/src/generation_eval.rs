@@ -116,6 +116,9 @@ pub struct BenchmarkPrompt {
     pub rendered_prompt_hash: String,
     /// Token ids the runtime actually fed the model, hashed.
     pub input_token_ids_hash: String,
+    /// v4: the generated continuation, hashed. Binds the quality panel to
+    /// outputs that actually exist.
+    pub output_hash: String,
 }
 
 #[cfg_attr(feature = "uniffi", uniffi::export)]
@@ -172,6 +175,7 @@ pub enum BatteryEvidencePolicy {
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum RunMode {
+    Warmup,
     Cold,
     Warm,
     Sustained,
@@ -187,6 +191,29 @@ pub enum RunMode {
 pub enum ColdEvidence {
     ProcessCold { process_instance_id: String },
     FilesystemCacheCold { external_step_evidence_id: String },
+}
+
+/// What a single planned run actually measured. The aggregate is derived
+/// from these in Rust — the shell never supplies both a ledger and an
+/// unrelated authoritative summary.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct RunMetrics {
+    pub load_ms: u64,
+    pub time_to_first_token_ms: u64,
+    pub prompt_tokens: u32,
+    pub prompt_duration_ms: u64,
+    pub generated_tokens: u32,
+    pub generation_duration_ms: u64,
+    pub peak_rss_mb: u64,
+    pub model_memory_mb: u64,
+    /// Present only on a Cancellation run.
+    pub cancellation_latency_ms: Option<u64>,
+    pub peak_temperature_celsius_tenths: u32,
+    pub throttled: bool,
+    pub battery_drop_tenths_percent: u32,
+    pub background_foreground_recovered: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -214,6 +241,8 @@ pub struct RunObservation {
     pub thermal_sensor_identity: String,
     pub throttling_detector_identity: String,
     pub disposition: RunDisposition,
+    /// v4: what this run measured. The promotion aggregate derives from here.
+    pub metrics: RunMetrics,
 }
 
 /// v3: the exact schedule, frozen. `alternating_candidate_order: true` is a
@@ -580,7 +609,10 @@ pub struct CandidateResult {
     pub runtime_identity: String,
     /// Every prompt actually run, with both prompt identities.
     pub prompts: Vec<BenchmarkPrompt>,
-    pub cost: CostObservation,
+    /// The installed artifact size — a pack fact, not a per-run measurement.
+    pub installed_bytes: u64,
+    /// v4: the rubric the panel was scored under; must be the frozen one.
+    pub quality_rubric_id: String,
     pub quality: QualityPanel,
     /// v2: why this run is or is not a usable measurement.
     pub disposition: RunDisposition,
@@ -620,6 +652,50 @@ pub fn validate_evaluation_protocol(protocol: EvaluationProtocol) -> Vec<String>
         if entry.index as usize != i {
             bad("run plan indices must be dense and ordered");
             break;
+        }
+    }
+    // The plan must EXPAND the declared experiment: the summary counts are
+    // drift guards, and a plan that quietly omits seeds, the sustained run or
+    // the cancellation test would let an incomplete result be admitted.
+    if protocol.timed_runs as usize != protocol.seeds.len() {
+        bad("timedRuns must equal the number of frozen seeds");
+    }
+    let candidates: std::collections::BTreeSet<&String> =
+        protocol.run_plan.iter().map(|e| &e.candidate_id).collect();
+    if candidates.len() != 2 {
+        bad("the run plan must cover exactly two candidates");
+    }
+    for cand in candidates {
+        let mine: Vec<&RunPlanEntry> = protocol
+            .run_plan
+            .iter()
+            .filter(|e| &e.candidate_id == cand)
+            .collect();
+        let count = |m: RunMode| mine.iter().filter(|e| e.mode == m).count();
+        if count(RunMode::Warmup) != protocol.warmup_runs as usize {
+            bad("run plan warmup entries disagree with warmupRuns");
+        }
+        for mode in [RunMode::Cold, RunMode::Warm] {
+            if count(mode) != protocol.timed_runs as usize {
+                bad("run plan timed entries disagree with timedRuns");
+            }
+            // Every frozen seed must actually be exercised in each mode.
+            let seeds: std::collections::BTreeSet<u64> = mine
+                .iter()
+                .filter(|e| e.mode == mode)
+                .map(|e| e.seed)
+                .collect();
+            let declared: std::collections::BTreeSet<u64> =
+                protocol.seeds.iter().copied().collect();
+            if seeds != declared {
+                bad("run plan does not exercise every frozen seed in each timed mode");
+            }
+        }
+        if count(RunMode::Sustained) != 1 {
+            bad("run plan must contain exactly one sustained run per candidate");
+        }
+        if count(RunMode::Cancellation) != 1 {
+            bad("run plan must contain exactly one cancellation run per candidate");
         }
     }
     if protocol.timed_runs == 0
@@ -675,6 +751,83 @@ pub fn validate_evaluation_protocol(protocol: EvaluationProtocol) -> Vec<String>
         bad("thermal start ceiling is at or above the abort cutoff");
     }
     e
+}
+
+/// Derive the promotion aggregate from the ledger. The frozen rule: cold and
+/// warm loads come from their own modes, throughput and latency from the
+/// TIMED runs only (warmups excluded), memory and temperature are peaks
+/// across every run, cancellation latency comes from the cancellation run,
+/// and any throttled or unrecovered run poisons the aggregate.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn derive_cost_observation(
+    observations: Vec<RunObservation>,
+    installed_bytes: u64,
+) -> Option<CostObservation> {
+    let timed: Vec<&RunObservation> = observations
+        .iter()
+        .filter(|o| matches!(o.mode, RunMode::Cold | RunMode::Warm))
+        .collect();
+    if timed.is_empty() {
+        return None;
+    }
+    let mean = |vals: Vec<f64>| vals.iter().sum::<f64>() / vals.len() as f64;
+    let cold: Vec<&&RunObservation> = timed.iter().filter(|o| o.mode == RunMode::Cold).collect();
+    let warm: Vec<&&RunObservation> = timed.iter().filter(|o| o.mode == RunMode::Warm).collect();
+    if cold.is_empty() || warm.is_empty() {
+        return None;
+    }
+    let rate = |num: u32, ms: u64| {
+        if ms == 0 {
+            0.0
+        } else {
+            num as f64 / (ms as f64 / 1000.0)
+        }
+    };
+    let cancellation = observations
+        .iter()
+        .find(|o| o.mode == RunMode::Cancellation)
+        .and_then(|o| o.metrics.cancellation_latency_ms)?;
+    Some(CostObservation {
+        cold_load_ms: mean(cold.iter().map(|o| o.metrics.load_ms as f64).collect()) as u64,
+        warm_load_ms: mean(warm.iter().map(|o| o.metrics.load_ms as f64).collect()) as u64,
+        time_to_first_token_ms: mean(
+            timed
+                .iter()
+                .map(|o| o.metrics.time_to_first_token_ms as f64)
+                .collect(),
+        ) as u64,
+        prompt_tokens_per_second: mean(
+            timed
+                .iter()
+                .map(|o| rate(o.metrics.prompt_tokens, o.metrics.prompt_duration_ms))
+                .collect(),
+        ),
+        generation_tokens_per_second: mean(
+            timed
+                .iter()
+                .map(|o| rate(o.metrics.generated_tokens, o.metrics.generation_duration_ms))
+                .collect(),
+        ),
+        peak_rss_mb: observations.iter().map(|o| o.metrics.peak_rss_mb).max()?,
+        model_memory_mb: observations
+            .iter()
+            .map(|o| o.metrics.model_memory_mb)
+            .max()?,
+        cancellation_latency_ms: cancellation,
+        installed_bytes,
+        battery_drop_tenths_percent: observations
+            .iter()
+            .map(|o| o.metrics.battery_drop_tenths_percent)
+            .sum(),
+        peak_temperature_celsius_tenths: observations
+            .iter()
+            .map(|o| o.metrics.peak_temperature_celsius_tenths)
+            .max()?,
+        thermally_throttled: observations.iter().any(|o| o.metrics.throttled),
+        background_foreground_recovered: observations
+            .iter()
+            .all(|o| o.metrics.background_foreground_recovered),
+    })
 }
 
 // ---------- admission and promotion ----------
@@ -821,6 +974,8 @@ pub fn admit_result(
             ),
         });
     }
+    let mut run_ids = std::collections::HashSet::new();
+    let mut seen_processes = std::collections::HashSet::new();
     for (entry, obs) in planned.iter().zip(result.observations.iter()) {
         if obs.sequence_index != entry.index || obs.mode != entry.mode || obs.seed != entry.seed {
             return Some(AdmissionFailure::RunLedgerMismatch {
@@ -837,9 +992,71 @@ pub fn admit_result(
                 reason: format!("run {}: {:?}", entry.index, obs.disposition),
             });
         }
-        if obs.pack_integrity_receipt.trim().is_empty() {
+        // The receipt must be BOUND to this candidate's artifact, not merely
+        // present — a nonempty string proves nothing.
+        if obs.pack_integrity_receipt != candidate.artifact_sha256_hex {
             return Some(AdmissionFailure::RunLedgerMismatch {
-                reason: format!("run {} has no pack-integrity receipt", entry.index),
+                reason: format!(
+                    "run {} pack receipt is not this candidate's artifact digest",
+                    entry.index
+                ),
+            });
+        }
+        if obs.run_id.trim().is_empty() || !run_ids.insert(obs.run_id.clone()) {
+            return Some(AdmissionFailure::RunLedgerMismatch {
+                reason: format!("run {} has a blank or duplicate run id", entry.index),
+            });
+        }
+        if obs.process_instance_id.trim().is_empty() {
+            return Some(AdmissionFailure::RunLedgerMismatch {
+                reason: format!("run {} has no process instance id", entry.index),
+            });
+        }
+        // Cold evidence must actually describe THIS process.
+        if let ColdEvidence::ProcessCold {
+            process_instance_id,
+        } = &obs.cold_evidence
+        {
+            if process_instance_id != &obs.process_instance_id {
+                return Some(AdmissionFailure::ColdEvidenceMissing {
+                    run_id: obs.run_id.clone(),
+                });
+            }
+        }
+        // Warm means warm: the frozen definition constrains what may be
+        // reused, and a "warm" run in a brand-new process is not warm.
+        if obs.mode == RunMode::Warm {
+            match protocol.environment.warm_definition {
+                WarmDefinition::ContextRecreatedModelResident | WarmDefinition::ContextReused => {
+                    if !seen_processes.contains(&obs.process_instance_id) {
+                        return Some(AdmissionFailure::EnvironmentDeviation {
+                            reason: format!(
+                                "run {}: warm run in a process with no prior run",
+                                entry.index
+                            ),
+                        });
+                    }
+                }
+            }
+        }
+        // A required restart must be DEMONSTRATED by a new process instance,
+        // not asserted by a protocol boolean.
+        if obs.mode == RunMode::Cold
+            && protocol.environment.restart_process_between_candidates
+            && seen_processes.contains(&obs.process_instance_id)
+        {
+            return Some(AdmissionFailure::EnvironmentDeviation {
+                reason: format!(
+                    "run {}: cold run reused a process instance from an earlier run",
+                    entry.index
+                ),
+            });
+        }
+        seen_processes.insert(obs.process_instance_id.clone());
+        // A cancellation run must actually have measured a cancellation.
+        if obs.mode == RunMode::Cancellation && obs.metrics.cancellation_latency_ms.is_none() {
+            return Some(AdmissionFailure::RunLedgerMismatch {
+                reason: format!("run {} is a cancellation run with no latency", entry.index),
             });
         }
         // A cold CLAIM needs cold EVIDENCE.
@@ -869,6 +1086,8 @@ pub fn admit_result(
             Some("airplane mode")
         } else if obs.observed_screen_on != env.screen_on {
             Some("screen state")
+        } else if obs.observed_brightness_percent != env.screen_brightness_percent {
+            Some("screen brightness")
         } else if obs.start_temperature_celsius_tenths > env.thermal_start_ceiling_celsius_tenths {
             Some("start temperature above the ceiling")
         } else if env.cooldown_exit == CooldownExit::TemperatureAtOrBelowStartCeiling
@@ -888,11 +1107,23 @@ pub fn admit_result(
         }
     }
 
-    if result.cost.thermally_throttled {
+    if result.observations.iter().any(|o| o.metrics.throttled) {
         return Some(AdmissionFailure::ThermallyThrottled);
+    }
+    if result.quality_rubric_id != protocol.quality_rubric_id {
+        return Some(AdmissionFailure::EnvironmentDeviation {
+            reason: "quality panel scored under a different rubric".into(),
+        });
     }
     if quality_score(result.quality).is_none() {
         return Some(AdmissionFailure::MalformedQualityPanel);
+    }
+    // The aggregate must be derivable from the ledger; if it is not, there is
+    // nothing legitimate to evaluate thresholds against.
+    if derive_cost_observation(result.observations.clone(), 0).is_none() {
+        return Some(AdmissionFailure::RunLedgerMismatch {
+            reason: "ledger does not yield a derivable aggregate".into(),
+        });
     }
     None
 }
@@ -1003,8 +1234,18 @@ pub fn evaluate_promotion(
         _ => return nothing("a quality panel was malformed".into()),
     };
     let thresholds = protocol.thresholds.clone();
-    let fa = meets_thresholds(result_a.cost.clone(), thresholds.clone());
-    let fb = meets_thresholds(result_b.cost.clone(), thresholds.clone());
+    // The aggregate is DERIVED from each ledger, never accepted from the
+    // caller — otherwise a valid-looking ledger could carry favourable
+    // unrelated numbers.
+    let (cost_a, cost_b) = match (
+        derive_cost_observation(result_a.observations.clone(), result_a.installed_bytes),
+        derive_cost_observation(result_b.observations.clone(), result_b.installed_bytes),
+    ) {
+        (Some(a), Some(b)) => (a, b),
+        _ => return nothing("a ledger did not yield a derivable aggregate".into()),
+    };
+    let fa = meets_thresholds(cost_a.clone(), thresholds.clone());
+    let fb = meets_thresholds(cost_b.clone(), thresholds.clone());
 
     match (fa.is_empty(), fb.is_empty()) {
         (false, false) => nothing("neither candidate met the frozen ceilings".into()),
@@ -1021,12 +1262,11 @@ pub fn evaluate_promotion(
         (true, true) => {
             let margin = (sa - sb).abs();
             if margin < thresholds.material_quality_margin {
-                let (basic, enhanced) =
-                    if result_a.cost.installed_bytes <= result_b.cost.installed_bytes {
-                        (result_a.candidate_id, result_b.candidate_id)
-                    } else {
-                        (result_b.candidate_id, result_a.candidate_id)
-                    };
+                let (basic, enhanced) = if cost_a.installed_bytes <= cost_b.installed_bytes {
+                    (result_a.candidate_id, result_b.candidate_id)
+                } else {
+                    (result_b.candidate_id, result_a.candidate_id)
+                };
                 PromotionVerdict::SplitTiers {
                     basic_candidate_id: basic,
                     enhanced_candidate_id: enhanced,

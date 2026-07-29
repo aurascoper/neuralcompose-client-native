@@ -2184,6 +2184,11 @@ public struct BenchmarkPrompt: Equatable, Hashable {
      * Token ids the runtime actually fed the model, hashed.
      */
     public var inputTokenIdsHash: String
+    /**
+     * v4: the generated continuation, hashed. Binds the quality panel to
+     * outputs that actually exist.
+     */
+    public var outputHash: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -2196,12 +2201,17 @@ public struct BenchmarkPrompt: Equatable, Hashable {
          */renderedPromptHash: String, 
         /**
          * Token ids the runtime actually fed the model, hashed.
-         */inputTokenIdsHash: String) {
+         */inputTokenIdsHash: String, 
+        /**
+         * v4: the generated continuation, hashed. Binds the quality panel to
+         * outputs that actually exist.
+         */outputHash: String) {
         self.promptId = promptId
         self.promptProfile = promptProfile
         self.semanticPromptHash = semanticPromptHash
         self.renderedPromptHash = renderedPromptHash
         self.inputTokenIdsHash = inputTokenIdsHash
+        self.outputHash = outputHash
     }
 
     
@@ -2224,7 +2234,8 @@ public struct FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer {
                 promptProfile: FfiConverterString.read(from: &buf), 
                 semanticPromptHash: FfiConverterString.read(from: &buf), 
                 renderedPromptHash: FfiConverterString.read(from: &buf), 
-                inputTokenIdsHash: FfiConverterString.read(from: &buf)
+                inputTokenIdsHash: FfiConverterString.read(from: &buf), 
+                outputHash: FfiConverterString.read(from: &buf)
         )
     }
 
@@ -2234,6 +2245,7 @@ public struct FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer {
         FfiConverterString.write(value.semanticPromptHash, into: &buf)
         FfiConverterString.write(value.renderedPromptHash, into: &buf)
         FfiConverterString.write(value.inputTokenIdsHash, into: &buf)
+        FfiConverterString.write(value.outputHash, into: &buf)
     }
 }
 
@@ -2267,7 +2279,14 @@ public struct CandidateResult: Equatable, Hashable {
      * Every prompt actually run, with both prompt identities.
      */
     public var prompts: [BenchmarkPrompt]
-    public var cost: CostObservation
+    /**
+     * The installed artifact size — a pack fact, not a per-run measurement.
+     */
+    public var installedBytes: UInt64
+    /**
+     * v4: the rubric the panel was scored under; must be the frozen one.
+     */
+    public var qualityRubricId: String
     public var quality: QualityPanel
     /**
      * v2: why this run is or is not a usable measurement.
@@ -2283,7 +2302,13 @@ public struct CandidateResult: Equatable, Hashable {
     public init(candidateId: String, candidateIdentity: String, protocolIdentity: String, device: String, osVersion: String, runtimeIdentity: String, 
         /**
          * Every prompt actually run, with both prompt identities.
-         */prompts: [BenchmarkPrompt], cost: CostObservation, quality: QualityPanel, 
+         */prompts: [BenchmarkPrompt], 
+        /**
+         * The installed artifact size — a pack fact, not a per-run measurement.
+         */installedBytes: UInt64, 
+        /**
+         * v4: the rubric the panel was scored under; must be the frozen one.
+         */qualityRubricId: String, quality: QualityPanel, 
         /**
          * v2: why this run is or is not a usable measurement.
          */disposition: RunDisposition, 
@@ -2297,7 +2322,8 @@ public struct CandidateResult: Equatable, Hashable {
         self.osVersion = osVersion
         self.runtimeIdentity = runtimeIdentity
         self.prompts = prompts
-        self.cost = cost
+        self.installedBytes = installedBytes
+        self.qualityRubricId = qualityRubricId
         self.quality = quality
         self.disposition = disposition
         self.observations = observations
@@ -2326,7 +2352,8 @@ public struct FfiConverterTypeCandidateResult: FfiConverterRustBuffer {
                 osVersion: FfiConverterString.read(from: &buf), 
                 runtimeIdentity: FfiConverterString.read(from: &buf), 
                 prompts: FfiConverterSequenceTypeBenchmarkPrompt.read(from: &buf), 
-                cost: FfiConverterTypeCostObservation.read(from: &buf), 
+                installedBytes: FfiConverterUInt64.read(from: &buf), 
+                qualityRubricId: FfiConverterString.read(from: &buf), 
                 quality: FfiConverterTypeQualityPanel.read(from: &buf), 
                 disposition: FfiConverterTypeRunDisposition.read(from: &buf), 
                 observations: FfiConverterSequenceTypeRunObservation.read(from: &buf)
@@ -2341,7 +2368,8 @@ public struct FfiConverterTypeCandidateResult: FfiConverterRustBuffer {
         FfiConverterString.write(value.osVersion, into: &buf)
         FfiConverterString.write(value.runtimeIdentity, into: &buf)
         FfiConverterSequenceTypeBenchmarkPrompt.write(value.prompts, into: &buf)
-        FfiConverterTypeCostObservation.write(value.cost, into: &buf)
+        FfiConverterUInt64.write(value.installedBytes, into: &buf)
+        FfiConverterString.write(value.qualityRubricId, into: &buf)
         FfiConverterTypeQualityPanel.write(value.quality, into: &buf)
         FfiConverterTypeRunDisposition.write(value.disposition, into: &buf)
         FfiConverterSequenceTypeRunObservation.write(value.observations, into: &buf)
@@ -5342,6 +5370,115 @@ public func FfiConverterTypeRunEnvironment_lower(_ value: RunEnvironment) -> Rus
 }
 
 
+/**
+ * What a single planned run actually measured. The aggregate is derived
+ * from these in Rust — the shell never supplies both a ledger and an
+ * unrelated authoritative summary.
+ */
+public struct RunMetrics: Equatable, Hashable {
+    public var loadMs: UInt64
+    public var timeToFirstTokenMs: UInt64
+    public var promptTokens: UInt32
+    public var promptDurationMs: UInt64
+    public var generatedTokens: UInt32
+    public var generationDurationMs: UInt64
+    public var peakRssMb: UInt64
+    public var modelMemoryMb: UInt64
+    /**
+     * Present only on a Cancellation run.
+     */
+    public var cancellationLatencyMs: UInt64?
+    public var peakTemperatureCelsiusTenths: UInt32
+    public var throttled: Bool
+    public var batteryDropTenthsPercent: UInt32
+    public var backgroundForegroundRecovered: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(loadMs: UInt64, timeToFirstTokenMs: UInt64, promptTokens: UInt32, promptDurationMs: UInt64, generatedTokens: UInt32, generationDurationMs: UInt64, peakRssMb: UInt64, modelMemoryMb: UInt64, 
+        /**
+         * Present only on a Cancellation run.
+         */cancellationLatencyMs: UInt64?, peakTemperatureCelsiusTenths: UInt32, throttled: Bool, batteryDropTenthsPercent: UInt32, backgroundForegroundRecovered: Bool) {
+        self.loadMs = loadMs
+        self.timeToFirstTokenMs = timeToFirstTokenMs
+        self.promptTokens = promptTokens
+        self.promptDurationMs = promptDurationMs
+        self.generatedTokens = generatedTokens
+        self.generationDurationMs = generationDurationMs
+        self.peakRssMb = peakRssMb
+        self.modelMemoryMb = modelMemoryMb
+        self.cancellationLatencyMs = cancellationLatencyMs
+        self.peakTemperatureCelsiusTenths = peakTemperatureCelsiusTenths
+        self.throttled = throttled
+        self.batteryDropTenthsPercent = batteryDropTenthsPercent
+        self.backgroundForegroundRecovered = backgroundForegroundRecovered
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension RunMetrics: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRunMetrics: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RunMetrics {
+        return
+            try RunMetrics(
+                loadMs: FfiConverterUInt64.read(from: &buf), 
+                timeToFirstTokenMs: FfiConverterUInt64.read(from: &buf), 
+                promptTokens: FfiConverterUInt32.read(from: &buf), 
+                promptDurationMs: FfiConverterUInt64.read(from: &buf), 
+                generatedTokens: FfiConverterUInt32.read(from: &buf), 
+                generationDurationMs: FfiConverterUInt64.read(from: &buf), 
+                peakRssMb: FfiConverterUInt64.read(from: &buf), 
+                modelMemoryMb: FfiConverterUInt64.read(from: &buf), 
+                cancellationLatencyMs: FfiConverterOptionUInt64.read(from: &buf), 
+                peakTemperatureCelsiusTenths: FfiConverterUInt32.read(from: &buf), 
+                throttled: FfiConverterBool.read(from: &buf), 
+                batteryDropTenthsPercent: FfiConverterUInt32.read(from: &buf), 
+                backgroundForegroundRecovered: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RunMetrics, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.loadMs, into: &buf)
+        FfiConverterUInt64.write(value.timeToFirstTokenMs, into: &buf)
+        FfiConverterUInt32.write(value.promptTokens, into: &buf)
+        FfiConverterUInt64.write(value.promptDurationMs, into: &buf)
+        FfiConverterUInt32.write(value.generatedTokens, into: &buf)
+        FfiConverterUInt64.write(value.generationDurationMs, into: &buf)
+        FfiConverterUInt64.write(value.peakRssMb, into: &buf)
+        FfiConverterUInt64.write(value.modelMemoryMb, into: &buf)
+        FfiConverterOptionUInt64.write(value.cancellationLatencyMs, into: &buf)
+        FfiConverterUInt32.write(value.peakTemperatureCelsiusTenths, into: &buf)
+        FfiConverterBool.write(value.throttled, into: &buf)
+        FfiConverterUInt32.write(value.batteryDropTenthsPercent, into: &buf)
+        FfiConverterBool.write(value.backgroundForegroundRecovered, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunMetrics_lift(_ buf: RustBuffer) throws -> RunMetrics {
+    return try FfiConverterTypeRunMetrics.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRunMetrics_lower(_ value: RunMetrics) -> RustBuffer {
+    return FfiConverterTypeRunMetrics.lower(value)
+}
+
+
 public struct RunObservation: Equatable, Hashable {
     public var runId: String
     public var candidateId: String
@@ -5366,13 +5503,20 @@ public struct RunObservation: Equatable, Hashable {
     public var thermalSensorIdentity: String
     public var throttlingDetectorIdentity: String
     public var disposition: RunDisposition
+    /**
+     * v4: what this run measured. The promotion aggregate derives from here.
+     */
+    public var metrics: RunMetrics
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(runId: String, candidateId: String, seed: UInt64, mode: RunMode, sequenceIndex: UInt32, startedMonotonicMs: UInt64, endedMonotonicMs: UInt64, observedChargingState: ChargingState, observedScreenOn: Bool, observedBrightnessPercent: UInt32, observedAirplaneMode: Bool, processInstanceId: String, 
         /**
          * Digest proving the pack was re-verified before this run.
-         */packIntegrityReceipt: String, coldEvidence: ColdEvidence, startTemperatureCelsiusTenths: UInt32, cooldownDurationMs: UInt64, cooldownExitTemperatureCelsiusTenths: UInt32, thermalSensorIdentity: String, throttlingDetectorIdentity: String, disposition: RunDisposition) {
+         */packIntegrityReceipt: String, coldEvidence: ColdEvidence, startTemperatureCelsiusTenths: UInt32, cooldownDurationMs: UInt64, cooldownExitTemperatureCelsiusTenths: UInt32, thermalSensorIdentity: String, throttlingDetectorIdentity: String, disposition: RunDisposition, 
+        /**
+         * v4: what this run measured. The promotion aggregate derives from here.
+         */metrics: RunMetrics) {
         self.runId = runId
         self.candidateId = candidateId
         self.seed = seed
@@ -5393,6 +5537,7 @@ public struct RunObservation: Equatable, Hashable {
         self.thermalSensorIdentity = thermalSensorIdentity
         self.throttlingDetectorIdentity = throttlingDetectorIdentity
         self.disposition = disposition
+        self.metrics = metrics
     }
 
     
@@ -5430,7 +5575,8 @@ public struct FfiConverterTypeRunObservation: FfiConverterRustBuffer {
                 cooldownExitTemperatureCelsiusTenths: FfiConverterUInt32.read(from: &buf), 
                 thermalSensorIdentity: FfiConverterString.read(from: &buf), 
                 throttlingDetectorIdentity: FfiConverterString.read(from: &buf), 
-                disposition: FfiConverterTypeRunDisposition.read(from: &buf)
+                disposition: FfiConverterTypeRunDisposition.read(from: &buf), 
+                metrics: FfiConverterTypeRunMetrics.read(from: &buf)
         )
     }
 
@@ -5455,6 +5601,7 @@ public struct FfiConverterTypeRunObservation: FfiConverterRustBuffer {
         FfiConverterString.write(value.thermalSensorIdentity, into: &buf)
         FfiConverterString.write(value.throttlingDetectorIdentity, into: &buf)
         FfiConverterTypeRunDisposition.write(value.disposition, into: &buf)
+        FfiConverterTypeRunMetrics.write(value.metrics, into: &buf)
     }
 }
 
@@ -10046,6 +10193,7 @@ public func FfiConverterTypeRunDisposition_lower(_ value: RunDisposition) -> Rus
 
 public enum RunMode: Equatable, Hashable {
     
+    case warmup
     case cold
     case warm
     case sustained
@@ -10071,13 +10219,15 @@ public struct FfiConverterTypeRunMode: FfiConverterRustBuffer {
         let variant: Int32 = try readInt(&buf)
         switch variant {
         
-        case 1: return .cold
+        case 1: return .warmup
         
-        case 2: return .warm
+        case 2: return .cold
         
-        case 3: return .sustained
+        case 3: return .warm
         
-        case 4: return .cancellation
+        case 4: return .sustained
+        
+        case 5: return .cancellation
         
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -10087,20 +10237,24 @@ public struct FfiConverterTypeRunMode: FfiConverterRustBuffer {
         switch value {
         
         
-        case .cold:
+        case .warmup:
             writeInt(&buf, Int32(1))
         
         
-        case .warm:
+        case .cold:
             writeInt(&buf, Int32(2))
         
         
-        case .sustained:
+        case .warm:
             writeInt(&buf, Int32(3))
         
         
-        case .cancellation:
+        case .sustained:
             writeInt(&buf, Int32(4))
+        
+        
+        case .cancellation:
+            writeInt(&buf, Int32(5))
         
         }
     }
@@ -10880,6 +11034,30 @@ fileprivate struct FfiConverterOptionTypeConversionRecord: FfiConverterRustBuffe
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeConversionRecord.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeCostObservation: FfiConverterRustBuffer {
+    typealias SwiftType = CostObservation?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCostObservation.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCostObservation.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -11917,6 +12095,22 @@ public func candidateIdentity(candidate: EvaluationCandidate) -> String  {
 })
 }
 /**
+ * Derive the promotion aggregate from the ledger. The frozen rule: cold and
+ * warm loads come from their own modes, throughput and latency from the
+ * TIMED runs only (warmups excluded), memory and temperature are peaks
+ * across every run, cancellation latency comes from the cancellation run,
+ * and any throttled or unrecovered run poisons the aggregate.
+ */
+public func deriveCostObservation(observations: [RunObservation], installedBytes: UInt64) -> CostObservation?  {
+    return try!  FfiConverterOptionTypeCostObservation.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_derive_cost_observation(
+        FfiConverterSequenceTypeRunObservation.lower(observations),
+        FfiConverterUInt64.lower(installedBytes),uniffiCallStatus
+    )
+})
+}
+/**
  * The frozen decision rule, behind a sealed door. There is deliberately no
  * promotion path that accepts already-assumed-valid results: this admits
  * both candidates itself, so an inadmissible run cannot be promoted by
@@ -12438,6 +12632,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_candidate_identity() != 36234) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation() != 33145) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion() != 42781) {
