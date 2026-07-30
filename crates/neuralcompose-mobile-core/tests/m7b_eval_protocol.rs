@@ -1135,7 +1135,12 @@ fn a_scored_output_must_name_a_run_that_actually_happened() {
         admit_result(wrong_seed, candidate(A), p.clone()),
         Some(AdmissionFailure::QualityLedgerRejected { .. })
     ));
-    // A scored output cannot borrow the other candidate's run.
+    // A run id belonging to the other candidate is absent from THIS
+    // candidate's admitted execution ledger, so it is refused. Note this
+    // exercises the "run never executed" branch, not the candidate-mismatch
+    // branch: the ledger walk above has already required every observation to
+    // belong to the admitted candidate, which makes that comparison
+    // defence-in-depth rather than a reachable path.
     let mut borrowed = result(A, 0.8, 400_000_000);
     borrowed.quality_observations[0].run_id = result(B, 0.8, 1).observations[0].run_id.clone();
     assert!(matches!(
