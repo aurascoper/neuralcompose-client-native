@@ -1377,6 +1377,59 @@ pub fn admit_result(
     if result.observations.iter().any(|o| o.metrics.throttled) {
         return Some(AdmissionFailure::ThermallyThrottled);
     }
+    // v5.1: every scored output must name a run that ACTUALLY HAPPENED, with
+    // the right seed, in a scoring-eligible mode. derive_quality_panel only
+    // sees the quality ledger, so a plan naming a nonexistent run — or
+    // selecting a warmup, sustained or cancellation output — is only
+    // detectable here, where both ledgers are in scope.
+    for q in &result.quality_observations {
+        let run = match result.observations.iter().find(|o| o.run_id == q.run_id) {
+            None => {
+                return Some(AdmissionFailure::QualityLedgerRejected {
+                    reason: format!(
+                        "scored output {} names a run that never executed",
+                        q.blinded_output_id
+                    ),
+                })
+            }
+            Some(o) => o,
+        };
+        if run.seed != q.seed {
+            return Some(AdmissionFailure::QualityLedgerRejected {
+                reason: format!(
+                    "scored output {} claims a seed the run did not use",
+                    q.blinded_output_id
+                ),
+            });
+        }
+        if run.candidate_id != candidate.candidate_id {
+            return Some(AdmissionFailure::QualityLedgerRejected {
+                reason: format!(
+                    "scored output {} names another candidate's run",
+                    q.blinded_output_id
+                ),
+            });
+        }
+        // Scoring eligibility comes from the run's mode, never from its
+        // presence in the plan: warmups, cold, sustained and cancellation
+        // runs must not acquire scoring weight.
+        if run.mode != RunMode::Warm {
+            return Some(AdmissionFailure::QualityLedgerRejected {
+                reason: format!(
+                    "scored output {} came from a {:?} run, which is not scoring-eligible",
+                    q.blinded_output_id, run.mode
+                ),
+            });
+        }
+        if run.disposition != RunDisposition::Admissible {
+            return Some(AdmissionFailure::QualityLedgerRejected {
+                reason: format!(
+                    "scored output {} came from an inadmissible run",
+                    q.blinded_output_id
+                ),
+            });
+        }
+    }
     // The panel is derived, never supplied — so admission checks that the
     // raw ledger yields one at all.
     if let QualityDerivation::Rejected { failure } = derive_quality_panel(

@@ -1088,3 +1088,58 @@ fn the_quality_panel_is_derived_and_cannot_be_asserted() {
         other => panic!("expected a derived panel, got {other:?}"),
     }
 }
+
+// Scoring eligibility comes from the EXECUTION ledger, not the plan alone.
+#[test]
+fn a_scored_output_must_name_a_run_that_actually_happened() {
+    let p = protocol();
+    assert_eq!(
+        admit_result(result(A, 0.8, 400_000_000), candidate(A), p.clone()),
+        None
+    );
+    // A plan may name a run that never executed; admission must catch it.
+    let mut ghost = result(A, 0.8, 400_000_000);
+    ghost.quality_observations[0].run_id = "never-ran".into();
+    assert!(matches!(
+        admit_result(ghost, candidate(A), p.clone()),
+        Some(AdmissionFailure::QualityLedgerRejected { .. })
+    ));
+    // A warmup, cold, sustained or cancellation output cannot be scored,
+    // even when the plan points at it.
+    for mode in [
+        RunMode::Warmup,
+        RunMode::Cold,
+        RunMode::Sustained,
+        RunMode::Cancellation,
+    ] {
+        let mut r = result(A, 0.8, 400_000_000);
+        let ineligible = r
+            .observations
+            .iter()
+            .find(|o| o.mode == mode)
+            .map(|o| o.run_id.clone())
+            .unwrap();
+        r.quality_observations[0].run_id = ineligible;
+        assert!(
+            matches!(
+                admit_result(r, candidate(A), p.clone()),
+                Some(AdmissionFailure::QualityLedgerRejected { .. })
+            ),
+            "{mode:?} must not be scoring-eligible"
+        );
+    }
+    // The seed claimed by the scored output must be the seed the run used.
+    let mut wrong_seed = result(A, 0.8, 400_000_000);
+    wrong_seed.quality_observations[0].seed = 99;
+    assert!(matches!(
+        admit_result(wrong_seed, candidate(A), p.clone()),
+        Some(AdmissionFailure::QualityLedgerRejected { .. })
+    ));
+    // A scored output cannot borrow the other candidate's run.
+    let mut borrowed = result(A, 0.8, 400_000_000);
+    borrowed.quality_observations[0].run_id = result(B, 0.8, 1).observations[0].run_id.clone();
+    assert!(matches!(
+        admit_result(borrowed, candidate(A), p),
+        Some(AdmissionFailure::QualityLedgerRejected { .. })
+    ));
+}
