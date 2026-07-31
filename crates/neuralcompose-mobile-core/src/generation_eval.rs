@@ -14,8 +14,26 @@ use serde::{Deserialize, Serialize};
 pub const EVAL_PROTOCOL_DOMAIN: &str = "neuralcompose.generation-eval-protocol.v1";
 pub const EVAL_CANDIDATE_DOMAIN: &str = "neuralcompose.generation-eval-candidate.v1";
 pub const EVAL_RUN_DOMAIN: &str = "neuralcompose.generation-eval-run.v1";
-const SEMANTIC_PROMPT_DOMAIN: &str = "neuralcompose.semantic-prompt.v1";
+/// v6: the frozen corpus is a value with an identity, not a caller-asserted
+/// digest. Its own domain keeps a corpus hash from ever being mistaken for a
+/// protocol, candidate or prompt hash.
+pub const EVAL_CORPUS_DOMAIN: &str = "neuralcompose.generation-eval-corpus.v1";
+/// v6 bumps this domain because the hashed inputs changed shape: a single
+/// free `prompt_profile` string became two closed axes. Prompt hashes recorded
+/// under v1 remain exactly what they were; they are simply not comparable with
+/// v6 hashes, and a shared domain would have hidden that.
+const SEMANTIC_PROMPT_DOMAIN: &str = "neuralcompose.semantic-prompt.v2";
 const RENDERED_PROMPT_DOMAIN: &str = "neuralcompose.rendered-prompt.v1";
+
+/// Fixed-point denominator for every quality axis and margin. Axis values are
+/// integer millionths in `0..=FIXED_POINT_SCALE`; there is no float anywhere
+/// on the path from a scorer's mark to a promotion decision.
+pub const FIXED_POINT_SCALE: u32 = 1_000_000;
+
+/// The evaluator schema this module implements. Bound into the declaration so
+/// a later evaluator cannot reinterpret identical v6 data under an unchanged
+/// declaration digest.
+pub const EVALUATOR_SCHEMA_VERSION: u32 = 6;
 
 /// How a candidate's artifact came to exist. The asymmetry between an
 /// official download and a local conversion is recorded, never hidden:
@@ -98,6 +116,106 @@ pub struct EvaluationCandidate {
     pub prompt_bindings: Vec<PromptBinding>,
 }
 
+// ---------- prompts: the two-axis taxonomy ----------
+//
+// v5 carried a single free `prompt_profile: String`. It conflated two
+// independent things — WHAT operation is being evaluated, and the interaction
+// context it is performed in — and being a free string it could name anything,
+// so the hash was honest about its input while the input was not authoritative.
+// v6 splits it into two closed enums and permits only an explicit matrix of
+// pairs.
+
+/// What operation the prompt asks for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum BenchmarkTaskKind {
+    Summarization,
+    StructuredExtraction,
+    SubstantiveRewrite,
+    ReflectiveDialogue,
+    DreamAnalysis,
+    InstructionRendering,
+    Disclosure,
+}
+
+/// The interaction context the operation is performed in. Named
+/// `PromptContextProfile` rather than `…PresentationProfile` because several
+/// values are functional or safety contexts, not presentation styles.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum PromptContextProfile {
+    Neutral,
+    Hypnagogic,
+    MindfulnessObservation,
+    ReturnToTask,
+    StopAndDebrief,
+    Privacy,
+}
+
+/// One allowed cell of the taxonomy. The cross product is NOT permitted:
+/// most of the 42 combinations are meaningless, and a corpus that quietly
+/// contained them would be measuring something the protocol never declared.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct TaskContextPair {
+    pub task_kind: BenchmarkTaskKind,
+    pub context_profile: PromptContextProfile,
+}
+
+/// The exact nine pairs a v6 corpus may contain, in canonical order. This is
+/// normative: a declaration whose allowed matrix differs from this list is
+/// invalid, so the matrix cannot be widened by the caller that supplies it.
+pub const ALLOWED_TASK_CONTEXT_PAIRS: [(BenchmarkTaskKind, PromptContextProfile); 9] = [
+    (
+        BenchmarkTaskKind::Summarization,
+        PromptContextProfile::Neutral,
+    ),
+    (
+        BenchmarkTaskKind::StructuredExtraction,
+        PromptContextProfile::Neutral,
+    ),
+    (
+        BenchmarkTaskKind::SubstantiveRewrite,
+        PromptContextProfile::Neutral,
+    ),
+    (
+        BenchmarkTaskKind::ReflectiveDialogue,
+        PromptContextProfile::Hypnagogic,
+    ),
+    (
+        BenchmarkTaskKind::DreamAnalysis,
+        PromptContextProfile::Neutral,
+    ),
+    (
+        BenchmarkTaskKind::InstructionRendering,
+        PromptContextProfile::MindfulnessObservation,
+    ),
+    (
+        BenchmarkTaskKind::InstructionRendering,
+        PromptContextProfile::ReturnToTask,
+    ),
+    (
+        BenchmarkTaskKind::InstructionRendering,
+        PromptContextProfile::StopAndDebrief,
+    ),
+    (BenchmarkTaskKind::Disclosure, PromptContextProfile::Privacy),
+];
+
+/// The canonical allowed matrix as records.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn allowed_task_context_pairs() -> Vec<TaskContextPair> {
+    ALLOWED_TASK_CONTEXT_PAIRS
+        .iter()
+        .map(|(task_kind, context_profile)| TaskContextPair {
+            task_kind: *task_kind,
+            context_profile: *context_profile,
+        })
+        .collect()
+}
+
 // ---------- prompts: semantic vs rendered ----------
 
 /// A benchmark prompt carries TWO identities. The semantic input must be
@@ -109,7 +227,10 @@ pub struct EvaluationCandidate {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct BenchmarkPrompt {
     pub prompt_id: String,
-    pub prompt_profile: String,
+    /// v6: both taxonomy axes, checked against the frozen corpus at admission
+    /// so a result cannot relabel a prompt it actually ran.
+    pub task_kind: BenchmarkTaskKind,
+    pub context_profile: PromptContextProfile,
     /// Hash of the semantic message — same for every candidate.
     pub semantic_prompt_hash: String,
     /// Hash of the exact bytes this candidate's template rendered.
@@ -118,19 +239,28 @@ pub struct BenchmarkPrompt {
     pub input_token_ids_hash: String,
 }
 
+/// v6: BOTH axes enter the semantic identity. Two prompts with the same words
+/// under different contexts are different benchmark items — averaging them
+/// together would be averaging two different questions.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
-pub fn semantic_prompt_hash(prompt_profile: String, message: String) -> String {
+pub fn semantic_prompt_hash(
+    task_kind: BenchmarkTaskKind,
+    context_profile: PromptContextProfile,
+    message: String,
+) -> String {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
     struct Doc {
         domain: &'static str,
-        prompt_profile: String,
+        task_kind: BenchmarkTaskKind,
+        context_profile: PromptContextProfile,
         message: String,
     }
     crate::audio::sha256_hex(
         serde_json::to_vec(&Doc {
             domain: SEMANTIC_PROMPT_DOMAIN,
-            prompt_profile,
+            task_kind,
+            context_profile,
             message,
         })
         .expect("serialize"),
@@ -152,6 +282,163 @@ pub fn rendered_prompt_hash(rendered: String) -> String {
         })
         .expect("serialize"),
     )
+}
+
+// ---------- v6: the Rust-owned corpus ----------
+//
+// Through v5 the corpus existed only as `corpus_id` and `corpus_sha256_hex`
+// on the protocol, validated for non-emptiness. `git ls-files` returned no
+// corpus artifact at all: the digest the protocol claimed to bind was an
+// unbacked caller assertion, and the only values it ever held were test
+// fixtures. v6 removes both fields. The corpus is a committed, reviewable
+// file; Rust compiles it in and derives its identity from its content.
+//
+// The authority comes from the ABSENCE of an injection point — the same
+// discipline as `model_pack::RestoreResult`, which is output-only so that no
+// state-changing method can be handed a forged success. There is deliberately
+// no constructor, setter or function anywhere in this module that accepts a
+// corpus digest.
+
+/// The committed corpus, compiled in. `check-fixtures.sh` regenerates the
+/// canonical serialization of the parsed value and diffs it against this same
+/// file, so the compiled bytes and the reviewable artifact are proven to agree
+/// rather than assumed to.
+const CORPUS_V1_BYTES: &[u8] =
+    include_bytes!("../../../contracts/generation-eval/m7b-corpus-v1.json");
+
+/// One frozen prompt: the semantic input every candidate shares, plus the two
+/// taxonomy axes that make it the benchmark item it is.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct CorpusPrompt {
+    pub prompt_id: String,
+    pub task_kind: BenchmarkTaskKind,
+    pub context_profile: PromptContextProfile,
+    pub message: String,
+}
+
+/// The frozen corpus as a VALUE. Note what is absent: no digest field. An
+/// identity is computed from this, never supplied alongside it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct BenchmarkCorpus {
+    pub corpus_id: String,
+    pub prompts: Vec<CorpusPrompt>,
+}
+
+/// The corpus this build owns. Parsing cannot fail on a committed artifact
+/// that a test proves parses; a panic here would mean the compiled-in bytes
+/// are not the reviewed ones, which is not a recoverable condition.
+///
+/// Exported: a shell has to be able to OBTAIN the frozen corpus, or it cannot
+/// build a valid declaration at all. Note the direction — this hands the
+/// corpus out, it never takes one in, so it is not an injection point.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn frozen_corpus_v1() -> BenchmarkCorpus {
+    serde_json::from_slice(CORPUS_V1_BYTES).expect("the committed m7b corpus must parse")
+}
+
+/// Canonical corpus identity, derived from content. Reordering, renaming or
+/// editing any prompt — or changing either taxonomy axis on one — yields a
+/// different corpus and therefore a different declaration.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn corpus_identity(corpus: BenchmarkCorpus) -> String {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Doc {
+        domain: &'static str,
+        corpus: BenchmarkCorpus,
+    }
+    crate::audio::sha256_hex(
+        serde_json::to_vec(&Doc {
+            domain: EVAL_CORPUS_DOMAIN,
+            corpus,
+        })
+        .expect("serialize"),
+    )
+}
+
+/// How many prompts one allowed pair must contribute — EXACTLY, not at least.
+///
+/// A minimum-per-pair rule does not bound weight. Under the frozen
+/// equal-prompt macro rule, ten `Summarization × Neutral` prompts and one
+/// `ReflectiveDialogue × Hypnagogic` satisfy a minimum of one while giving
+/// summarization ten times the influence over the promotion decision. Quota
+/// shape IS the weighting, so it is declared exactly and hashed.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct PairQuota {
+    pub pair: TaskContextPair,
+    pub exact_count: u32,
+}
+
+/// The declared composition of the corpus. Part of the declaration identity,
+/// so the effective domain weighting is explicit and reviewable instead of
+/// being an emergent property of however many prompts someone wrote.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct CorpusCompositionPolicy {
+    /// The pairs the corpus may contain. Validated against
+    /// `ALLOWED_TASK_CONTEXT_PAIRS`, so this field records the matrix rather
+    /// than choosing it.
+    pub allowed_task_context_pairs: Vec<TaskContextPair>,
+    /// One entry per allowed pair, no more and no fewer.
+    pub exact_required_count_per_pair: Vec<PairQuota>,
+}
+
+/// v6-1's composition: two prompts per allowed pair.
+///
+/// Equal counts per PAIR is the choice, and its consequence is stated rather
+/// than hidden: because `InstructionRendering` appears in three contexts, it
+/// carries 6 of 18 prompts and therefore a third of the macro weight. That is
+/// deliberate — instruction rendering under mindfulness, return-to-task and
+/// stop-and-debrief is where a wrong output actually reaches someone mid
+/// practice. If unequal importance is wanted later, introduce declared
+/// fixed-point task weights; never manipulate prompt counts implicitly.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn frozen_composition_policy_v1() -> CorpusCompositionPolicy {
+    let pairs = allowed_task_context_pairs();
+    CorpusCompositionPolicy {
+        exact_required_count_per_pair: pairs
+            .iter()
+            .map(|pair| PairQuota {
+                pair: *pair,
+                exact_count: 2,
+            })
+            .collect(),
+        allowed_task_context_pairs: pairs,
+    }
+}
+
+/// The frozen semantic corpus as the admission layer needs it, DERIVED from
+/// the corpus value. v5 carried this as a caller-supplied `expected_prompts`
+/// list, which was a second place to assert a prompt identity that no longer
+/// had to agree with any prompt text.
+pub fn expected_prompts(corpus: &BenchmarkCorpus) -> Vec<ExpectedPrompt> {
+    corpus
+        .prompts
+        .iter()
+        .map(|p| ExpectedPrompt {
+            prompt_id: p.prompt_id.clone(),
+            semantic_prompt_hash: semantic_prompt_hash(
+                p.task_kind,
+                p.context_profile,
+                p.message.clone(),
+            ),
+        })
+        .collect()
+}
+
+/// The same derivation across the FFI boundary, where an owned argument is
+/// required. A shell needs this to fill in the prompt identities on a result;
+/// it computes them from corpus content and cannot be told what they are.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn corpus_expected_prompts(corpus: BenchmarkCorpus) -> Vec<ExpectedPrompt> {
+    expected_prompts(&corpus)
 }
 
 /// Whether a battery figure may gate promotion at all. Under a plugged-in
@@ -322,19 +609,115 @@ pub struct PromotionThresholds {
     pub thermal_cutoff_celsius_tenths: u32,
     /// A candidate must beat the other's quality panel by at least this
     /// margin to justify being larger.
-    pub material_quality_margin: f64,
+    ///
+    /// v6: integer millionths, `0..=FIXED_POINT_SCALE`. As an `f64` this was a
+    /// float compared against a float aggregate, and the aggregate drifts: the
+    /// two-stage average of ten all-`0.8` axes observes `0.8000000000000002`
+    /// (`0.8 * 3 / 3` reproduces it directly). Harmless for display, decisive
+    /// at an exact boundary — it is the difference between a tier split and a
+    /// promotion.
+    pub material_quality_margin_millionths: u32,
 }
 
+/// Which outputs are eligible to be scored. Enforced against the corpus, the
+/// frozen seeds and the run plan — not merely declared.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum QualitySelectionRule {
+    /// Exactly one scored output per candidate × frozen prompt × frozen seed,
+    /// drawn from that seed's `Warm` run and cross-referenced against the
+    /// unique matching `run_plan` slot.
+    ///
+    /// v5 validated the plan for non-emptiness and candidate consistency and
+    /// nothing more, so a plan could silently score one prompt twice and
+    /// another never, and the equal-prompt macro rule would then be averaging
+    /// a set nobody declared.
+    ExactlyOncePerCandidatePromptSeedFromWarm,
+}
+
+/// How many scorers stand behind a mark, and who. v5 carried
+/// `scorer_identity` as a free `String` on each observation and never checked
+/// it, so one ledger could mix raters and still average cleanly.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum ScorerPolicy {
+    /// The only form v6 admits. Every observation in both ledgers must carry
+    /// this exact digest.
+    ///
+    /// Multi-scorer semantics are deferred rather than guessed: they need
+    /// settled answers on coverage, missing raters, weighting, aggregation
+    /// order, disagreement, replacement and recusal, and whether inter-rater
+    /// reliability is descriptive or promotion-critical. No study here
+    /// requires any of them yet, so specifying them now would be invention.
+    SingleScorer { scorer_identity_digest: String },
+}
+
+/// The versioned identities of the *evaluator*, as distinct from the protocol
+/// it evaluates.
+///
+/// `protocol_version = 6` alone is insufficient: it says what the data means,
+/// not how this build interprets it. Without these, a later evaluator can
+/// reinterpret identical v6 data under an unchanged declaration digest —
+/// which is precisely what happened between `eb9492c` and `3ccf874`. Each id
+/// is an explicit versioned identity carrying its own domain separator, not a
+/// hash of the source, so a comment change does not invalidate a study.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct EvaluatorPolicyIdentities {
+    pub selection_policy_id: String,
+    pub quality_aggregation_policy_id: String,
+    pub promotion_rule_id: String,
+    /// Must equal `FIXED_POINT_SCALE`; a study scored in a different unit is
+    /// a different study.
+    pub fixed_point_scale: u32,
+    /// Must equal `EVALUATOR_SCHEMA_VERSION`.
+    pub evaluator_schema_version: u32,
+}
+
+/// The five identities this build implements.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn frozen_policy_identities_v6() -> EvaluatorPolicyIdentities {
+    EvaluatorPolicyIdentities {
+        selection_policy_id: "neuralcompose.selection-policy.v6-1".into(),
+        quality_aggregation_policy_id: "neuralcompose.quality-aggregation-policy.v6-1".into(),
+        promotion_rule_id: "neuralcompose.promotion-rule.v6-1".into(),
+        fixed_point_scale: FIXED_POINT_SCALE,
+        evaluator_schema_version: EVALUATOR_SCHEMA_VERSION,
+    }
+}
+
+/// The frozen v6 declaration: what the comparison means, fixed before any
+/// candidate is downloaded.
+///
+/// Renamed from `EvaluationProtocol` because v6 is no longer only a protocol
+/// description — it embeds the corpus VALUE and the evaluator identities, and
+/// the name should say that the whole thing is the declaration under which a
+/// verdict is made.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
-pub struct EvaluationProtocol {
+pub struct V6Declaration {
     pub protocol_version: u32,
-    pub corpus_id: String,
-    /// Digest of the committed sanitized corpus file.
-    pub corpus_sha256_hex: String,
+    /// v6: the corpus itself, by value. There is no digest parameter here or
+    /// anywhere else — identity is derived from this field.
+    pub corpus: BenchmarkCorpus,
+    /// v6: the exact quota map, hashed, so the effective weighting is part of
+    /// what was frozen.
+    pub composition_policy: CorpusCompositionPolicy,
+    /// A drift guard against `corpus`, kept from v3 for the same reason it
+    /// existed then: a summary count that disagrees with the thing it
+    /// summarizes is a defect worth failing on.
     pub prompt_count: u32,
     pub quality_rubric_id: String,
+    /// v6: exactly one scorer, checked.
+    pub scorer_policy: ScorerPolicy,
+    /// v6: which outputs are scored, enforced against corpus × seeds × plan.
+    pub selection_rule: QualitySelectionRule,
+    /// v6: the evaluator's own versioned identities.
+    pub policies: EvaluatorPolicyIdentities,
     pub sampler: SamplerConfig,
     /// Frozen seeds; multiple, so one lucky sample cannot decide anything.
     pub seeds: Vec<u64>,
@@ -346,8 +729,6 @@ pub struct EvaluationProtocol {
     /// v2: the conditions a measurement is taken under. Absent in v1, which
     /// is why v1 could not support an honest battery or cold-load claim.
     pub environment: RunEnvironment,
-    /// v3: the frozen semantic corpus every candidate shares.
-    pub expected_prompts: Vec<ExpectedPrompt>,
     /// v3: the exact run schedule, not merely the alternating property.
     pub run_plan: Vec<RunPlanEntry>,
     /// v5: which outputs are scored, declared rather than inferred.
@@ -356,19 +737,19 @@ pub struct EvaluationProtocol {
     pub blinding_manifest_digest: String,
 }
 
-/// Canonical protocol identity. Any change to the corpus, rubric, sampler,
-/// seeds, run counts, or thresholds yields a different protocol — so a
-/// threshold cannot be relaxed after seeing results while still claiming the
-/// same protocol.
+/// Canonical declaration identity. Any change to the corpus, quota map,
+/// evaluator policy identities, rubric, sampler, seeds, run counts or
+/// thresholds yields a different declaration — so a threshold cannot be
+/// relaxed after seeing results while still claiming the same study.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
-pub fn evaluation_protocol_identity(protocol: EvaluationProtocol) -> String {
+pub fn v6_declaration_identity(declaration: V6Declaration) -> String {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
     struct Doc {
         domain: &'static str,
-        protocol: EvaluationProtocol,
+        protocol: V6Declaration,
     }
-    let mut canonical = protocol;
+    let mut canonical = declaration;
     canonical.seeds.sort_unstable();
     crate::audio::sha256_hex(
         serde_json::to_vec(&Doc {
@@ -565,53 +946,185 @@ pub struct CostObservation {
     pub background_foreground_recovered: bool,
 }
 
-/// Blinded quality scores, 0.0–1.0 per axis. The shell collects them; the
+/// An exact non-negative rational, in millionths of 1.0:
+/// `numerator / denominator`.
+///
+/// The aggregation divides by seed counts and prompt counts, and those
+/// divisions do not land on integers — a third of anything does not. Rounding
+/// at each step would reintroduce exactly the drift the fixed-point change
+/// exists to remove, so the quotient is carried rather than taken. Always
+/// reduced to lowest terms with a nonzero denominator, so equal values are
+/// structurally equal and `PartialEq` means what it looks like.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct ExactMillionths {
+    pub numerator: u64,
+    pub denominator: u64,
+}
+
+fn gcd(a: u128, b: u128) -> u128 {
+    if b == 0 {
+        a
+    } else {
+        gcd(b, a % b)
+    }
+}
+
+impl ExactMillionths {
+    /// Reduce and narrow. `None` only on a zero denominator or a value too
+    /// large to represent — neither reachable from a valid panel, and both
+    /// refused rather than wrapped.
+    fn new(numerator: u128, denominator: u128) -> Option<Self> {
+        if denominator == 0 {
+            return None;
+        }
+        let d = gcd(numerator.max(denominator), numerator.min(denominator)).max(1);
+        Some(Self {
+            numerator: u64::try_from(numerator / d).ok()?,
+            denominator: u64::try_from(denominator / d).ok()?,
+        })
+    }
+
+    /// Exact ordering by cross-multiplication. No division, no epsilon.
+    fn cmp_exact(&self, other: &Self) -> std::cmp::Ordering {
+        let left = self.numerator as u128 * other.denominator as u128;
+        let right = other.numerator as u128 * self.denominator as u128;
+        left.cmp(&right)
+    }
+
+    /// `|self - other|`, exactly.
+    fn abs_difference(&self, other: &Self) -> Option<Self> {
+        let (hi, lo) = match self.cmp_exact(other) {
+            std::cmp::Ordering::Less => (other, self),
+            _ => (self, other),
+        };
+        let denominator = hi.denominator as u128 * lo.denominator as u128;
+        let numerator = hi.numerator as u128 * lo.denominator as u128
+            - lo.numerator as u128 * hi.denominator as u128;
+        Self::new(numerator, denominator)
+    }
+
+    /// A whole number of millionths, for thresholds declared as integers.
+    fn from_millionths(v: u32) -> Self {
+        Self {
+            numerator: u64::from(v),
+            denominator: 1,
+        }
+    }
+}
+
+/// Blinded quality scores, one per axis, as integer millionths in
+/// `0..=FIXED_POINT_SCALE` (so `800_000` is 0.8). The shell collects them; the
 /// rubric that produced them is pinned by `quality_rubric_id`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+///
+/// v5 held these as `f64`. A scorer's mark is an ordinal judgement against a
+/// rubric — it was never a real number, and representing it as one bought
+/// nothing while making the aggregate compare inexactly against an exact
+/// margin. `NaN` and `Infinity` cease to be representable at all, which is
+/// why the malformed-panel checks below now have only one thing left to test.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct QualityPanel {
-    pub instruction_adherence: f64,
-    pub required_output_structure: f64,
-    /// Higher is better: 1.0 means nothing was invented.
-    pub avoids_unsupported_invention: f64,
-    pub appropriate_uncertainty: f64,
-    /// Higher is better: 1.0 means no false refusals.
-    pub avoids_false_refusal: f64,
-    pub substantive_position_retention: f64,
-    /// Higher is better: 1.0 means no degenerate repetition.
-    pub avoids_repetition: f64,
-    pub truncation_behavior: f64,
-    pub language_preservation: f64,
-    pub prompt_profile_fidelity: f64,
+    pub instruction_adherence: u32,
+    pub required_output_structure: u32,
+    /// Higher is better: `FIXED_POINT_SCALE` means nothing was invented.
+    pub avoids_unsupported_invention: u32,
+    pub appropriate_uncertainty: u32,
+    /// Higher is better: `FIXED_POINT_SCALE` means no false refusals.
+    pub avoids_false_refusal: u32,
+    pub substantive_position_retention: u32,
+    /// Higher is better: `FIXED_POINT_SCALE` means no degenerate repetition.
+    pub avoids_repetition: u32,
+    pub truncation_behavior: u32,
+    pub language_preservation: u32,
+    /// Fidelity to the prompt's declared `PromptContextProfile`.
+    pub prompt_profile_fidelity: u32,
 }
 
-impl QualityPanel {
-    fn axes(&self) -> [f64; 10] {
-        [
-            self.instruction_adherence,
-            self.required_output_structure,
-            self.avoids_unsupported_invention,
-            self.appropriate_uncertainty,
-            self.avoids_false_refusal,
-            self.substantive_position_retention,
-            self.avoids_repetition,
-            self.truncation_behavior,
-            self.language_preservation,
-            self.prompt_profile_fidelity,
-        ]
-    }
+/// The ten axes in canonical order. One list, used by every axis walk in this
+/// module, so an axis cannot be added to the record and quietly skipped by the
+/// aggregation.
+fn axes_of(p: &QualityPanel) -> [u32; 10] {
+    [
+        p.instruction_adherence,
+        p.required_output_structure,
+        p.avoids_unsupported_invention,
+        p.appropriate_uncertainty,
+        p.avoids_false_refusal,
+        p.substantive_position_retention,
+        p.avoids_repetition,
+        p.truncation_behavior,
+        p.language_preservation,
+        p.prompt_profile_fidelity,
+    ]
 }
 
-/// Mean of the ten axes, or `None` if any axis is outside 0.0–1.0 or
-/// non-finite — a malformed panel scores nothing rather than something.
+/// The derived panel. Each axis is an exact rational because averaging across
+/// seeds and prompts does not generally land on a whole millionth.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct DerivedQualityPanel {
+    pub instruction_adherence: ExactMillionths,
+    pub required_output_structure: ExactMillionths,
+    pub avoids_unsupported_invention: ExactMillionths,
+    pub appropriate_uncertainty: ExactMillionths,
+    pub avoids_false_refusal: ExactMillionths,
+    pub substantive_position_retention: ExactMillionths,
+    pub avoids_repetition: ExactMillionths,
+    pub truncation_behavior: ExactMillionths,
+    pub language_preservation: ExactMillionths,
+    pub prompt_profile_fidelity: ExactMillionths,
+}
+
+fn derived_axes_of(p: &DerivedQualityPanel) -> [ExactMillionths; 10] {
+    [
+        p.instruction_adherence,
+        p.required_output_structure,
+        p.avoids_unsupported_invention,
+        p.appropriate_uncertainty,
+        p.avoids_false_refusal,
+        p.substantive_position_retention,
+        p.avoids_repetition,
+        p.truncation_behavior,
+        p.language_preservation,
+        p.prompt_profile_fidelity,
+    ]
+}
+
+/// Mean of the ten raw axes, or `None` if any axis exceeds
+/// `FIXED_POINT_SCALE` — a malformed panel scores nothing rather than
+/// something.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
-pub fn quality_score(panel: QualityPanel) -> Option<f64> {
-    let axes = panel.axes();
-    if axes.iter().any(|v| !v.is_finite() || *v < 0.0 || *v > 1.0) {
+pub fn quality_score(panel: QualityPanel) -> Option<ExactMillionths> {
+    let axes = axes_of(&panel);
+    if axes.iter().any(|v| *v > FIXED_POINT_SCALE) {
         return None;
     }
-    Some(axes.iter().sum::<f64>() / axes.len() as f64)
+    let sum: u128 = axes.iter().map(|v| u128::from(*v)).sum();
+    ExactMillionths::new(sum, axes.len() as u128)
+}
+
+/// Mean of the ten derived axes, exactly. Every axis shares one denominator by
+/// construction, but this does not assume it.
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+pub fn derived_quality_score(panel: DerivedQualityPanel) -> Option<ExactMillionths> {
+    let axes = derived_axes_of(&panel);
+    if axes.iter().any(|a| a.denominator == 0) {
+        return None;
+    }
+    let mut denominator = 1u128;
+    for a in axes.iter() {
+        let d = u128::from(a.denominator);
+        denominator = denominator / gcd(denominator.max(d), denominator.min(d)).max(1) * d;
+    }
+    let mut numerator = 0u128;
+    for a in axes.iter() {
+        numerator += u128::from(a.numerator) * (denominator / u128::from(a.denominator));
+    }
+    ExactMillionths::new(numerator, denominator * axes.len() as u128)
 }
 
 /// One candidate's complete result under one frozen protocol.
@@ -637,17 +1150,126 @@ pub struct CandidateResult {
     pub observations: Vec<RunObservation>,
 }
 
-/// v3: hashing an invalid protocol does not make it valid. Admission and
+/// v3: hashing an invalid declaration does not make it valid. Admission and
 /// promotion both run this first.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
-pub fn validate_evaluation_protocol(protocol: EvaluationProtocol) -> Vec<String> {
+pub fn validate_v6_declaration(protocol: V6Declaration) -> Vec<String> {
     let mut e = validate_run_environment(protocol.environment.clone());
     let mut bad = |m: &str| e.push(m.to_string());
-    if protocol.protocol_version != 5 {
-        bad("unsupported protocolVersion (v5 expected)");
+    if protocol.protocol_version != 6 {
+        bad("unsupported protocolVersion (v6 expected)");
     }
-    if protocol.corpus_id.trim().is_empty() || protocol.quality_rubric_id.trim().is_empty() {
-        bad("corpusId and qualityRubricId must be non-empty");
+
+    // ---- the evaluator's own identities ----
+    // A study is reproducible only if the thing that interpreted it is named.
+    let pol = &protocol.policies;
+    for (name, id, domain) in [
+        (
+            "selectionPolicyId",
+            &pol.selection_policy_id,
+            "neuralcompose.selection-policy.",
+        ),
+        (
+            "qualityAggregationPolicyId",
+            &pol.quality_aggregation_policy_id,
+            "neuralcompose.quality-aggregation-policy.",
+        ),
+        (
+            "promotionRuleId",
+            &pol.promotion_rule_id,
+            "neuralcompose.promotion-rule.",
+        ),
+    ] {
+        if !id.starts_with(domain) || id.len() <= domain.len() {
+            bad(&format!("{name} must be a versioned id under {domain}"));
+        }
+    }
+    if pol.fixed_point_scale != FIXED_POINT_SCALE {
+        bad("fixedPointScale is not the scale this evaluator computes in");
+    }
+    if pol.evaluator_schema_version != EVALUATOR_SCHEMA_VERSION {
+        bad("evaluatorSchemaVersion names a different evaluator");
+    }
+    match &protocol.scorer_policy {
+        ScorerPolicy::SingleScorer {
+            scorer_identity_digest,
+        } if scorer_identity_digest.trim().is_empty() => {
+            bad("scorer policy carries no scorer identity digest")
+        }
+        _ => {}
+    }
+
+    // ---- the corpus, and the quota map that weights it ----
+    let corpus = &protocol.corpus;
+    if corpus.corpus_id.trim().is_empty() {
+        bad("corpusId must be non-empty");
+    }
+    if protocol.quality_rubric_id.trim().is_empty() {
+        bad("qualityRubricId must be non-empty");
+    }
+    let allowed = allowed_task_context_pairs();
+    // The matrix is normative. This field records it; it does not choose it,
+    // so a declaration cannot widen what it is allowed to contain.
+    if protocol.composition_policy.allowed_task_context_pairs != allowed {
+        bad("allowedTaskContextPairs is not the normative nine-pair matrix");
+    }
+    let quotas = &protocol.composition_policy.exact_required_count_per_pair;
+    if quotas.len() != allowed.len() {
+        bad("exactRequiredCountPerPair must carry one entry per allowed pair");
+    }
+    let pair_of = |p: &CorpusPrompt| TaskContextPair {
+        task_kind: p.task_kind,
+        context_profile: p.context_profile,
+    };
+    for pair in &allowed {
+        let matching: Vec<&PairQuota> = quotas.iter().filter(|q| q.pair == *pair).collect();
+        if matching.len() != 1 {
+            bad(&format!(
+                "{:?}x{:?} has {} quota entries, expected exactly 1",
+                pair.task_kind,
+                pair.context_profile,
+                matching.len()
+            ));
+            continue;
+        }
+        // An allowed pair contributing nothing is not allowed — it is absent,
+        // and saying so as a zero quota would hide it from review.
+        if matching[0].exact_count == 0 {
+            bad(&format!(
+                "{:?}x{:?} declares a zero quota",
+                pair.task_kind, pair.context_profile
+            ));
+        }
+        let actual = corpus
+            .prompts
+            .iter()
+            .filter(|p| pair_of(p) == *pair)
+            .count();
+        if actual != matching[0].exact_count as usize {
+            bad(&format!(
+                "{:?}x{:?}: corpus has {actual} prompts, quota requires exactly {}",
+                pair.task_kind, pair.context_profile, matching[0].exact_count
+            ));
+        }
+    }
+    let mut prompt_ids = std::collections::HashSet::new();
+    let mut duplicate_prompt = false;
+    for p in &corpus.prompts {
+        if !prompt_ids.insert(p.prompt_id.clone()) {
+            duplicate_prompt = true;
+        }
+        if !allowed.contains(&pair_of(p)) {
+            bad(&format!(
+                "prompt {} uses a task x context pair outside the allowed matrix",
+                p.prompt_id
+            ));
+        }
+        if p.message.trim().is_empty() || p.prompt_id.trim().is_empty() {
+            bad(&format!("prompt {} is blank", p.prompt_id));
+        }
+    }
+    if duplicate_prompt {
+        bad("duplicate promptId in the corpus");
     }
     if protocol.seeds.is_empty() {
         bad("at least one seed required");
@@ -656,10 +1278,10 @@ pub fn validate_evaluation_protocol(protocol: EvaluationProtocol) -> Vec<String>
     if protocol.seeds.iter().any(|s| !seen.insert(*s)) {
         bad("duplicate seeds");
     }
-    if protocol.prompt_count == 0 || protocol.expected_prompts.is_empty() {
+    if protocol.prompt_count == 0 || corpus.prompts.is_empty() {
         bad("a corpus with no prompts measures nothing");
     }
-    if protocol.expected_prompts.len() as u32 != protocol.prompt_count {
+    if corpus.prompts.len() as u32 != protocol.prompt_count {
         bad("promptCount disagrees with the frozen corpus");
     }
     if protocol.run_plan.is_empty() {
@@ -738,8 +1360,8 @@ pub fn validate_evaluation_protocol(protocol: EvaluationProtocol) -> Vec<String>
         bad("zero context or output cap");
     }
     let t = &protocol.thresholds;
-    if !t.material_quality_margin.is_finite() || t.material_quality_margin < 0.0 {
-        bad("materialQualityMargin must be finite and non-negative");
+    if t.material_quality_margin_millionths > FIXED_POINT_SCALE {
+        bad("materialQualityMargin above 1.0 can never be met");
     }
     if !t.min_generation_tokens_per_second.is_finite() {
         bad("minGenerationTokensPerSecond must be finite");
@@ -766,6 +1388,117 @@ pub fn validate_evaluation_protocol(protocol: EvaluationProtocol) -> Vec<String>
     }
     if env.thermal_start_ceiling_celsius_tenths >= t.thermal_cutoff_celsius_tenths {
         bad("thermal start ceiling is at or above the abort cutoff");
+    }
+
+    // ---- v6: selection coverage, ENFORCED ----
+    //
+    // v5 checked the quality plan for non-emptiness and candidate consistency.
+    // That left the plan free to score one prompt twice and another never
+    // while still looking well-formed, and the equal-prompt macro rule would
+    // then have been averaging a set nobody declared. Coverage is now derived
+    // from the corpus and the frozen seeds and compared against the plan.
+    match protocol.selection_rule {
+        QualitySelectionRule::ExactlyOncePerCandidatePromptSeedFromWarm => {
+            for (i, entry) in protocol.quality_plan.iter().enumerate() {
+                if entry.index as usize != i {
+                    bad("quality plan indices must be dense and ordered");
+                    break;
+                }
+            }
+            let mut blinded = std::collections::HashSet::new();
+            let mut duplicate_output = false;
+            for entry in &protocol.quality_plan {
+                if !blinded.insert(entry.blinded_output_id.clone()) {
+                    duplicate_output = true;
+                }
+            }
+            if duplicate_output {
+                bad("a blindedOutputId appears more than once in the quality plan");
+            }
+            let seeds: std::collections::BTreeSet<u64> = protocol.seeds.iter().copied().collect();
+            let plan_candidates: std::collections::BTreeSet<&String> =
+                protocol.run_plan.iter().map(|e| &e.candidate_id).collect();
+            // Every cell of candidate x prompt x seed, exactly once. Both a
+            // duplicated slot and a missing one fail here.
+            for cand in &plan_candidates {
+                for p in &corpus.prompts {
+                    for seed in &seeds {
+                        let n = protocol
+                            .quality_plan
+                            .iter()
+                            .filter(|q| {
+                                &&q.candidate_id == cand
+                                    && q.prompt_id == p.prompt_id
+                                    && q.seed == *seed
+                            })
+                            .count();
+                        if n != 1 {
+                            bad(&format!(
+                                "{cand} x {} x seed {seed}: {n} scored outputs, expected exactly 1",
+                                p.prompt_id
+                            ));
+                        }
+                    }
+                }
+            }
+            for entry in &protocol.quality_plan {
+                if !plan_candidates.contains(&entry.candidate_id) {
+                    bad(&format!(
+                        "scored output {} names a candidate absent from the run plan",
+                        entry.blinded_output_id
+                    ));
+                    continue;
+                }
+                if !prompt_ids.contains(&entry.prompt_id) {
+                    bad(&format!(
+                        "scored output {} names a prompt absent from the corpus",
+                        entry.blinded_output_id
+                    ));
+                }
+                if !seeds.contains(&entry.seed) {
+                    bad(&format!(
+                        "scored output {} names a seed that was never frozen",
+                        entry.blinded_output_id
+                    ));
+                }
+                // The unique matching run-plan slot. Quality is scored from
+                // warm runs only, so the slot is (candidate, Warm, seed) and
+                // there must be exactly one of it.
+                let slots = protocol
+                    .run_plan
+                    .iter()
+                    .filter(|r| {
+                        r.candidate_id == entry.candidate_id
+                            && r.mode == RunMode::Warm
+                            && r.seed == entry.seed
+                    })
+                    .count();
+                if slots != 1 {
+                    bad(&format!(
+                        "scored output {} has {slots} matching warm run-plan slots, expected 1",
+                        entry.blinded_output_id
+                    ));
+                }
+            }
+            // One warm run per (candidate, seed) produces all that seed's
+            // outputs, and serves no other slot.
+            let mut run_of: std::collections::BTreeMap<(&String, u64), &String> =
+                std::collections::BTreeMap::new();
+            let mut split_run = false;
+            for entry in &protocol.quality_plan {
+                match run_of.insert((&entry.candidate_id, entry.seed), &entry.run_id) {
+                    Some(prior) if prior != &entry.run_id => split_run = true,
+                    _ => {}
+                }
+            }
+            if split_run {
+                bad("one candidate/seed draws its scored outputs from more than one run");
+            }
+            let mut run_ids = std::collections::HashSet::new();
+            if run_of.values().any(|r| !run_ids.insert(*r)) {
+                bad("one run id serves more than one candidate/seed slot");
+            }
+        }
     }
     e
 }
@@ -899,7 +1632,9 @@ pub struct PromptQualityObservation {
     pub output_token_ids_sha256: String,
     pub rubric_id: String,
     pub blinding_manifest_digest: String,
-    pub scorer_identity: String,
+    /// v6: must equal the digest the declaration's `ScorerPolicy` names. A
+    /// free string that nothing compared could mix raters inside one average.
+    pub scorer_identity_digest: String,
     pub scores: QualityPanel,
     pub disposition: QualityDisposition,
 }
@@ -907,36 +1642,41 @@ pub struct PromptQualityObservation {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum QualityAdmissionFailure {
-    PlanCoverageMismatch { reason: String },
-    DuplicateObservation { blinded_output_id: String },
-    WrongCandidate { blinded_output_id: String },
+    PlanCoverageMismatch {
+        reason: String,
+    },
+    DuplicateObservation {
+        blinded_output_id: String,
+    },
+    WrongCandidate {
+        blinded_output_id: String,
+    },
     RubricMismatch,
     BlindingManifestMismatch,
-    ParityMismatch { blinded_output_id: String },
-    Inadmissible { blinded_output_id: String },
-    MalformedScores { blinded_output_id: String },
+    ParityMismatch {
+        blinded_output_id: String,
+    },
+    Inadmissible {
+        blinded_output_id: String,
+    },
+    MalformedScores {
+        blinded_output_id: String,
+    },
+    /// v6: this mark was not made by the scorer the declaration names. Two
+    /// distinct digests anywhere in one ledger reach this.
+    ScorerIdentityMismatch {
+        blinded_output_id: String,
+    },
+    /// The exact aggregation could not be represented. Unreachable from a
+    /// valid panel; refused rather than wrapped.
+    InexpressibleAggregate,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum QualityDerivation {
-    Derived { panel: QualityPanel },
+    Derived { panel: DerivedQualityPanel },
     Rejected { failure: QualityAdmissionFailure },
-}
-
-fn axes_of(p: &QualityPanel) -> [f64; 10] {
-    [
-        p.instruction_adherence,
-        p.required_output_structure,
-        p.avoids_unsupported_invention,
-        p.appropriate_uncertainty,
-        p.avoids_false_refusal,
-        p.substantive_position_retention,
-        p.avoids_repetition,
-        p.truncation_behavior,
-        p.language_preservation,
-        p.prompt_profile_fidelity,
-    ]
 }
 
 /// Derive the panel from the raw ledger under the FROZEN macro weighting:
@@ -946,11 +1686,15 @@ fn axes_of(p: &QualityPanel) -> [f64; 10] {
 /// observations cannot dominate the candidate score.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn derive_quality_panel(
-    protocol: EvaluationProtocol,
+    protocol: V6Declaration,
     candidate: EvaluationCandidate,
     observations: Vec<PromptQualityObservation>,
 ) -> QualityDerivation {
     let reject = |failure| QualityDerivation::Rejected { failure };
+    let expected = expected_prompts(&protocol.corpus);
+    let ScorerPolicy::SingleScorer {
+        scorer_identity_digest: declared_scorer,
+    } = &protocol.scorer_policy;
     let planned: Vec<&QualityPlanEntry> = protocol
         .quality_plan
         .iter()
@@ -966,8 +1710,8 @@ pub fn derive_quality_panel(
         });
     }
     let mut seen = std::collections::HashSet::new();
-    // prompt_id -> per-axis sums across seeds
-    let mut per_prompt: std::collections::BTreeMap<String, (usize, [f64; 10])> =
+    // prompt_id -> (number of seeds scored, per-axis sums across those seeds)
+    let mut per_prompt: std::collections::BTreeMap<String, (u128, [u128; 10])> =
         std::collections::BTreeMap::new();
 
     for entry in &planned {
@@ -1006,11 +1750,18 @@ pub fn derive_quality_panel(
         if obs.blinding_manifest_digest != protocol.blinding_manifest_digest {
             return reject(QualityAdmissionFailure::BlindingManifestMismatch);
         }
+        // Every mark in this ledger must come from the one declared scorer.
+        // Comparing each against the declaration, rather than against its
+        // neighbours, rejects a uniformly-wrong ledger too.
+        if &obs.scorer_identity_digest != declared_scorer {
+            return reject(QualityAdmissionFailure::ScorerIdentityMismatch {
+                blinded_output_id: obs.blinded_output_id.clone(),
+            });
+        }
         // Parity: the scored output must come from the frozen prompt as this
         // candidate renders it — swapping hashes between candidates,
         // prompts, seeds or runs fails here.
-        let expected_semantic = protocol
-            .expected_prompts
+        let expected_semantic = expected
             .iter()
             .find(|e| e.prompt_id == obs.prompt_id)
             .map(|e| e.semantic_prompt_hash.clone());
@@ -1035,17 +1786,17 @@ pub fn derive_quality_panel(
             });
         }
         let axes = axes_of(&obs.scores);
-        if axes.iter().any(|v| !v.is_finite() || *v < 0.0 || *v > 1.0) {
+        if axes.iter().any(|v| *v > FIXED_POINT_SCALE) {
             return reject(QualityAdmissionFailure::MalformedScores {
                 blinded_output_id: obs.blinded_output_id.clone(),
             });
         }
         let slot = per_prompt
             .entry(obs.prompt_id.clone())
-            .or_insert((0, [0.0; 10]));
+            .or_insert((0, [0; 10]));
         slot.0 += 1;
         for (i, v) in axes.iter().enumerate() {
-            slot.1[i] += v;
+            slot.1[i] += u128::from(*v);
         }
     }
     if per_prompt.is_empty() {
@@ -1053,27 +1804,46 @@ pub fn derive_quality_panel(
             reason: "no prompts scored".into(),
         });
     }
-    // Seeds within a prompt, then prompts equally.
-    let mut totals = [0.0f64; 10];
-    for (count, sums) in per_prompt.values() {
-        for i in 0..10 {
-            totals[i] += sums[i] / *count as f64;
+    // Seeds within a prompt, then prompts equally — the frozen macro
+    // weighting, computed exactly.
+    //
+    //   axis = (1/P) * SUM_p ( S_p / n_p )
+    //
+    // Taking each `S_p / n_p` as a quotient would round P times before the
+    // final division. Instead every term is put over the common denominator
+    // `L = lcm(n_p)` and the whole thing becomes one exact fraction with
+    // denominator `P * L` — no rounding anywhere on the path to a verdict.
+    let mut l = 1u128;
+    for (count, _) in per_prompt.values() {
+        l = l / gcd(l.max(*count), l.min(*count)).max(1) * *count;
+    }
+    let p_count = per_prompt.len() as u128;
+    let mut axis = [ExactMillionths {
+        numerator: 0,
+        denominator: 1,
+    }; 10];
+    for (i, slot) in axis.iter_mut().enumerate() {
+        let mut numerator = 0u128;
+        for (count, sums) in per_prompt.values() {
+            numerator += sums[i] * (l / count);
+        }
+        match ExactMillionths::new(numerator, p_count * l) {
+            Some(v) => *slot = v,
+            None => return reject(QualityAdmissionFailure::InexpressibleAggregate),
         }
     }
-    let n = per_prompt.len() as f64;
-    let m: Vec<f64> = totals.iter().map(|t| t / n).collect();
     QualityDerivation::Derived {
-        panel: QualityPanel {
-            instruction_adherence: m[0],
-            required_output_structure: m[1],
-            avoids_unsupported_invention: m[2],
-            appropriate_uncertainty: m[3],
-            avoids_false_refusal: m[4],
-            substantive_position_retention: m[5],
-            avoids_repetition: m[6],
-            truncation_behavior: m[7],
-            language_preservation: m[8],
-            prompt_profile_fidelity: m[9],
+        panel: DerivedQualityPanel {
+            instruction_adherence: axis[0],
+            required_output_structure: axis[1],
+            avoids_unsupported_invention: axis[2],
+            appropriate_uncertainty: axis[3],
+            avoids_false_refusal: axis[4],
+            substantive_position_retention: axis[5],
+            avoids_repetition: axis[6],
+            truncation_behavior: axis[7],
+            language_preservation: axis[8],
+            prompt_profile_fidelity: axis[9],
         },
     }
 }
@@ -1084,17 +1854,39 @@ pub fn derive_quality_panel(
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum AdmissionFailure {
     ProtocolMismatch,
-    ProtocolInvalid { reason: String },
+    ProtocolInvalid {
+        reason: String,
+    },
     CandidateIdentityMismatch,
     ResultCandidateMismatch,
     PromptCountMismatch,
-    DuplicatePromptId { prompt_id: String },
-    UnknownPromptId { prompt_id: String },
-    RenderedPromptMismatch { prompt_id: String },
-    InputTokenMismatch { prompt_id: String },
-    RunLedgerMismatch { reason: String },
-    ColdEvidenceMissing { run_id: String },
-    EnvironmentDeviation { reason: String },
+    DuplicatePromptId {
+        prompt_id: String,
+    },
+    UnknownPromptId {
+        prompt_id: String,
+    },
+    /// v6: the result labelled a prompt with a different task kind or context
+    /// profile than the frozen corpus gives it. Relabelling changes which
+    /// benchmark item was answered.
+    PromptTaxonomyMismatch {
+        prompt_id: String,
+    },
+    RenderedPromptMismatch {
+        prompt_id: String,
+    },
+    InputTokenMismatch {
+        prompt_id: String,
+    },
+    RunLedgerMismatch {
+        reason: String,
+    },
+    ColdEvidenceMissing {
+        run_id: String,
+    },
+    EnvironmentDeviation {
+        reason: String,
+    },
     MissingConversionRecord,
     UnexpectedConversionRecord,
     RequantizationNotAllowed,
@@ -1103,9 +1895,13 @@ pub enum AdmissionFailure {
     ChatTemplateIdentityMismatch,
     SemanticPromptMismatch,
     MalformedQualityPanel,
-    QualityLedgerRejected { reason: String },
+    QualityLedgerRejected {
+        reason: String,
+    },
     ThermallyThrottled,
-    Disqualified { reason: String },
+    Disqualified {
+        reason: String,
+    },
 }
 
 /// May this result enter the comparison at all? Admission is separate from
@@ -1116,20 +1912,21 @@ pub enum AdmissionFailure {
 pub fn admit_result(
     result: CandidateResult,
     candidate: EvaluationCandidate,
-    protocol: EvaluationProtocol,
+    protocol: V6Declaration,
 ) -> Option<AdmissionFailure> {
-    let protocol_errs = validate_evaluation_protocol(protocol.clone());
+    let protocol_errs = validate_v6_declaration(protocol.clone());
     if !protocol_errs.is_empty() {
         return Some(AdmissionFailure::ProtocolInvalid {
             reason: protocol_errs.join("; "),
         });
     }
+    let expected = expected_prompts(&protocol.corpus);
     if result.disposition != RunDisposition::Admissible {
         return Some(AdmissionFailure::Disqualified {
             reason: format!("{:?}", result.disposition),
         });
     }
-    if result.protocol_identity != evaluation_protocol_identity(protocol.clone()) {
+    if result.protocol_identity != v6_declaration_identity(protocol.clone()) {
         return Some(AdmissionFailure::ProtocolMismatch);
     }
     // The result must actually belong to this candidate.
@@ -1157,7 +1954,7 @@ pub fn admit_result(
 
     // Prompt parity: exactly the frozen corpus, once each, rendered and
     // tokenized as this candidate declared in advance.
-    if result.prompts.len() != protocol.expected_prompts.len() {
+    if result.prompts.len() != expected.len() {
         return Some(AdmissionFailure::PromptCountMismatch);
     }
     let mut seen = std::collections::HashSet::new();
@@ -1167,8 +1964,9 @@ pub fn admit_result(
                 prompt_id: p.prompt_id.clone(),
             });
         }
-        let expected = match protocol
-            .expected_prompts
+        let frozen = match protocol
+            .corpus
+            .prompts
             .iter()
             .find(|e| e.prompt_id == p.prompt_id)
         {
@@ -1179,7 +1977,24 @@ pub fn admit_result(
             }
             Some(e) => e,
         };
-        if p.semantic_prompt_hash != expected.semantic_prompt_hash {
+        // v6: the taxonomy the result claims must be the corpus's. Both axes
+        // are hashed into the semantic identity, so a relabelling also fails
+        // the check below — this reports the actual cause rather than leaving
+        // it as an opaque hash mismatch.
+        if p.task_kind != frozen.task_kind || p.context_profile != frozen.context_profile {
+            return Some(AdmissionFailure::PromptTaxonomyMismatch {
+                prompt_id: p.prompt_id.clone(),
+            });
+        }
+        let expected_prompt = match expected.iter().find(|e| e.prompt_id == p.prompt_id) {
+            None => {
+                return Some(AdmissionFailure::UnknownPromptId {
+                    prompt_id: p.prompt_id.clone(),
+                })
+            }
+            Some(e) => e,
+        };
+        if p.semantic_prompt_hash != expected_prompt.semantic_prompt_hash {
             return Some(AdmissionFailure::SemanticPromptMismatch);
         }
         let binding = match candidate
@@ -1506,18 +2321,25 @@ pub enum PromotionVerdict {
     /// One candidate is promotable as the mobile default.
     Promote {
         candidate_id: String,
-        quality_score: f64,
-        margin: f64,
+        quality_score: ExactMillionths,
+        margin: ExactMillionths,
+        /// Which evaluator produced this. `protocol_version` alone does not
+        /// say how the data was interpreted.
+        policies: EvaluatorPolicyIdentities,
     },
     /// Both are admissible and both pass, but neither is materially better —
     /// a split (Basic / Enhanced) is the honest outcome.
     SplitTiers {
         basic_candidate_id: String,
         enhanced_candidate_id: String,
+        policies: EvaluatorPolicyIdentities,
     },
     /// Nothing is promoted. This is a legitimate result, not a failure to
     /// decide.
-    PromoteNothing { reason: String },
+    PromoteNothing {
+        reason: String,
+        policies: EvaluatorPolicyIdentities,
+    },
 }
 
 /// Cross-candidate checks that cannot live inside per-candidate admission:
@@ -1526,7 +2348,7 @@ pub enum PromotionVerdict {
 /// restart between A and B is only provable here.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn validate_global_ledger(
-    protocol: EvaluationProtocol,
+    protocol: V6Declaration,
     result_a: CandidateResult,
     result_b: CandidateResult,
 ) -> Vec<String> {
@@ -1591,15 +2413,19 @@ pub fn validate_global_ledger(
 /// failing promotes nothing.
 #[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn evaluate_promotion(
-    protocol: EvaluationProtocol,
+    protocol: V6Declaration,
     candidate_a: EvaluationCandidate,
     result_a: CandidateResult,
     candidate_b: EvaluationCandidate,
     result_b: CandidateResult,
 ) -> PromotionVerdict {
-    let nothing = |reason: String| PromotionVerdict::PromoteNothing { reason };
+    let policies = protocol.policies.clone();
+    let nothing = |reason: String| PromotionVerdict::PromoteNothing {
+        reason,
+        policies: policies.clone(),
+    };
 
-    let protocol_errs = validate_evaluation_protocol(protocol.clone());
+    let protocol_errs = validate_v6_declaration(protocol.clone());
     if !protocol_errs.is_empty() {
         return nothing(format!("protocol invalid: {}", protocol_errs.join("; ")));
     }
@@ -1620,7 +2446,7 @@ pub fn evaluate_promotion(
         cand.clone(),
         r.quality_observations.clone(),
     ) {
-        QualityDerivation::Derived { panel } => quality_score(panel),
+        QualityDerivation::Derived { panel } => derived_quality_score(panel),
         QualityDerivation::Rejected { .. } => None,
     };
     let (sa, sb) = match (
@@ -1644,21 +2470,31 @@ pub fn evaluate_promotion(
     let fa = meets_thresholds(cost_a.clone(), thresholds.clone());
     let fb = meets_thresholds(cost_b.clone(), thresholds.clone());
 
+    // The margin is a difference of two exact rationals and the threshold is
+    // a whole number of millionths; the comparison is by cross-multiplication,
+    // so there is no epsilon and no representation error to absorb.
+    let margin = match sa.abs_difference(&sb) {
+        Some(m) => m,
+        None => return nothing("the quality margin is not exactly representable".into()),
+    };
     match (fa.is_empty(), fb.is_empty()) {
         (false, false) => nothing("neither candidate met the frozen ceilings".into()),
         (true, false) => PromotionVerdict::Promote {
             candidate_id: result_a.candidate_id,
             quality_score: sa,
-            margin: sa - sb,
+            margin,
+            policies,
         },
         (false, true) => PromotionVerdict::Promote {
             candidate_id: result_b.candidate_id,
             quality_score: sb,
-            margin: sb - sa,
+            margin,
+            policies,
         },
         (true, true) => {
-            let margin = (sa - sb).abs();
-            if margin < thresholds.material_quality_margin {
+            let required =
+                ExactMillionths::from_millionths(thresholds.material_quality_margin_millionths);
+            if margin.cmp_exact(&required) == std::cmp::Ordering::Less {
                 let (basic, enhanced) = if cost_a.installed_bytes <= cost_b.installed_bytes {
                     (result_a.candidate_id, result_b.candidate_id)
                 } else {
@@ -1667,18 +2503,21 @@ pub fn evaluate_promotion(
                 PromotionVerdict::SplitTiers {
                     basic_candidate_id: basic,
                     enhanced_candidate_id: enhanced,
+                    policies,
                 }
-            } else if sa > sb {
+            } else if sa.cmp_exact(&sb) == std::cmp::Ordering::Greater {
                 PromotionVerdict::Promote {
                     candidate_id: result_a.candidate_id,
                     quality_score: sa,
                     margin,
+                    policies,
                 }
             } else {
                 PromotionVerdict::Promote {
                     candidate_id: result_b.candidate_id,
                     quality_score: sb,
                     margin,
+                    policies,
                 }
             }
         }

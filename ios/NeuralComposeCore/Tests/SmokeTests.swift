@@ -345,7 +345,7 @@ final class SmokeTests: XCTestCase {
     }
 
 
-    // MARK: - M7-B protocol v5 through the real UniFFI bindings
+    // MARK: - M7-B declaration v6 through the real UniFFI bindings
     //
     // Binding regeneration and a drift-clean diff prove the API exists; they
     // do not prove Swift reaches the same verdict. This enters through the
@@ -353,18 +353,26 @@ final class SmokeTests: XCTestCase {
     // the expected panel INDEPENDENTLY in Swift. There is deliberately no
     // local reimplementation of the averaging and no caller-supplied
     // aggregate — `CandidateResult` has no quality field to supply.
+    //
+    // v6: the corpus is no longer something this test invents. It comes from
+    // `frozenCorpusV1()`, the artifact Rust compiles in, so Swift is exercised
+    // against the same 18 prompts the declaration is frozen over.
 
     private static let candA = "qwen2.5-0.5b-instruct-q4km"
     private static let candB = "qwen3-0.6b-q4km-derived"
-    private static let promptIds = ["p1", "p2"]
+    private static let corpus = frozenCorpusV1()
+    private static let promptIds = frozenCorpusV1().prompts.map { $0.promptId }
     private static let seeds: [UInt64] = [11, 22, 33]
+    private static let scorer = String(repeating: "f0", count: 32)
 
     private func hx(_ n: UInt8) -> String {
         String(repeating: String(format: "%02x", n), count: 32)
     }
 
+    /// Derived from corpus content across the boundary — never asserted here.
     private func semanticHash(_ promptId: String) -> String {
-        semanticPromptHash(promptProfile: "focused", message: "corpus-\(promptId)")
+        corpusExpectedPrompts(corpus: Self.corpus)
+            .first { $0.promptId == promptId }!.semanticPromptHash
     }
 
     private func m7bSampler() -> SamplerConfig {
@@ -393,7 +401,8 @@ final class SmokeTests: XCTestCase {
             minGenerationTokensPerSecond: 8.0, maxPeakRssMb: 1600,
             maxInstalledBytes: 1_200_000_000, maxCancellationLatencyMs: 300,
             batteryPolicy: .telemetryOnlyPluggedIn,
-            thermalCutoffCelsiusTenths: 450, materialQualityMargin: 0.05)
+            thermalCutoffCelsiusTenths: 450,
+            materialQualityMarginMillionths: 50_000)
     }
 
     /// Counterbalanced ABBA over both prompts' shared timed runs.
@@ -437,17 +446,20 @@ final class SmokeTests: XCTestCase {
         return plan
     }
 
-    private func m7bProtocol() -> EvaluationProtocol {
-        EvaluationProtocol(
-            protocolVersion: 5, corpusId: "m7b-swift-v1", corpusSha256Hex: hx(0xa1),
-            promptCount: UInt32(Self.promptIds.count), qualityRubricId: "m7b-rubric-v1",
+    private func m7bDeclaration() -> V6Declaration {
+        V6Declaration(
+            protocolVersion: 6,
+            corpus: Self.corpus,
+            compositionPolicy: frozenCompositionPolicyV1(),
+            promptCount: UInt32(Self.corpus.prompts.count),
+            qualityRubricId: "m7b-rubric-v1",
+            scorerPolicy: .singleScorer(scorerIdentityDigest: Self.scorer),
+            selectionRule: .exactlyOncePerCandidatePromptSeedFromWarm,
+            policies: frozenPolicyIdentitiesV6(),
             sampler: m7bSampler(), seeds: Self.seeds, warmupRuns: 1,
             timedRuns: UInt32(Self.seeds.count), sustainedSeconds: 300,
             perRunTimeoutMs: 60_000, thresholds: m7bThresholds(),
             environment: m7bEnvironment(),
-            expectedPrompts: Self.promptIds.map {
-                ExpectedPrompt(promptId: $0, semanticPromptHash: semanticHash($0))
-            },
             runPlan: m7bRunPlan(), qualityPlan: m7bQualityPlan(),
             blindingManifestDigest: hx(0xbd))
     }
@@ -485,7 +497,8 @@ final class SmokeTests: XCTestCase {
             })
     }
 
-    private func m7bPanel(_ v: Double) -> QualityPanel {
+    /// `v` is integer millionths: 800_000 is 0.8.
+    private func m7bPanel(_ v: UInt32) -> QualityPanel {
         QualityPanel(
             instructionAdherence: v, requiredOutputStructure: v,
             avoidsUnsupportedInvention: v, appropriateUncertainty: v,
@@ -505,7 +518,7 @@ final class SmokeTests: XCTestCase {
             batteryDropTenthsPercent: 2, backgroundForegroundRecovered: true)
     }
 
-    private func m7bResult(_ id: String, instructionSeedScores: [Double]) -> CandidateResult {
+    private func m7bResult(_ id: String, instructionSeedScores: [UInt32]) -> CandidateResult {
         let cand = m7bCandidate(id)
         let obs = m7bRunPlan().filter { $0.candidateId == id }.map { e -> RunObservation in
             let proc = "\(id)-proc-\(e.mode == .cold ? e.index : 0)"
@@ -528,11 +541,11 @@ final class SmokeTests: XCTestCase {
         }
         let quality = m7bQualityPlan().filter { $0.candidateId == id }.map { e -> PromptQualityObservation in
             let b = cand.promptBindings.first { $0.promptId == e.promptId }!
-            // Only prompt p1's instruction axis varies, and only for the
-            // candidate under test — everything else stays at 0.8.
+            // Only the FIRST corpus prompt's instruction axis varies, and
+            // only for the candidate under test — everything else stays at 0.8.
             let seedIdx = Self.seeds.firstIndex(of: e.seed)!
-            var scores = m7bPanel(0.8)
-            if e.promptId == "p1" && seedIdx < instructionSeedScores.count {
+            var scores = m7bPanel(800_000)
+            if e.promptId == Self.promptIds[0] && seedIdx < instructionSeedScores.count {
                 scores.instructionAdherence = instructionSeedScores[seedIdx]
             }
             return PromptQualityObservation(
@@ -543,17 +556,20 @@ final class SmokeTests: XCTestCase {
                 inputTokenIdsHash: b.inputTokenIdsHash,
                 outputTextSha256: hx(0x41), outputTokenIdsSha256: hx(0x42),
                 rubricId: "m7b-rubric-v1", blindingManifestDigest: hx(0xbd),
-                scorerIdentity: "blinded-panel-v1", scores: scores,
+                scorerIdentityDigest: Self.scorer, scores: scores,
                 disposition: .admissible)
         }
         return CandidateResult(
             candidateId: id, candidateIdentity: candidateIdentity(candidate: cand),
-            protocolIdentity: evaluationProtocolIdentity(protocol: m7bProtocol()),
+            protocolIdentity: v6DeclarationIdentity(declaration: m7bDeclaration()),
             device: "swift-host", osVersion: "test", runtimeIdentity: "llama.cpp@f5b9bd39",
             prompts: Self.promptIds.map { pid in
                 let b = cand.promptBindings.first { $0.promptId == pid }!
+                let frozen = Self.corpus.prompts.first { $0.promptId == pid }!
                 return BenchmarkPrompt(
-                    promptId: pid, promptProfile: "focused",
+                    promptId: pid,
+                    taskKind: frozen.taskKind,
+                    contextProfile: frozen.contextProfile,
                     semanticPromptHash: semanticHash(pid),
                     renderedPromptHash: b.renderedPromptHash,
                     inputTokenIdsHash: b.inputTokenIdsHash)
@@ -564,13 +580,14 @@ final class SmokeTests: XCTestCase {
     }
 
     func testM7bQualityPanelDerivesIdenticallyThroughSwiftBindings() throws {
-        let proto = m7bProtocol()
+        let proto = m7bDeclaration()
         XCTAssertTrue(
-            validateEvaluationProtocol(protocol: proto).isEmpty,
-            "the v5 fixture must be a valid protocol")
+            validateV6Declaration(protocol: proto).isEmpty,
+            "the v6 fixture must be a valid declaration")
 
-        // 0.8, 0.8, 0.2 across the three seeds of prompt p1.
-        let result = m7bResult(Self.candA, instructionSeedScores: [0.8, 0.8, 0.2])
+        // 0.8, 0.8, 0.2 across the three seeds of the first corpus prompt.
+        let first = Self.promptIds[0]
+        let result = m7bResult(Self.candA, instructionSeedScores: [800_000, 800_000, 200_000])
         guard case let .derived(panel) = deriveQualityPanel(
             protocol: proto, candidate: m7bCandidate(Self.candA),
             observations: result.qualityObservations)
@@ -578,17 +595,25 @@ final class SmokeTests: XCTestCase {
 
         // Derive the same value independently here, in the required order:
         // average across seeds within a prompt, then across prompts equally.
-        let p1Instruction = (0.8 + 0.8 + 0.2) / 3.0   // 0.6
-        let p2Instruction = (0.8 + 0.8 + 0.8) / 3.0   // 0.8
-        let expectedInstruction = (p1Instruction + p2Instruction) / 2.0
+        //
+        //   that prompt: (800_000 + 800_000 + 200_000) / 3      = 600_000
+        //   the axis:    (600_000 + 17 * 800_000) / 18          = 14_200_000/18
+        //
+        // which reduces to 7_100_000/9. v5 asserted this by recomputing the
+        // f64 expression in the same order Rust used, because two-stage
+        // averaging of 0.8 yields 0.8000000000000002 and no written-down
+        // constant would have matched. Under exact rationals the expected
+        // value can simply be WRITTEN DOWN, which is the clearest sign the
+        // arithmetic change did what it was for.
+        let n = UInt64(Self.corpus.prompts.count)
+        XCTAssertEqual(n, 18, "the frozen corpus is 2 prompts per allowed pair")
         XCTAssertEqual(
-            panel.instructionAdherence, expectedInstruction,
-            "Swift and Rust must agree bit-for-bit on the macro weighting")
-        // Every other axis is untouched. Note the derived value is NOT the
-        // literal 0.8: two-stage averaging of 0.8 yields 0.8000000000000002
-        // in IEEE-754, so the expectation is computed here in the SAME order
-        // Rust uses rather than asserted against a rounded constant.
-        let untouched = (p2Instruction + p2Instruction) / 2.0
+            panel.instructionAdherence,
+            ExactMillionths(numerator: 7_100_000, denominator: 9),
+            "Swift and Rust must agree exactly on the macro weighting")
+
+        // Every other axis is untouched, and lands on a whole millionth.
+        let untouched = ExactMillionths(numerator: 800_000, denominator: 1)
         for (name, value) in [
             ("requiredOutputStructure", panel.requiredOutputStructure),
             ("avoidsUnsupportedInvention", panel.avoidsUnsupportedInvention),
@@ -603,18 +628,21 @@ final class SmokeTests: XCTestCase {
             XCTAssertEqual(value, untouched, "\(name) must be unaffected")
         }
 
-        // A single prompt scored 0.6/0.8 must reproduce the Rust 0.6 exactly.
-        let singlePrompt = m7bResult(Self.candA, instructionSeedScores: [0.8, 0.8, 0.2])
-            .qualityObservations.filter { $0.promptId == "p1" }
+        // The seeds-within-a-prompt stage in isolation: one prompt scored
+        // 0.8/0.8/0.2 averages to exactly 0.6, denominator 1.
+        let singlePrompt = result.qualityObservations.filter { $0.promptId == first }
         var soloProto = proto
-        soloProto.expectedPrompts = [proto.expectedPrompts[0]]
+        soloProto.corpus = BenchmarkCorpus(
+            corpusId: proto.corpus.corpusId, prompts: [proto.corpus.prompts[0]])
         soloProto.promptCount = 1
-        soloProto.qualityPlan = proto.qualityPlan.filter { $0.promptId == "p1" }
+        soloProto.qualityPlan = proto.qualityPlan.filter { $0.promptId == first }
         guard case let .derived(solo) = deriveQualityPanel(
             protocol: soloProto, candidate: m7bCandidate(Self.candA),
             observations: singlePrompt)
         else { return XCTFail("expected a derived single-prompt panel") }
-        XCTAssertEqual(solo.instructionAdherence, (0.8 + 0.8 + 0.2) / 3.0)
+        XCTAssertEqual(
+            solo.instructionAdherence,
+            ExactMillionths(numerator: 600_000, denominator: 1))
 
         // Cost is derived too, as a worst-case envelope.
         guard let cost = deriveCostObservation(
@@ -640,10 +668,10 @@ final class SmokeTests: XCTestCase {
         let verdict = evaluatePromotion(
             protocol: proto,
             candidateA: m7bCandidate(Self.candA),
-            resultA: m7bResult(Self.candA, instructionSeedScores: [0.8, 0.8, 0.8]),
+            resultA: m7bResult(Self.candA, instructionSeedScores: [800_000, 800_000, 800_000]),
             candidateB: m7bCandidate(Self.candB),
-            resultB: m7bResult(Self.candB, instructionSeedScores: [0.8, 0.8, 0.8]))
-        guard case let .splitTiers(basic, enhanced) = verdict else {
+            resultB: m7bResult(Self.candB, instructionSeedScores: [800_000, 800_000, 800_000]))
+        guard case let .splitTiers(basic, enhanced, _) = verdict else {
             return XCTFail("expected a tier split, got \(verdict)")
         }
         XCTAssertEqual(basic, Self.candA, "the smaller install becomes Basic")

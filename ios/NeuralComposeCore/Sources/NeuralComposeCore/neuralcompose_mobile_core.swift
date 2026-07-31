@@ -2164,6 +2164,64 @@ public func FfiConverterTypeBackendObservation_lower(_ value: BackendObservation
 
 
 /**
+ * The frozen corpus as a VALUE. Note what is absent: no digest field. An
+ * identity is computed from this, never supplied alongside it.
+ */
+public struct BenchmarkCorpus: Equatable, Hashable {
+    public var corpusId: String
+    public var prompts: [CorpusPrompt]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(corpusId: String, prompts: [CorpusPrompt]) {
+        self.corpusId = corpusId
+        self.prompts = prompts
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BenchmarkCorpus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBenchmarkCorpus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BenchmarkCorpus {
+        return
+            try BenchmarkCorpus(
+                corpusId: FfiConverterString.read(from: &buf), 
+                prompts: FfiConverterSequenceTypeCorpusPrompt.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BenchmarkCorpus, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.corpusId, into: &buf)
+        FfiConverterSequenceTypeCorpusPrompt.write(value.prompts, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBenchmarkCorpus_lift(_ buf: RustBuffer) throws -> BenchmarkCorpus {
+    return try FfiConverterTypeBenchmarkCorpus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBenchmarkCorpus_lower(_ value: BenchmarkCorpus) -> RustBuffer {
+    return FfiConverterTypeBenchmarkCorpus.lower(value)
+}
+
+
+/**
  * A benchmark prompt carries TWO identities. The semantic input must be
  * identical across models; the rendered bytes may legitimately differ
  * because official chat templates differ — and that difference has to be
@@ -2171,7 +2229,12 @@ public func FfiConverterTypeBackendObservation_lower(_ value: BackendObservation
  */
 public struct BenchmarkPrompt: Equatable, Hashable {
     public var promptId: String
-    public var promptProfile: String
+    /**
+     * v6: both taxonomy axes, checked against the frozen corpus at admission
+     * so a result cannot relabel a prompt it actually ran.
+     */
+    public var taskKind: BenchmarkTaskKind
+    public var contextProfile: PromptContextProfile
     /**
      * Hash of the semantic message — same for every candidate.
      */
@@ -2187,7 +2250,11 @@ public struct BenchmarkPrompt: Equatable, Hashable {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(promptId: String, promptProfile: String, 
+    public init(promptId: String, 
+        /**
+         * v6: both taxonomy axes, checked against the frozen corpus at admission
+         * so a result cannot relabel a prompt it actually ran.
+         */taskKind: BenchmarkTaskKind, contextProfile: PromptContextProfile, 
         /**
          * Hash of the semantic message — same for every candidate.
          */semanticPromptHash: String, 
@@ -2198,7 +2265,8 @@ public struct BenchmarkPrompt: Equatable, Hashable {
          * Token ids the runtime actually fed the model, hashed.
          */inputTokenIdsHash: String) {
         self.promptId = promptId
-        self.promptProfile = promptProfile
+        self.taskKind = taskKind
+        self.contextProfile = contextProfile
         self.semanticPromptHash = semanticPromptHash
         self.renderedPromptHash = renderedPromptHash
         self.inputTokenIdsHash = inputTokenIdsHash
@@ -2221,7 +2289,8 @@ public struct FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer {
         return
             try BenchmarkPrompt(
                 promptId: FfiConverterString.read(from: &buf), 
-                promptProfile: FfiConverterString.read(from: &buf), 
+                taskKind: FfiConverterTypeBenchmarkTaskKind.read(from: &buf), 
+                contextProfile: FfiConverterTypePromptContextProfile.read(from: &buf), 
                 semanticPromptHash: FfiConverterString.read(from: &buf), 
                 renderedPromptHash: FfiConverterString.read(from: &buf), 
                 inputTokenIdsHash: FfiConverterString.read(from: &buf)
@@ -2230,7 +2299,8 @@ public struct FfiConverterTypeBenchmarkPrompt: FfiConverterRustBuffer {
 
     public static func write(_ value: BenchmarkPrompt, into buf: inout [UInt8]) {
         FfiConverterString.write(value.promptId, into: &buf)
-        FfiConverterString.write(value.promptProfile, into: &buf)
+        FfiConverterTypeBenchmarkTaskKind.write(value.taskKind, into: &buf)
+        FfiConverterTypePromptContextProfile.write(value.contextProfile, into: &buf)
         FfiConverterString.write(value.semanticPromptHash, into: &buf)
         FfiConverterString.write(value.renderedPromptHash, into: &buf)
         FfiConverterString.write(value.inputTokenIdsHash, into: &buf)
@@ -2879,6 +2949,147 @@ public func FfiConverterTypeConversionRecord_lower(_ value: ConversionRecord) ->
 
 
 /**
+ * The declared composition of the corpus. Part of the declaration identity,
+ * so the effective domain weighting is explicit and reviewable instead of
+ * being an emergent property of however many prompts someone wrote.
+ */
+public struct CorpusCompositionPolicy: Equatable, Hashable {
+    /**
+     * The pairs the corpus may contain. Validated against
+     * `ALLOWED_TASK_CONTEXT_PAIRS`, so this field records the matrix rather
+     * than choosing it.
+     */
+    public var allowedTaskContextPairs: [TaskContextPair]
+    /**
+     * One entry per allowed pair, no more and no fewer.
+     */
+    public var exactRequiredCountPerPair: [PairQuota]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The pairs the corpus may contain. Validated against
+         * `ALLOWED_TASK_CONTEXT_PAIRS`, so this field records the matrix rather
+         * than choosing it.
+         */allowedTaskContextPairs: [TaskContextPair], 
+        /**
+         * One entry per allowed pair, no more and no fewer.
+         */exactRequiredCountPerPair: [PairQuota]) {
+        self.allowedTaskContextPairs = allowedTaskContextPairs
+        self.exactRequiredCountPerPair = exactRequiredCountPerPair
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CorpusCompositionPolicy: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCorpusCompositionPolicy: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CorpusCompositionPolicy {
+        return
+            try CorpusCompositionPolicy(
+                allowedTaskContextPairs: FfiConverterSequenceTypeTaskContextPair.read(from: &buf), 
+                exactRequiredCountPerPair: FfiConverterSequenceTypePairQuota.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CorpusCompositionPolicy, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeTaskContextPair.write(value.allowedTaskContextPairs, into: &buf)
+        FfiConverterSequenceTypePairQuota.write(value.exactRequiredCountPerPair, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCorpusCompositionPolicy_lift(_ buf: RustBuffer) throws -> CorpusCompositionPolicy {
+    return try FfiConverterTypeCorpusCompositionPolicy.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCorpusCompositionPolicy_lower(_ value: CorpusCompositionPolicy) -> RustBuffer {
+    return FfiConverterTypeCorpusCompositionPolicy.lower(value)
+}
+
+
+/**
+ * One frozen prompt: the semantic input every candidate shares, plus the two
+ * taxonomy axes that make it the benchmark item it is.
+ */
+public struct CorpusPrompt: Equatable, Hashable {
+    public var promptId: String
+    public var taskKind: BenchmarkTaskKind
+    public var contextProfile: PromptContextProfile
+    public var message: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(promptId: String, taskKind: BenchmarkTaskKind, contextProfile: PromptContextProfile, message: String) {
+        self.promptId = promptId
+        self.taskKind = taskKind
+        self.contextProfile = contextProfile
+        self.message = message
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension CorpusPrompt: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCorpusPrompt: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CorpusPrompt {
+        return
+            try CorpusPrompt(
+                promptId: FfiConverterString.read(from: &buf), 
+                taskKind: FfiConverterTypeBenchmarkTaskKind.read(from: &buf), 
+                contextProfile: FfiConverterTypePromptContextProfile.read(from: &buf), 
+                message: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CorpusPrompt, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.promptId, into: &buf)
+        FfiConverterTypeBenchmarkTaskKind.write(value.taskKind, into: &buf)
+        FfiConverterTypePromptContextProfile.write(value.contextProfile, into: &buf)
+        FfiConverterString.write(value.message, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCorpusPrompt_lift(_ buf: RustBuffer) throws -> CorpusPrompt {
+    return try FfiConverterTypeCorpusPrompt.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCorpusPrompt_lower(_ value: CorpusPrompt) -> RustBuffer {
+    return FfiConverterTypeCorpusPrompt.lower(value)
+}
+
+
+/**
  * Measurements only the device can make. Rust receives these; it never
  * reads a battery or a thermal sensor itself.
  */
@@ -2985,6 +3196,96 @@ public func FfiConverterTypeCostObservation_lift(_ buf: RustBuffer) throws -> Co
 #endif
 public func FfiConverterTypeCostObservation_lower(_ value: CostObservation) -> RustBuffer {
     return FfiConverterTypeCostObservation.lower(value)
+}
+
+
+/**
+ * The derived panel. Each axis is an exact rational because averaging across
+ * seeds and prompts does not generally land on a whole millionth.
+ */
+public struct DerivedQualityPanel: Equatable, Hashable {
+    public var instructionAdherence: ExactMillionths
+    public var requiredOutputStructure: ExactMillionths
+    public var avoidsUnsupportedInvention: ExactMillionths
+    public var appropriateUncertainty: ExactMillionths
+    public var avoidsFalseRefusal: ExactMillionths
+    public var substantivePositionRetention: ExactMillionths
+    public var avoidsRepetition: ExactMillionths
+    public var truncationBehavior: ExactMillionths
+    public var languagePreservation: ExactMillionths
+    public var promptProfileFidelity: ExactMillionths
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(instructionAdherence: ExactMillionths, requiredOutputStructure: ExactMillionths, avoidsUnsupportedInvention: ExactMillionths, appropriateUncertainty: ExactMillionths, avoidsFalseRefusal: ExactMillionths, substantivePositionRetention: ExactMillionths, avoidsRepetition: ExactMillionths, truncationBehavior: ExactMillionths, languagePreservation: ExactMillionths, promptProfileFidelity: ExactMillionths) {
+        self.instructionAdherence = instructionAdherence
+        self.requiredOutputStructure = requiredOutputStructure
+        self.avoidsUnsupportedInvention = avoidsUnsupportedInvention
+        self.appropriateUncertainty = appropriateUncertainty
+        self.avoidsFalseRefusal = avoidsFalseRefusal
+        self.substantivePositionRetention = substantivePositionRetention
+        self.avoidsRepetition = avoidsRepetition
+        self.truncationBehavior = truncationBehavior
+        self.languagePreservation = languagePreservation
+        self.promptProfileFidelity = promptProfileFidelity
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DerivedQualityPanel: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDerivedQualityPanel: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DerivedQualityPanel {
+        return
+            try DerivedQualityPanel(
+                instructionAdherence: FfiConverterTypeExactMillionths.read(from: &buf), 
+                requiredOutputStructure: FfiConverterTypeExactMillionths.read(from: &buf), 
+                avoidsUnsupportedInvention: FfiConverterTypeExactMillionths.read(from: &buf), 
+                appropriateUncertainty: FfiConverterTypeExactMillionths.read(from: &buf), 
+                avoidsFalseRefusal: FfiConverterTypeExactMillionths.read(from: &buf), 
+                substantivePositionRetention: FfiConverterTypeExactMillionths.read(from: &buf), 
+                avoidsRepetition: FfiConverterTypeExactMillionths.read(from: &buf), 
+                truncationBehavior: FfiConverterTypeExactMillionths.read(from: &buf), 
+                languagePreservation: FfiConverterTypeExactMillionths.read(from: &buf), 
+                promptProfileFidelity: FfiConverterTypeExactMillionths.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DerivedQualityPanel, into buf: inout [UInt8]) {
+        FfiConverterTypeExactMillionths.write(value.instructionAdherence, into: &buf)
+        FfiConverterTypeExactMillionths.write(value.requiredOutputStructure, into: &buf)
+        FfiConverterTypeExactMillionths.write(value.avoidsUnsupportedInvention, into: &buf)
+        FfiConverterTypeExactMillionths.write(value.appropriateUncertainty, into: &buf)
+        FfiConverterTypeExactMillionths.write(value.avoidsFalseRefusal, into: &buf)
+        FfiConverterTypeExactMillionths.write(value.substantivePositionRetention, into: &buf)
+        FfiConverterTypeExactMillionths.write(value.avoidsRepetition, into: &buf)
+        FfiConverterTypeExactMillionths.write(value.truncationBehavior, into: &buf)
+        FfiConverterTypeExactMillionths.write(value.languagePreservation, into: &buf)
+        FfiConverterTypeExactMillionths.write(value.promptProfileFidelity, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDerivedQualityPanel_lift(_ buf: RustBuffer) throws -> DerivedQualityPanel {
+    return try FfiConverterTypeDerivedQualityPanel.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDerivedQualityPanel_lower(_ value: DerivedQualityPanel) -> RustBuffer {
+    return FfiConverterTypeDerivedQualityPanel.lower(value)
 }
 
 
@@ -3299,89 +3600,46 @@ public func FfiConverterTypeEvaluationCandidate_lower(_ value: EvaluationCandida
 }
 
 
-public struct EvaluationProtocol: Equatable, Hashable {
-    public var protocolVersion: UInt32
-    public var corpusId: String
+/**
+ * The versioned identities of the *evaluator*, as distinct from the protocol
+ * it evaluates.
+ *
+ * `protocol_version = 6` alone is insufficient: it says what the data means,
+ * not how this build interprets it. Without these, a later evaluator can
+ * reinterpret identical v6 data under an unchanged declaration digest —
+ * which is precisely what happened between `eb9492c` and `3ccf874`. Each id
+ * is an explicit versioned identity carrying its own domain separator, not a
+ * hash of the source, so a comment change does not invalidate a study.
+ */
+public struct EvaluatorPolicyIdentities: Equatable, Hashable {
+    public var selectionPolicyId: String
+    public var qualityAggregationPolicyId: String
+    public var promotionRuleId: String
     /**
-     * Digest of the committed sanitized corpus file.
+     * Must equal `FIXED_POINT_SCALE`; a study scored in a different unit is
+     * a different study.
      */
-    public var corpusSha256Hex: String
-    public var promptCount: UInt32
-    public var qualityRubricId: String
-    public var sampler: SamplerConfig
+    public var fixedPointScale: UInt32
     /**
-     * Frozen seeds; multiple, so one lucky sample cannot decide anything.
+     * Must equal `EVALUATOR_SCHEMA_VERSION`.
      */
-    public var seeds: [UInt64]
-    public var warmupRuns: UInt32
-    public var timedRuns: UInt32
-    public var sustainedSeconds: UInt32
-    public var perRunTimeoutMs: UInt64
-    public var thresholds: PromotionThresholds
-    /**
-     * v2: the conditions a measurement is taken under. Absent in v1, which
-     * is why v1 could not support an honest battery or cold-load claim.
-     */
-    public var environment: RunEnvironment
-    /**
-     * v3: the frozen semantic corpus every candidate shares.
-     */
-    public var expectedPrompts: [ExpectedPrompt]
-    /**
-     * v3: the exact run schedule, not merely the alternating property.
-     */
-    public var runPlan: [RunPlanEntry]
-    /**
-     * v5: which outputs are scored, declared rather than inferred.
-     */
-    public var qualityPlan: [QualityPlanEntry]
-    /**
-     * v5: the blinding manifest scorers worked under.
-     */
-    public var blindingManifestDigest: String
+    public var evaluatorSchemaVersion: UInt32
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(protocolVersion: UInt32, corpusId: String, 
+    public init(selectionPolicyId: String, qualityAggregationPolicyId: String, promotionRuleId: String, 
         /**
-         * Digest of the committed sanitized corpus file.
-         */corpusSha256Hex: String, promptCount: UInt32, qualityRubricId: String, sampler: SamplerConfig, 
+         * Must equal `FIXED_POINT_SCALE`; a study scored in a different unit is
+         * a different study.
+         */fixedPointScale: UInt32, 
         /**
-         * Frozen seeds; multiple, so one lucky sample cannot decide anything.
-         */seeds: [UInt64], warmupRuns: UInt32, timedRuns: UInt32, sustainedSeconds: UInt32, perRunTimeoutMs: UInt64, thresholds: PromotionThresholds, 
-        /**
-         * v2: the conditions a measurement is taken under. Absent in v1, which
-         * is why v1 could not support an honest battery or cold-load claim.
-         */environment: RunEnvironment, 
-        /**
-         * v3: the frozen semantic corpus every candidate shares.
-         */expectedPrompts: [ExpectedPrompt], 
-        /**
-         * v3: the exact run schedule, not merely the alternating property.
-         */runPlan: [RunPlanEntry], 
-        /**
-         * v5: which outputs are scored, declared rather than inferred.
-         */qualityPlan: [QualityPlanEntry], 
-        /**
-         * v5: the blinding manifest scorers worked under.
-         */blindingManifestDigest: String) {
-        self.protocolVersion = protocolVersion
-        self.corpusId = corpusId
-        self.corpusSha256Hex = corpusSha256Hex
-        self.promptCount = promptCount
-        self.qualityRubricId = qualityRubricId
-        self.sampler = sampler
-        self.seeds = seeds
-        self.warmupRuns = warmupRuns
-        self.timedRuns = timedRuns
-        self.sustainedSeconds = sustainedSeconds
-        self.perRunTimeoutMs = perRunTimeoutMs
-        self.thresholds = thresholds
-        self.environment = environment
-        self.expectedPrompts = expectedPrompts
-        self.runPlan = runPlan
-        self.qualityPlan = qualityPlan
-        self.blindingManifestDigest = blindingManifestDigest
+         * Must equal `EVALUATOR_SCHEMA_VERSION`.
+         */evaluatorSchemaVersion: UInt32) {
+        self.selectionPolicyId = selectionPolicyId
+        self.qualityAggregationPolicyId = qualityAggregationPolicyId
+        self.promotionRuleId = promotionRuleId
+        self.fixedPointScale = fixedPointScale
+        self.evaluatorSchemaVersion = evaluatorSchemaVersion
     }
 
     
@@ -3390,54 +3648,30 @@ public struct EvaluationProtocol: Equatable, Hashable {
 }
 
 #if compiler(>=6)
-extension EvaluationProtocol: Sendable {}
+extension EvaluatorPolicyIdentities: Sendable {}
 #endif
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public struct FfiConverterTypeEvaluationProtocol: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EvaluationProtocol {
+public struct FfiConverterTypeEvaluatorPolicyIdentities: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EvaluatorPolicyIdentities {
         return
-            try EvaluationProtocol(
-                protocolVersion: FfiConverterUInt32.read(from: &buf), 
-                corpusId: FfiConverterString.read(from: &buf), 
-                corpusSha256Hex: FfiConverterString.read(from: &buf), 
-                promptCount: FfiConverterUInt32.read(from: &buf), 
-                qualityRubricId: FfiConverterString.read(from: &buf), 
-                sampler: FfiConverterTypeSamplerConfig.read(from: &buf), 
-                seeds: FfiConverterSequenceUInt64.read(from: &buf), 
-                warmupRuns: FfiConverterUInt32.read(from: &buf), 
-                timedRuns: FfiConverterUInt32.read(from: &buf), 
-                sustainedSeconds: FfiConverterUInt32.read(from: &buf), 
-                perRunTimeoutMs: FfiConverterUInt64.read(from: &buf), 
-                thresholds: FfiConverterTypePromotionThresholds.read(from: &buf), 
-                environment: FfiConverterTypeRunEnvironment.read(from: &buf), 
-                expectedPrompts: FfiConverterSequenceTypeExpectedPrompt.read(from: &buf), 
-                runPlan: FfiConverterSequenceTypeRunPlanEntry.read(from: &buf), 
-                qualityPlan: FfiConverterSequenceTypeQualityPlanEntry.read(from: &buf), 
-                blindingManifestDigest: FfiConverterString.read(from: &buf)
+            try EvaluatorPolicyIdentities(
+                selectionPolicyId: FfiConverterString.read(from: &buf), 
+                qualityAggregationPolicyId: FfiConverterString.read(from: &buf), 
+                promotionRuleId: FfiConverterString.read(from: &buf), 
+                fixedPointScale: FfiConverterUInt32.read(from: &buf), 
+                evaluatorSchemaVersion: FfiConverterUInt32.read(from: &buf)
         )
     }
 
-    public static func write(_ value: EvaluationProtocol, into buf: inout [UInt8]) {
-        FfiConverterUInt32.write(value.protocolVersion, into: &buf)
-        FfiConverterString.write(value.corpusId, into: &buf)
-        FfiConverterString.write(value.corpusSha256Hex, into: &buf)
-        FfiConverterUInt32.write(value.promptCount, into: &buf)
-        FfiConverterString.write(value.qualityRubricId, into: &buf)
-        FfiConverterTypeSamplerConfig.write(value.sampler, into: &buf)
-        FfiConverterSequenceUInt64.write(value.seeds, into: &buf)
-        FfiConverterUInt32.write(value.warmupRuns, into: &buf)
-        FfiConverterUInt32.write(value.timedRuns, into: &buf)
-        FfiConverterUInt32.write(value.sustainedSeconds, into: &buf)
-        FfiConverterUInt64.write(value.perRunTimeoutMs, into: &buf)
-        FfiConverterTypePromotionThresholds.write(value.thresholds, into: &buf)
-        FfiConverterTypeRunEnvironment.write(value.environment, into: &buf)
-        FfiConverterSequenceTypeExpectedPrompt.write(value.expectedPrompts, into: &buf)
-        FfiConverterSequenceTypeRunPlanEntry.write(value.runPlan, into: &buf)
-        FfiConverterSequenceTypeQualityPlanEntry.write(value.qualityPlan, into: &buf)
-        FfiConverterString.write(value.blindingManifestDigest, into: &buf)
+    public static func write(_ value: EvaluatorPolicyIdentities, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.selectionPolicyId, into: &buf)
+        FfiConverterString.write(value.qualityAggregationPolicyId, into: &buf)
+        FfiConverterString.write(value.promotionRuleId, into: &buf)
+        FfiConverterUInt32.write(value.fixedPointScale, into: &buf)
+        FfiConverterUInt32.write(value.evaluatorSchemaVersion, into: &buf)
     }
 }
 
@@ -3445,15 +3679,15 @@ public struct FfiConverterTypeEvaluationProtocol: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeEvaluationProtocol_lift(_ buf: RustBuffer) throws -> EvaluationProtocol {
-    return try FfiConverterTypeEvaluationProtocol.lift(buf)
+public func FfiConverterTypeEvaluatorPolicyIdentities_lift(_ buf: RustBuffer) throws -> EvaluatorPolicyIdentities {
+    return try FfiConverterTypeEvaluatorPolicyIdentities.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeEvaluationProtocol_lower(_ value: EvaluationProtocol) -> RustBuffer {
-    return FfiConverterTypeEvaluationProtocol.lower(value)
+public func FfiConverterTypeEvaluatorPolicyIdentities_lower(_ value: EvaluatorPolicyIdentities) -> RustBuffer {
+    return FfiConverterTypeEvaluatorPolicyIdentities.lower(value)
 }
 
 
@@ -3516,6 +3750,71 @@ public func FfiConverterTypeEventSpan_lift(_ buf: RustBuffer) throws -> EventSpa
 #endif
 public func FfiConverterTypeEventSpan_lower(_ value: EventSpan) -> RustBuffer {
     return FfiConverterTypeEventSpan.lower(value)
+}
+
+
+/**
+ * An exact non-negative rational, in millionths of 1.0:
+ * `numerator / denominator`.
+ *
+ * The aggregation divides by seed counts and prompt counts, and those
+ * divisions do not land on integers — a third of anything does not. Rounding
+ * at each step would reintroduce exactly the drift the fixed-point change
+ * exists to remove, so the quotient is carried rather than taken. Always
+ * reduced to lowest terms with a nonzero denominator, so equal values are
+ * structurally equal and `PartialEq` means what it looks like.
+ */
+public struct ExactMillionths: Equatable, Hashable {
+    public var numerator: UInt64
+    public var denominator: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(numerator: UInt64, denominator: UInt64) {
+        self.numerator = numerator
+        self.denominator = denominator
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ExactMillionths: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeExactMillionths: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ExactMillionths {
+        return
+            try ExactMillionths(
+                numerator: FfiConverterUInt64.read(from: &buf), 
+                denominator: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ExactMillionths, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.numerator, into: &buf)
+        FfiConverterUInt64.write(value.denominator, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeExactMillionths_lift(_ buf: RustBuffer) throws -> ExactMillionths {
+    return try FfiConverterTypeExactMillionths.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeExactMillionths_lower(_ value: ExactMillionths) -> RustBuffer {
+    return FfiConverterTypeExactMillionths.lower(value)
 }
 
 
@@ -4377,6 +4676,69 @@ public func FfiConverterTypeOperationFailure_lower(_ value: OperationFailure) ->
 }
 
 
+/**
+ * How many prompts one allowed pair must contribute — EXACTLY, not at least.
+ *
+ * A minimum-per-pair rule does not bound weight. Under the frozen
+ * equal-prompt macro rule, ten `Summarization × Neutral` prompts and one
+ * `ReflectiveDialogue × Hypnagogic` satisfy a minimum of one while giving
+ * summarization ten times the influence over the promotion decision. Quota
+ * shape IS the weighting, so it is declared exactly and hashed.
+ */
+public struct PairQuota: Equatable, Hashable {
+    public var pair: TaskContextPair
+    public var exactCount: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(pair: TaskContextPair, exactCount: UInt32) {
+        self.pair = pair
+        self.exactCount = exactCount
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PairQuota: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePairQuota: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PairQuota {
+        return
+            try PairQuota(
+                pair: FfiConverterTypeTaskContextPair.read(from: &buf), 
+                exactCount: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PairQuota, into buf: inout [UInt8]) {
+        FfiConverterTypeTaskContextPair.write(value.pair, into: &buf)
+        FfiConverterUInt32.write(value.exactCount, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePairQuota_lift(_ buf: RustBuffer) throws -> PairQuota {
+    return try FfiConverterTypePairQuota.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePairQuota_lower(_ value: PairQuota) -> RustBuffer {
+    return FfiConverterTypePairQuota.lower(value)
+}
+
+
 public struct Presentation: Equatable, Hashable {
     public var phase: StreamPhase
     public var tone: StreamTone
@@ -4486,8 +4848,15 @@ public struct PromotionThresholds: Equatable, Hashable {
     /**
      * A candidate must beat the other's quality panel by at least this
      * margin to justify being larger.
+     *
+     * v6: integer millionths, `0..=FIXED_POINT_SCALE`. As an `f64` this was a
+     * float compared against a float aggregate, and the aggregate drifts: the
+     * two-stage average of ten all-`0.8` axes observes `0.8000000000000002`
+     * (`0.8 * 3 / 3` reproduces it directly). Harmless for display, decisive
+     * at an exact boundary — it is the difference between a tier split and a
+     * promotion.
      */
-    public var materialQualityMargin: Double
+    public var materialQualityMarginMillionths: UInt32
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -4504,7 +4873,14 @@ public struct PromotionThresholds: Equatable, Hashable {
         /**
          * A candidate must beat the other's quality panel by at least this
          * margin to justify being larger.
-         */materialQualityMargin: Double) {
+         *
+         * v6: integer millionths, `0..=FIXED_POINT_SCALE`. As an `f64` this was a
+         * float compared against a float aggregate, and the aggregate drifts: the
+         * two-stage average of ten all-`0.8` axes observes `0.8000000000000002`
+         * (`0.8 * 3 / 3` reproduces it directly). Harmless for display, decisive
+         * at an exact boundary — it is the difference between a tier split and a
+         * promotion.
+         */materialQualityMarginMillionths: UInt32) {
         self.maxColdLoadMs = maxColdLoadMs
         self.maxTimeToFirstTokenMs = maxTimeToFirstTokenMs
         self.minGenerationTokensPerSecond = minGenerationTokensPerSecond
@@ -4513,7 +4889,7 @@ public struct PromotionThresholds: Equatable, Hashable {
         self.maxCancellationLatencyMs = maxCancellationLatencyMs
         self.batteryPolicy = batteryPolicy
         self.thermalCutoffCelsiusTenths = thermalCutoffCelsiusTenths
-        self.materialQualityMargin = materialQualityMargin
+        self.materialQualityMarginMillionths = materialQualityMarginMillionths
     }
 
     
@@ -4540,7 +4916,7 @@ public struct FfiConverterTypePromotionThresholds: FfiConverterRustBuffer {
                 maxCancellationLatencyMs: FfiConverterUInt64.read(from: &buf), 
                 batteryPolicy: FfiConverterTypeBatteryEvidencePolicy.read(from: &buf), 
                 thermalCutoffCelsiusTenths: FfiConverterUInt32.read(from: &buf), 
-                materialQualityMargin: FfiConverterDouble.read(from: &buf)
+                materialQualityMarginMillionths: FfiConverterUInt32.read(from: &buf)
         )
     }
 
@@ -4553,7 +4929,7 @@ public struct FfiConverterTypePromotionThresholds: FfiConverterRustBuffer {
         FfiConverterUInt64.write(value.maxCancellationLatencyMs, into: &buf)
         FfiConverterTypeBatteryEvidencePolicy.write(value.batteryPolicy, into: &buf)
         FfiConverterUInt32.write(value.thermalCutoffCelsiusTenths, into: &buf)
-        FfiConverterDouble.write(value.materialQualityMargin, into: &buf)
+        FfiConverterUInt32.write(value.materialQualityMarginMillionths, into: &buf)
     }
 }
 
@@ -4655,13 +5031,21 @@ public struct PromptQualityObservation: Equatable, Hashable {
     public var outputTokenIdsSha256: String
     public var rubricId: String
     public var blindingManifestDigest: String
-    public var scorerIdentity: String
+    /**
+     * v6: must equal the digest the declaration's `ScorerPolicy` names. A
+     * free string that nothing compared could mix raters inside one average.
+     */
+    public var scorerIdentityDigest: String
     public var scores: QualityPanel
     public var disposition: QualityDisposition
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(blindedOutputId: String, runId: String, candidateId: String, promptId: String, seed: UInt64, semanticPromptHash: String, renderedPromptHash: String, inputTokenIdsHash: String, outputTextSha256: String, outputTokenIdsSha256: String, rubricId: String, blindingManifestDigest: String, scorerIdentity: String, scores: QualityPanel, disposition: QualityDisposition) {
+    public init(blindedOutputId: String, runId: String, candidateId: String, promptId: String, seed: UInt64, semanticPromptHash: String, renderedPromptHash: String, inputTokenIdsHash: String, outputTextSha256: String, outputTokenIdsSha256: String, rubricId: String, blindingManifestDigest: String, 
+        /**
+         * v6: must equal the digest the declaration's `ScorerPolicy` names. A
+         * free string that nothing compared could mix raters inside one average.
+         */scorerIdentityDigest: String, scores: QualityPanel, disposition: QualityDisposition) {
         self.blindedOutputId = blindedOutputId
         self.runId = runId
         self.candidateId = candidateId
@@ -4674,7 +5058,7 @@ public struct PromptQualityObservation: Equatable, Hashable {
         self.outputTokenIdsSha256 = outputTokenIdsSha256
         self.rubricId = rubricId
         self.blindingManifestDigest = blindingManifestDigest
-        self.scorerIdentity = scorerIdentity
+        self.scorerIdentityDigest = scorerIdentityDigest
         self.scores = scores
         self.disposition = disposition
     }
@@ -4707,7 +5091,7 @@ public struct FfiConverterTypePromptQualityObservation: FfiConverterRustBuffer {
                 outputTokenIdsSha256: FfiConverterString.read(from: &buf), 
                 rubricId: FfiConverterString.read(from: &buf), 
                 blindingManifestDigest: FfiConverterString.read(from: &buf), 
-                scorerIdentity: FfiConverterString.read(from: &buf), 
+                scorerIdentityDigest: FfiConverterString.read(from: &buf), 
                 scores: FfiConverterTypeQualityPanel.read(from: &buf), 
                 disposition: FfiConverterTypeQualityDisposition.read(from: &buf)
         )
@@ -4726,7 +5110,7 @@ public struct FfiConverterTypePromptQualityObservation: FfiConverterRustBuffer {
         FfiConverterString.write(value.outputTokenIdsSha256, into: &buf)
         FfiConverterString.write(value.rubricId, into: &buf)
         FfiConverterString.write(value.blindingManifestDigest, into: &buf)
-        FfiConverterString.write(value.scorerIdentity, into: &buf)
+        FfiConverterString.write(value.scorerIdentityDigest, into: &buf)
         FfiConverterTypeQualityPanel.write(value.scores, into: &buf)
         FfiConverterTypeQualityDisposition.write(value.disposition, into: &buf)
     }
@@ -4935,42 +5319,55 @@ public func FfiConverterTypeProviderDescriptor_lower(_ value: ProviderDescriptor
 
 
 /**
- * Blinded quality scores, 0.0–1.0 per axis. The shell collects them; the
+ * Blinded quality scores, one per axis, as integer millionths in
+ * `0..=FIXED_POINT_SCALE` (so `800_000` is 0.8). The shell collects them; the
  * rubric that produced them is pinned by `quality_rubric_id`.
+ *
+ * v5 held these as `f64`. A scorer's mark is an ordinal judgement against a
+ * rubric — it was never a real number, and representing it as one bought
+ * nothing while making the aggregate compare inexactly against an exact
+ * margin. `NaN` and `Infinity` cease to be representable at all, which is
+ * why the malformed-panel checks below now have only one thing left to test.
  */
 public struct QualityPanel: Equatable, Hashable {
-    public var instructionAdherence: Double
-    public var requiredOutputStructure: Double
+    public var instructionAdherence: UInt32
+    public var requiredOutputStructure: UInt32
     /**
-     * Higher is better: 1.0 means nothing was invented.
+     * Higher is better: `FIXED_POINT_SCALE` means nothing was invented.
      */
-    public var avoidsUnsupportedInvention: Double
-    public var appropriateUncertainty: Double
+    public var avoidsUnsupportedInvention: UInt32
+    public var appropriateUncertainty: UInt32
     /**
-     * Higher is better: 1.0 means no false refusals.
+     * Higher is better: `FIXED_POINT_SCALE` means no false refusals.
      */
-    public var avoidsFalseRefusal: Double
-    public var substantivePositionRetention: Double
+    public var avoidsFalseRefusal: UInt32
+    public var substantivePositionRetention: UInt32
     /**
-     * Higher is better: 1.0 means no degenerate repetition.
+     * Higher is better: `FIXED_POINT_SCALE` means no degenerate repetition.
      */
-    public var avoidsRepetition: Double
-    public var truncationBehavior: Double
-    public var languagePreservation: Double
-    public var promptProfileFidelity: Double
+    public var avoidsRepetition: UInt32
+    public var truncationBehavior: UInt32
+    public var languagePreservation: UInt32
+    /**
+     * Fidelity to the prompt's declared `PromptContextProfile`.
+     */
+    public var promptProfileFidelity: UInt32
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(instructionAdherence: Double, requiredOutputStructure: Double, 
+    public init(instructionAdherence: UInt32, requiredOutputStructure: UInt32, 
         /**
-         * Higher is better: 1.0 means nothing was invented.
-         */avoidsUnsupportedInvention: Double, appropriateUncertainty: Double, 
+         * Higher is better: `FIXED_POINT_SCALE` means nothing was invented.
+         */avoidsUnsupportedInvention: UInt32, appropriateUncertainty: UInt32, 
         /**
-         * Higher is better: 1.0 means no false refusals.
-         */avoidsFalseRefusal: Double, substantivePositionRetention: Double, 
+         * Higher is better: `FIXED_POINT_SCALE` means no false refusals.
+         */avoidsFalseRefusal: UInt32, substantivePositionRetention: UInt32, 
         /**
-         * Higher is better: 1.0 means no degenerate repetition.
-         */avoidsRepetition: Double, truncationBehavior: Double, languagePreservation: Double, promptProfileFidelity: Double) {
+         * Higher is better: `FIXED_POINT_SCALE` means no degenerate repetition.
+         */avoidsRepetition: UInt32, truncationBehavior: UInt32, languagePreservation: UInt32, 
+        /**
+         * Fidelity to the prompt's declared `PromptContextProfile`.
+         */promptProfileFidelity: UInt32) {
         self.instructionAdherence = instructionAdherence
         self.requiredOutputStructure = requiredOutputStructure
         self.avoidsUnsupportedInvention = avoidsUnsupportedInvention
@@ -4999,30 +5396,30 @@ public struct FfiConverterTypeQualityPanel: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QualityPanel {
         return
             try QualityPanel(
-                instructionAdherence: FfiConverterDouble.read(from: &buf), 
-                requiredOutputStructure: FfiConverterDouble.read(from: &buf), 
-                avoidsUnsupportedInvention: FfiConverterDouble.read(from: &buf), 
-                appropriateUncertainty: FfiConverterDouble.read(from: &buf), 
-                avoidsFalseRefusal: FfiConverterDouble.read(from: &buf), 
-                substantivePositionRetention: FfiConverterDouble.read(from: &buf), 
-                avoidsRepetition: FfiConverterDouble.read(from: &buf), 
-                truncationBehavior: FfiConverterDouble.read(from: &buf), 
-                languagePreservation: FfiConverterDouble.read(from: &buf), 
-                promptProfileFidelity: FfiConverterDouble.read(from: &buf)
+                instructionAdherence: FfiConverterUInt32.read(from: &buf), 
+                requiredOutputStructure: FfiConverterUInt32.read(from: &buf), 
+                avoidsUnsupportedInvention: FfiConverterUInt32.read(from: &buf), 
+                appropriateUncertainty: FfiConverterUInt32.read(from: &buf), 
+                avoidsFalseRefusal: FfiConverterUInt32.read(from: &buf), 
+                substantivePositionRetention: FfiConverterUInt32.read(from: &buf), 
+                avoidsRepetition: FfiConverterUInt32.read(from: &buf), 
+                truncationBehavior: FfiConverterUInt32.read(from: &buf), 
+                languagePreservation: FfiConverterUInt32.read(from: &buf), 
+                promptProfileFidelity: FfiConverterUInt32.read(from: &buf)
         )
     }
 
     public static func write(_ value: QualityPanel, into buf: inout [UInt8]) {
-        FfiConverterDouble.write(value.instructionAdherence, into: &buf)
-        FfiConverterDouble.write(value.requiredOutputStructure, into: &buf)
-        FfiConverterDouble.write(value.avoidsUnsupportedInvention, into: &buf)
-        FfiConverterDouble.write(value.appropriateUncertainty, into: &buf)
-        FfiConverterDouble.write(value.avoidsFalseRefusal, into: &buf)
-        FfiConverterDouble.write(value.substantivePositionRetention, into: &buf)
-        FfiConverterDouble.write(value.avoidsRepetition, into: &buf)
-        FfiConverterDouble.write(value.truncationBehavior, into: &buf)
-        FfiConverterDouble.write(value.languagePreservation, into: &buf)
-        FfiConverterDouble.write(value.promptProfileFidelity, into: &buf)
+        FfiConverterUInt32.write(value.instructionAdherence, into: &buf)
+        FfiConverterUInt32.write(value.requiredOutputStructure, into: &buf)
+        FfiConverterUInt32.write(value.avoidsUnsupportedInvention, into: &buf)
+        FfiConverterUInt32.write(value.appropriateUncertainty, into: &buf)
+        FfiConverterUInt32.write(value.avoidsFalseRefusal, into: &buf)
+        FfiConverterUInt32.write(value.substantivePositionRetention, into: &buf)
+        FfiConverterUInt32.write(value.avoidsRepetition, into: &buf)
+        FfiConverterUInt32.write(value.truncationBehavior, into: &buf)
+        FfiConverterUInt32.write(value.languagePreservation, into: &buf)
+        FfiConverterUInt32.write(value.promptProfileFidelity, into: &buf)
     }
 }
 
@@ -6616,6 +7013,272 @@ public func FfiConverterTypeSupportEvidence_lower(_ value: SupportEvidence) -> R
 }
 
 
+/**
+ * One allowed cell of the taxonomy. The cross product is NOT permitted:
+ * most of the 42 combinations are meaningless, and a corpus that quietly
+ * contained them would be measuring something the protocol never declared.
+ */
+public struct TaskContextPair: Equatable, Hashable {
+    public var taskKind: BenchmarkTaskKind
+    public var contextProfile: PromptContextProfile
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(taskKind: BenchmarkTaskKind, contextProfile: PromptContextProfile) {
+        self.taskKind = taskKind
+        self.contextProfile = contextProfile
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TaskContextPair: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTaskContextPair: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TaskContextPair {
+        return
+            try TaskContextPair(
+                taskKind: FfiConverterTypeBenchmarkTaskKind.read(from: &buf), 
+                contextProfile: FfiConverterTypePromptContextProfile.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TaskContextPair, into buf: inout [UInt8]) {
+        FfiConverterTypeBenchmarkTaskKind.write(value.taskKind, into: &buf)
+        FfiConverterTypePromptContextProfile.write(value.contextProfile, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskContextPair_lift(_ buf: RustBuffer) throws -> TaskContextPair {
+    return try FfiConverterTypeTaskContextPair.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTaskContextPair_lower(_ value: TaskContextPair) -> RustBuffer {
+    return FfiConverterTypeTaskContextPair.lower(value)
+}
+
+
+/**
+ * The frozen v6 declaration: what the comparison means, fixed before any
+ * candidate is downloaded.
+ *
+ * Renamed from `EvaluationProtocol` because v6 is no longer only a protocol
+ * description — it embeds the corpus VALUE and the evaluator identities, and
+ * the name should say that the whole thing is the declaration under which a
+ * verdict is made.
+ */
+public struct V6Declaration: Equatable, Hashable {
+    public var protocolVersion: UInt32
+    /**
+     * v6: the corpus itself, by value. There is no digest parameter here or
+     * anywhere else — identity is derived from this field.
+     */
+    public var corpus: BenchmarkCorpus
+    /**
+     * v6: the exact quota map, hashed, so the effective weighting is part of
+     * what was frozen.
+     */
+    public var compositionPolicy: CorpusCompositionPolicy
+    /**
+     * A drift guard against `corpus`, kept from v3 for the same reason it
+     * existed then: a summary count that disagrees with the thing it
+     * summarizes is a defect worth failing on.
+     */
+    public var promptCount: UInt32
+    public var qualityRubricId: String
+    /**
+     * v6: exactly one scorer, checked.
+     */
+    public var scorerPolicy: ScorerPolicy
+    /**
+     * v6: which outputs are scored, enforced against corpus × seeds × plan.
+     */
+    public var selectionRule: QualitySelectionRule
+    /**
+     * v6: the evaluator's own versioned identities.
+     */
+    public var policies: EvaluatorPolicyIdentities
+    public var sampler: SamplerConfig
+    /**
+     * Frozen seeds; multiple, so one lucky sample cannot decide anything.
+     */
+    public var seeds: [UInt64]
+    public var warmupRuns: UInt32
+    public var timedRuns: UInt32
+    public var sustainedSeconds: UInt32
+    public var perRunTimeoutMs: UInt64
+    public var thresholds: PromotionThresholds
+    /**
+     * v2: the conditions a measurement is taken under. Absent in v1, which
+     * is why v1 could not support an honest battery or cold-load claim.
+     */
+    public var environment: RunEnvironment
+    /**
+     * v3: the exact run schedule, not merely the alternating property.
+     */
+    public var runPlan: [RunPlanEntry]
+    /**
+     * v5: which outputs are scored, declared rather than inferred.
+     */
+    public var qualityPlan: [QualityPlanEntry]
+    /**
+     * v5: the blinding manifest scorers worked under.
+     */
+    public var blindingManifestDigest: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(protocolVersion: UInt32, 
+        /**
+         * v6: the corpus itself, by value. There is no digest parameter here or
+         * anywhere else — identity is derived from this field.
+         */corpus: BenchmarkCorpus, 
+        /**
+         * v6: the exact quota map, hashed, so the effective weighting is part of
+         * what was frozen.
+         */compositionPolicy: CorpusCompositionPolicy, 
+        /**
+         * A drift guard against `corpus`, kept from v3 for the same reason it
+         * existed then: a summary count that disagrees with the thing it
+         * summarizes is a defect worth failing on.
+         */promptCount: UInt32, qualityRubricId: String, 
+        /**
+         * v6: exactly one scorer, checked.
+         */scorerPolicy: ScorerPolicy, 
+        /**
+         * v6: which outputs are scored, enforced against corpus × seeds × plan.
+         */selectionRule: QualitySelectionRule, 
+        /**
+         * v6: the evaluator's own versioned identities.
+         */policies: EvaluatorPolicyIdentities, sampler: SamplerConfig, 
+        /**
+         * Frozen seeds; multiple, so one lucky sample cannot decide anything.
+         */seeds: [UInt64], warmupRuns: UInt32, timedRuns: UInt32, sustainedSeconds: UInt32, perRunTimeoutMs: UInt64, thresholds: PromotionThresholds, 
+        /**
+         * v2: the conditions a measurement is taken under. Absent in v1, which
+         * is why v1 could not support an honest battery or cold-load claim.
+         */environment: RunEnvironment, 
+        /**
+         * v3: the exact run schedule, not merely the alternating property.
+         */runPlan: [RunPlanEntry], 
+        /**
+         * v5: which outputs are scored, declared rather than inferred.
+         */qualityPlan: [QualityPlanEntry], 
+        /**
+         * v5: the blinding manifest scorers worked under.
+         */blindingManifestDigest: String) {
+        self.protocolVersion = protocolVersion
+        self.corpus = corpus
+        self.compositionPolicy = compositionPolicy
+        self.promptCount = promptCount
+        self.qualityRubricId = qualityRubricId
+        self.scorerPolicy = scorerPolicy
+        self.selectionRule = selectionRule
+        self.policies = policies
+        self.sampler = sampler
+        self.seeds = seeds
+        self.warmupRuns = warmupRuns
+        self.timedRuns = timedRuns
+        self.sustainedSeconds = sustainedSeconds
+        self.perRunTimeoutMs = perRunTimeoutMs
+        self.thresholds = thresholds
+        self.environment = environment
+        self.runPlan = runPlan
+        self.qualityPlan = qualityPlan
+        self.blindingManifestDigest = blindingManifestDigest
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension V6Declaration: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeV6Declaration: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> V6Declaration {
+        return
+            try V6Declaration(
+                protocolVersion: FfiConverterUInt32.read(from: &buf), 
+                corpus: FfiConverterTypeBenchmarkCorpus.read(from: &buf), 
+                compositionPolicy: FfiConverterTypeCorpusCompositionPolicy.read(from: &buf), 
+                promptCount: FfiConverterUInt32.read(from: &buf), 
+                qualityRubricId: FfiConverterString.read(from: &buf), 
+                scorerPolicy: FfiConverterTypeScorerPolicy.read(from: &buf), 
+                selectionRule: FfiConverterTypeQualitySelectionRule.read(from: &buf), 
+                policies: FfiConverterTypeEvaluatorPolicyIdentities.read(from: &buf), 
+                sampler: FfiConverterTypeSamplerConfig.read(from: &buf), 
+                seeds: FfiConverterSequenceUInt64.read(from: &buf), 
+                warmupRuns: FfiConverterUInt32.read(from: &buf), 
+                timedRuns: FfiConverterUInt32.read(from: &buf), 
+                sustainedSeconds: FfiConverterUInt32.read(from: &buf), 
+                perRunTimeoutMs: FfiConverterUInt64.read(from: &buf), 
+                thresholds: FfiConverterTypePromotionThresholds.read(from: &buf), 
+                environment: FfiConverterTypeRunEnvironment.read(from: &buf), 
+                runPlan: FfiConverterSequenceTypeRunPlanEntry.read(from: &buf), 
+                qualityPlan: FfiConverterSequenceTypeQualityPlanEntry.read(from: &buf), 
+                blindingManifestDigest: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: V6Declaration, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.protocolVersion, into: &buf)
+        FfiConverterTypeBenchmarkCorpus.write(value.corpus, into: &buf)
+        FfiConverterTypeCorpusCompositionPolicy.write(value.compositionPolicy, into: &buf)
+        FfiConverterUInt32.write(value.promptCount, into: &buf)
+        FfiConverterString.write(value.qualityRubricId, into: &buf)
+        FfiConverterTypeScorerPolicy.write(value.scorerPolicy, into: &buf)
+        FfiConverterTypeQualitySelectionRule.write(value.selectionRule, into: &buf)
+        FfiConverterTypeEvaluatorPolicyIdentities.write(value.policies, into: &buf)
+        FfiConverterTypeSamplerConfig.write(value.sampler, into: &buf)
+        FfiConverterSequenceUInt64.write(value.seeds, into: &buf)
+        FfiConverterUInt32.write(value.warmupRuns, into: &buf)
+        FfiConverterUInt32.write(value.timedRuns, into: &buf)
+        FfiConverterUInt32.write(value.sustainedSeconds, into: &buf)
+        FfiConverterUInt64.write(value.perRunTimeoutMs, into: &buf)
+        FfiConverterTypePromotionThresholds.write(value.thresholds, into: &buf)
+        FfiConverterTypeRunEnvironment.write(value.environment, into: &buf)
+        FfiConverterSequenceTypeRunPlanEntry.write(value.runPlan, into: &buf)
+        FfiConverterSequenceTypeQualityPlanEntry.write(value.qualityPlan, into: &buf)
+        FfiConverterString.write(value.blindingManifestDigest, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeV6Declaration_lift(_ buf: RustBuffer) throws -> V6Declaration {
+    return try FfiConverterTypeV6Declaration.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeV6Declaration_lower(_ value: V6Declaration) -> RustBuffer {
+    return FfiConverterTypeV6Declaration.lower(value)
+}
+
+
 public struct VerifiedArtifact: Equatable, Hashable {
     public var artifactId: String
     public var relativePath: String
@@ -6885,6 +7548,13 @@ public enum AdmissionFailure: Equatable, Hashable {
     )
     case unknownPromptId(promptId: String
     )
+    /**
+     * v6: the result labelled a prompt with a different task kind or context
+     * profile than the frozen corpus gives it. Relabelling changes which
+     * benchmark item was answered.
+     */
+    case promptTaxonomyMismatch(promptId: String
+    )
     case renderedPromptMismatch(promptId: String
     )
     case inputTokenMismatch(promptId: String
@@ -6946,43 +7616,46 @@ public struct FfiConverterTypeAdmissionFailure: FfiConverterRustBuffer {
         case 7: return .unknownPromptId(promptId: try FfiConverterString.read(from: &buf)
         )
         
-        case 8: return .renderedPromptMismatch(promptId: try FfiConverterString.read(from: &buf)
+        case 8: return .promptTaxonomyMismatch(promptId: try FfiConverterString.read(from: &buf)
         )
         
-        case 9: return .inputTokenMismatch(promptId: try FfiConverterString.read(from: &buf)
+        case 9: return .renderedPromptMismatch(promptId: try FfiConverterString.read(from: &buf)
         )
         
-        case 10: return .runLedgerMismatch(reason: try FfiConverterString.read(from: &buf)
+        case 10: return .inputTokenMismatch(promptId: try FfiConverterString.read(from: &buf)
         )
         
-        case 11: return .coldEvidenceMissing(runId: try FfiConverterString.read(from: &buf)
+        case 11: return .runLedgerMismatch(reason: try FfiConverterString.read(from: &buf)
         )
         
-        case 12: return .environmentDeviation(reason: try FfiConverterString.read(from: &buf)
+        case 12: return .coldEvidenceMissing(runId: try FfiConverterString.read(from: &buf)
         )
         
-        case 13: return .missingConversionRecord
-        
-        case 14: return .unexpectedConversionRecord
-        
-        case 15: return .requantizationNotAllowed
-        
-        case 16: return .thinkingModeNotDisabled
-        
-        case 17: return .tokenizerIdentityMismatch
-        
-        case 18: return .chatTemplateIdentityMismatch
-        
-        case 19: return .semanticPromptMismatch
-        
-        case 20: return .malformedQualityPanel
-        
-        case 21: return .qualityLedgerRejected(reason: try FfiConverterString.read(from: &buf)
+        case 13: return .environmentDeviation(reason: try FfiConverterString.read(from: &buf)
         )
         
-        case 22: return .thermallyThrottled
+        case 14: return .missingConversionRecord
         
-        case 23: return .disqualified(reason: try FfiConverterString.read(from: &buf)
+        case 15: return .unexpectedConversionRecord
+        
+        case 16: return .requantizationNotAllowed
+        
+        case 17: return .thinkingModeNotDisabled
+        
+        case 18: return .tokenizerIdentityMismatch
+        
+        case 19: return .chatTemplateIdentityMismatch
+        
+        case 20: return .semanticPromptMismatch
+        
+        case 21: return .malformedQualityPanel
+        
+        case 22: return .qualityLedgerRejected(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 23: return .thermallyThrottled
+        
+        case 24: return .disqualified(reason: try FfiConverterString.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -7024,74 +7697,79 @@ public struct FfiConverterTypeAdmissionFailure: FfiConverterRustBuffer {
             FfiConverterString.write(promptId, into: &buf)
             
         
-        case let .renderedPromptMismatch(promptId):
+        case let .promptTaxonomyMismatch(promptId):
             writeInt(&buf, Int32(8))
             FfiConverterString.write(promptId, into: &buf)
             
         
-        case let .inputTokenMismatch(promptId):
+        case let .renderedPromptMismatch(promptId):
             writeInt(&buf, Int32(9))
             FfiConverterString.write(promptId, into: &buf)
             
         
-        case let .runLedgerMismatch(reason):
+        case let .inputTokenMismatch(promptId):
             writeInt(&buf, Int32(10))
+            FfiConverterString.write(promptId, into: &buf)
+            
+        
+        case let .runLedgerMismatch(reason):
+            writeInt(&buf, Int32(11))
             FfiConverterString.write(reason, into: &buf)
             
         
         case let .coldEvidenceMissing(runId):
-            writeInt(&buf, Int32(11))
+            writeInt(&buf, Int32(12))
             FfiConverterString.write(runId, into: &buf)
             
         
         case let .environmentDeviation(reason):
-            writeInt(&buf, Int32(12))
+            writeInt(&buf, Int32(13))
             FfiConverterString.write(reason, into: &buf)
             
         
         case .missingConversionRecord:
-            writeInt(&buf, Int32(13))
-        
-        
-        case .unexpectedConversionRecord:
             writeInt(&buf, Int32(14))
         
         
-        case .requantizationNotAllowed:
+        case .unexpectedConversionRecord:
             writeInt(&buf, Int32(15))
         
         
-        case .thinkingModeNotDisabled:
+        case .requantizationNotAllowed:
             writeInt(&buf, Int32(16))
         
         
-        case .tokenizerIdentityMismatch:
+        case .thinkingModeNotDisabled:
             writeInt(&buf, Int32(17))
         
         
-        case .chatTemplateIdentityMismatch:
+        case .tokenizerIdentityMismatch:
             writeInt(&buf, Int32(18))
         
         
-        case .semanticPromptMismatch:
+        case .chatTemplateIdentityMismatch:
             writeInt(&buf, Int32(19))
         
         
-        case .malformedQualityPanel:
+        case .semanticPromptMismatch:
             writeInt(&buf, Int32(20))
         
         
-        case let .qualityLedgerRejected(reason):
+        case .malformedQualityPanel:
             writeInt(&buf, Int32(21))
+        
+        
+        case let .qualityLedgerRejected(reason):
+            writeInt(&buf, Int32(22))
             FfiConverterString.write(reason, into: &buf)
             
         
         case .thermallyThrottled:
-            writeInt(&buf, Int32(22))
+            writeInt(&buf, Int32(23))
         
         
         case let .disqualified(reason):
-            writeInt(&buf, Int32(23))
+            writeInt(&buf, Int32(24))
             FfiConverterString.write(reason, into: &buf)
             
         }
@@ -7443,6 +8121,110 @@ public func FfiConverterTypeBatteryEvidencePolicy_lift(_ buf: RustBuffer) throws
 #endif
 public func FfiConverterTypeBatteryEvidencePolicy_lower(_ value: BatteryEvidencePolicy) -> RustBuffer {
     return FfiConverterTypeBatteryEvidencePolicy.lower(value)
+}
+
+
+
+/**
+ * What operation the prompt asks for.
+ */
+
+public enum BenchmarkTaskKind: Equatable, Hashable {
+    
+    case summarization
+    case structuredExtraction
+    case substantiveRewrite
+    case reflectiveDialogue
+    case dreamAnalysis
+    case instructionRendering
+    case disclosure
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension BenchmarkTaskKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBenchmarkTaskKind: FfiConverterRustBuffer {
+    typealias SwiftType = BenchmarkTaskKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BenchmarkTaskKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .summarization
+        
+        case 2: return .structuredExtraction
+        
+        case 3: return .substantiveRewrite
+        
+        case 4: return .reflectiveDialogue
+        
+        case 5: return .dreamAnalysis
+        
+        case 6: return .instructionRendering
+        
+        case 7: return .disclosure
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: BenchmarkTaskKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .summarization:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .structuredExtraction:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .substantiveRewrite:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .reflectiveDialogue:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .dreamAnalysis:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .instructionRendering:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .disclosure:
+            writeInt(&buf, Int32(7))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBenchmarkTaskKind_lift(_ buf: RustBuffer) throws -> BenchmarkTaskKind {
+    return try FfiConverterTypeBenchmarkTaskKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBenchmarkTaskKind_lower(_ value: BenchmarkTaskKind) -> RustBuffer {
+    return FfiConverterTypeBenchmarkTaskKind.lower(value)
 }
 
 
@@ -9282,19 +10064,23 @@ public enum PromotionVerdict: Equatable, Hashable {
     /**
      * One candidate is promotable as the mobile default.
      */
-    case promote(candidateId: String, qualityScore: Double, margin: Double
+    case promote(candidateId: String, qualityScore: ExactMillionths, margin: ExactMillionths, 
+        /**
+         * Which evaluator produced this. `protocol_version` alone does not
+         * say how the data was interpreted.
+         */policies: EvaluatorPolicyIdentities
     )
     /**
      * Both are admissible and both pass, but neither is materially better —
      * a split (Basic / Enhanced) is the honest outcome.
      */
-    case splitTiers(basicCandidateId: String, enhancedCandidateId: String
+    case splitTiers(basicCandidateId: String, enhancedCandidateId: String, policies: EvaluatorPolicyIdentities
     )
     /**
      * Nothing is promoted. This is a legitimate result, not a failure to
      * decide.
      */
-    case promoteNothing(reason: String
+    case promoteNothing(reason: String, policies: EvaluatorPolicyIdentities
     )
 
 
@@ -9317,13 +10103,13 @@ public struct FfiConverterTypePromotionVerdict: FfiConverterRustBuffer {
         let variant: Int32 = try readInt(&buf)
         switch variant {
         
-        case 1: return .promote(candidateId: try FfiConverterString.read(from: &buf), qualityScore: try FfiConverterDouble.read(from: &buf), margin: try FfiConverterDouble.read(from: &buf)
+        case 1: return .promote(candidateId: try FfiConverterString.read(from: &buf), qualityScore: try FfiConverterTypeExactMillionths.read(from: &buf), margin: try FfiConverterTypeExactMillionths.read(from: &buf), policies: try FfiConverterTypeEvaluatorPolicyIdentities.read(from: &buf)
         )
         
-        case 2: return .splitTiers(basicCandidateId: try FfiConverterString.read(from: &buf), enhancedCandidateId: try FfiConverterString.read(from: &buf)
+        case 2: return .splitTiers(basicCandidateId: try FfiConverterString.read(from: &buf), enhancedCandidateId: try FfiConverterString.read(from: &buf), policies: try FfiConverterTypeEvaluatorPolicyIdentities.read(from: &buf)
         )
         
-        case 3: return .promoteNothing(reason: try FfiConverterString.read(from: &buf)
+        case 3: return .promoteNothing(reason: try FfiConverterString.read(from: &buf), policies: try FfiConverterTypeEvaluatorPolicyIdentities.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -9334,22 +10120,25 @@ public struct FfiConverterTypePromotionVerdict: FfiConverterRustBuffer {
         switch value {
         
         
-        case let .promote(candidateId,qualityScore,margin):
+        case let .promote(candidateId,qualityScore,margin,policies):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(candidateId, into: &buf)
-            FfiConverterDouble.write(qualityScore, into: &buf)
-            FfiConverterDouble.write(margin, into: &buf)
+            FfiConverterTypeExactMillionths.write(qualityScore, into: &buf)
+            FfiConverterTypeExactMillionths.write(margin, into: &buf)
+            FfiConverterTypeEvaluatorPolicyIdentities.write(policies, into: &buf)
             
         
-        case let .splitTiers(basicCandidateId,enhancedCandidateId):
+        case let .splitTiers(basicCandidateId,enhancedCandidateId,policies):
             writeInt(&buf, Int32(2))
             FfiConverterString.write(basicCandidateId, into: &buf)
             FfiConverterString.write(enhancedCandidateId, into: &buf)
+            FfiConverterTypeEvaluatorPolicyIdentities.write(policies, into: &buf)
             
         
-        case let .promoteNothing(reason):
+        case let .promoteNothing(reason,policies):
             writeInt(&buf, Int32(3))
             FfiConverterString.write(reason, into: &buf)
+            FfiConverterTypeEvaluatorPolicyIdentities.write(policies, into: &buf)
             
         }
     }
@@ -9368,6 +10157,105 @@ public func FfiConverterTypePromotionVerdict_lift(_ buf: RustBuffer) throws -> P
 #endif
 public func FfiConverterTypePromotionVerdict_lower(_ value: PromotionVerdict) -> RustBuffer {
     return FfiConverterTypePromotionVerdict.lower(value)
+}
+
+
+
+/**
+ * The interaction context the operation is performed in. Named
+ * `PromptContextProfile` rather than `…PresentationProfile` because several
+ * values are functional or safety contexts, not presentation styles.
+ */
+
+public enum PromptContextProfile: Equatable, Hashable {
+    
+    case neutral
+    case hypnagogic
+    case mindfulnessObservation
+    case returnToTask
+    case stopAndDebrief
+    case privacy
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PromptContextProfile: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePromptContextProfile: FfiConverterRustBuffer {
+    typealias SwiftType = PromptContextProfile
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PromptContextProfile {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .neutral
+        
+        case 2: return .hypnagogic
+        
+        case 3: return .mindfulnessObservation
+        
+        case 4: return .returnToTask
+        
+        case 5: return .stopAndDebrief
+        
+        case 6: return .privacy
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PromptContextProfile, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .neutral:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .hypnagogic:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .mindfulnessObservation:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .returnToTask:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .stopAndDebrief:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .privacy:
+            writeInt(&buf, Int32(6))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePromptContextProfile_lift(_ buf: RustBuffer) throws -> PromptContextProfile {
+    return try FfiConverterTypePromptContextProfile.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePromptContextProfile_lower(_ value: PromptContextProfile) -> RustBuffer {
+    return FfiConverterTypePromptContextProfile.lower(value)
 }
 
 
@@ -9743,6 +10631,17 @@ public enum QualityAdmissionFailure: Equatable, Hashable {
     )
     case malformedScores(blindedOutputId: String
     )
+    /**
+     * v6: this mark was not made by the scorer the declaration names. Two
+     * distinct digests anywhere in one ledger reach this.
+     */
+    case scorerIdentityMismatch(blindedOutputId: String
+    )
+    /**
+     * The exact aggregation could not be represented. Unreachable from a
+     * valid panel; refused rather than wrapped.
+     */
+    case inexpressibleAggregate
 
 
 
@@ -9785,6 +10684,11 @@ public struct FfiConverterTypeQualityAdmissionFailure: FfiConverterRustBuffer {
         
         case 8: return .malformedScores(blindedOutputId: try FfiConverterString.read(from: &buf)
         )
+        
+        case 9: return .scorerIdentityMismatch(blindedOutputId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 10: return .inexpressibleAggregate
         
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -9831,6 +10735,15 @@ public struct FfiConverterTypeQualityAdmissionFailure: FfiConverterRustBuffer {
             writeInt(&buf, Int32(8))
             FfiConverterString.write(blindedOutputId, into: &buf)
             
+        
+        case let .scorerIdentityMismatch(blindedOutputId):
+            writeInt(&buf, Int32(9))
+            FfiConverterString.write(blindedOutputId, into: &buf)
+            
+        
+        case .inexpressibleAggregate:
+            writeInt(&buf, Int32(10))
+        
         }
     }
 }
@@ -9855,7 +10768,7 @@ public func FfiConverterTypeQualityAdmissionFailure_lower(_ value: QualityAdmiss
 
 public enum QualityDerivation: Equatable, Hashable {
     
-    case derived(panel: QualityPanel
+    case derived(panel: DerivedQualityPanel
     )
     case rejected(failure: QualityAdmissionFailure
     )
@@ -9880,7 +10793,7 @@ public struct FfiConverterTypeQualityDerivation: FfiConverterRustBuffer {
         let variant: Int32 = try readInt(&buf)
         switch variant {
         
-        case 1: return .derived(panel: try FfiConverterTypeQualityPanel.read(from: &buf)
+        case 1: return .derived(panel: try FfiConverterTypeDerivedQualityPanel.read(from: &buf)
         )
         
         case 2: return .rejected(failure: try FfiConverterTypeQualityAdmissionFailure.read(from: &buf)
@@ -9896,7 +10809,7 @@ public struct FfiConverterTypeQualityDerivation: FfiConverterRustBuffer {
         
         case let .derived(panel):
             writeInt(&buf, Int32(1))
-            FfiConverterTypeQualityPanel.write(panel, into: &buf)
+            FfiConverterTypeDerivedQualityPanel.write(panel, into: &buf)
             
         
         case let .rejected(failure):
@@ -10021,6 +10934,79 @@ public func FfiConverterTypeQualityDisposition_lift(_ buf: RustBuffer) throws ->
 #endif
 public func FfiConverterTypeQualityDisposition_lower(_ value: QualityDisposition) -> RustBuffer {
     return FfiConverterTypeQualityDisposition.lower(value)
+}
+
+
+
+/**
+ * Which outputs are eligible to be scored. Enforced against the corpus, the
+ * frozen seeds and the run plan — not merely declared.
+ */
+
+public enum QualitySelectionRule: Equatable, Hashable {
+    
+    /**
+     * Exactly one scored output per candidate × frozen prompt × frozen seed,
+     * drawn from that seed's `Warm` run and cross-referenced against the
+     * unique matching `run_plan` slot.
+     *
+     * v5 validated the plan for non-emptiness and candidate consistency and
+     * nothing more, so a plan could silently score one prompt twice and
+     * another never, and the equal-prompt macro rule would then be averaging
+     * a set nobody declared.
+     */
+    case exactlyOncePerCandidatePromptSeedFromWarm
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension QualitySelectionRule: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeQualitySelectionRule: FfiConverterRustBuffer {
+    typealias SwiftType = QualitySelectionRule
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QualitySelectionRule {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .exactlyOncePerCandidatePromptSeedFromWarm
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: QualitySelectionRule, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .exactlyOncePerCandidatePromptSeedFromWarm:
+            writeInt(&buf, Int32(1))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualitySelectionRule_lift(_ buf: RustBuffer) throws -> QualitySelectionRule {
+    return try FfiConverterTypeQualitySelectionRule.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeQualitySelectionRule_lower(_ value: QualitySelectionRule) -> RustBuffer {
+    return FfiConverterTypeQualitySelectionRule.lower(value)
 }
 
 
@@ -10950,6 +11936,83 @@ public func FfiConverterTypeRuntimeSelection_lower(_ value: RuntimeSelection) ->
 
 
 
+/**
+ * How many scorers stand behind a mark, and who. v5 carried
+ * `scorer_identity` as a free `String` on each observation and never checked
+ * it, so one ledger could mix raters and still average cleanly.
+ */
+
+public enum ScorerPolicy: Equatable, Hashable {
+    
+    /**
+     * The only form v6 admits. Every observation in both ledgers must carry
+     * this exact digest.
+     *
+     * Multi-scorer semantics are deferred rather than guessed: they need
+     * settled answers on coverage, missing raters, weighting, aggregation
+     * order, disagreement, replacement and recusal, and whether inter-rater
+     * reliability is descriptive or promotion-critical. No study here
+     * requires any of them yet, so specifying them now would be invention.
+     */
+    case singleScorer(scorerIdentityDigest: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ScorerPolicy: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeScorerPolicy: FfiConverterRustBuffer {
+    typealias SwiftType = ScorerPolicy
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ScorerPolicy {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .singleScorer(scorerIdentityDigest: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ScorerPolicy, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .singleScorer(scorerIdentityDigest):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(scorerIdentityDigest, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeScorerPolicy_lift(_ buf: RustBuffer) throws -> ScorerPolicy {
+    return try FfiConverterTypeScorerPolicy.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeScorerPolicy_lower(_ value: ScorerPolicy) -> RustBuffer {
+    return FfiConverterTypeScorerPolicy.lower(value)
+}
+
+
+
 
 public enum SelectionFailure: Equatable, Hashable {
     
@@ -11715,6 +12778,30 @@ fileprivate struct FfiConverterOptionTypeEventSpan: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeExactMillionths: FfiConverterRustBuffer {
+    typealias SwiftType = ExactMillionths?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeExactMillionths.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeExactMillionths.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeGenerationContract: FfiConverterRustBuffer {
     typealias SwiftType = GenerationContract?
 
@@ -12057,6 +13144,31 @@ fileprivate struct FfiConverterSequenceTypeBenchmarkPrompt: FfiConverterRustBuff
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeCorpusPrompt: FfiConverterRustBuffer {
+    typealias SwiftType = [CorpusPrompt]
+
+    public static func write(_ value: [CorpusPrompt], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCorpusPrompt.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CorpusPrompt] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CorpusPrompt]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCorpusPrompt.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeExpectedPrompt: FfiConverterRustBuffer {
     typealias SwiftType = [ExpectedPrompt]
 
@@ -12224,6 +13336,31 @@ fileprivate struct FfiConverterSequenceTypeObservedArtifact: FfiConverterRustBuf
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeObservedArtifact.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePairQuota: FfiConverterRustBuffer {
+    typealias SwiftType = [PairQuota]
+
+    public static func write(_ value: [PairQuota], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePairQuota.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PairQuota] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PairQuota]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePairQuota.read(from: &buf))
         }
         return seq
     }
@@ -12482,6 +13619,31 @@ fileprivate struct FfiConverterSequenceTypeRuntimeLibrary: FfiConverterRustBuffe
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeTaskContextPair: FfiConverterRustBuffer {
+    typealias SwiftType = [TaskContextPair]
+
+    public static func write(_ value: [TaskContextPair], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeTaskContextPair.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TaskContextPair] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [TaskContextPair]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeTaskContextPair.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeVerifiedArtifact: FfiConverterRustBuffer {
     typealias SwiftType = [VerifiedArtifact]
 
@@ -12714,13 +13876,23 @@ public func variantBindsToContract(variant: ModelVariant, policy: BackendConform
  * Callers should not need to remember to call this — `evaluate_promotion`
  * runs it internally, and there is no promotion path that skips it.
  */
-public func admitResult(result: CandidateResult, candidate: EvaluationCandidate, `protocol`: EvaluationProtocol) -> AdmissionFailure?  {
+public func admitResult(result: CandidateResult, candidate: EvaluationCandidate, `protocol`: V6Declaration) -> AdmissionFailure?  {
     return try!  FfiConverterOptionTypeAdmissionFailure.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_admit_result(
         FfiConverterTypeCandidateResult_lower(result),
         FfiConverterTypeEvaluationCandidate_lower(candidate),
-        FfiConverterTypeEvaluationProtocol_lower(`protocol`),uniffiCallStatus
+        FfiConverterTypeV6Declaration_lower(`protocol`),uniffiCallStatus
+    )
+})
+}
+/**
+ * The canonical allowed matrix as records.
+ */
+public func allowedTaskContextPairs() -> [TaskContextPair]  {
+    return try!  FfiConverterSequenceTypeTaskContextPair.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_allowed_task_context_pairs(uniffiCallStatus
     )
 })
 }
@@ -12742,6 +13914,32 @@ public func candidateIdentity(candidate: EvaluationCandidate) -> String  {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_candidate_identity(
         FfiConverterTypeEvaluationCandidate_lower(candidate),uniffiCallStatus
+    )
+})
+}
+/**
+ * The same derivation across the FFI boundary, where an owned argument is
+ * required. A shell needs this to fill in the prompt identities on a result;
+ * it computes them from corpus content and cannot be told what they are.
+ */
+public func corpusExpectedPrompts(corpus: BenchmarkCorpus) -> [ExpectedPrompt]  {
+    return try!  FfiConverterSequenceTypeExpectedPrompt.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_corpus_expected_prompts(
+        FfiConverterTypeBenchmarkCorpus_lower(corpus),uniffiCallStatus
+    )
+})
+}
+/**
+ * Canonical corpus identity, derived from content. Reordering, renaming or
+ * editing any prompt — or changing either taxonomy axis on one — yields a
+ * different corpus and therefore a different declaration.
+ */
+public func corpusIdentity(corpus: BenchmarkCorpus) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_corpus_identity(
+        FfiConverterTypeBenchmarkCorpus_lower(corpus),uniffiCallStatus
     )
 })
 }
@@ -12773,13 +13971,25 @@ public func deriveCostObservation(observations: [RunObservation], installedBytes
  * length, token count, run count or prompt frequency — so a prompt with more
  * observations cannot dominate the candidate score.
  */
-public func deriveQualityPanel(`protocol`: EvaluationProtocol, candidate: EvaluationCandidate, observations: [PromptQualityObservation]) -> QualityDerivation  {
+public func deriveQualityPanel(`protocol`: V6Declaration, candidate: EvaluationCandidate, observations: [PromptQualityObservation]) -> QualityDerivation  {
     return try!  FfiConverterTypeQualityDerivation_lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_derive_quality_panel(
-        FfiConverterTypeEvaluationProtocol_lower(`protocol`),
+        FfiConverterTypeV6Declaration_lower(`protocol`),
         FfiConverterTypeEvaluationCandidate_lower(candidate),
         FfiConverterSequenceTypePromptQualityObservation.lower(observations),uniffiCallStatus
+    )
+})
+}
+/**
+ * Mean of the ten derived axes, exactly. Every axis shares one denominator by
+ * construction, but this does not assume it.
+ */
+public func derivedQualityScore(panel: DerivedQualityPanel) -> ExactMillionths?  {
+    return try!  FfiConverterOptionTypeExactMillionths.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_derived_quality_score(
+        FfiConverterTypeDerivedQualityPanel_lower(panel),uniffiCallStatus
     )
 })
 }
@@ -12793,11 +14003,11 @@ public func deriveQualityPanel(`protocol`: EvaluationProtocol, candidate: Evalua
  * other by a material margin or the honest outcome is a tier split; and both
  * failing promotes nothing.
  */
-public func evaluatePromotion(`protocol`: EvaluationProtocol, candidateA: EvaluationCandidate, resultA: CandidateResult, candidateB: EvaluationCandidate, resultB: CandidateResult) -> PromotionVerdict  {
+public func evaluatePromotion(`protocol`: V6Declaration, candidateA: EvaluationCandidate, resultA: CandidateResult, candidateB: EvaluationCandidate, resultB: CandidateResult) -> PromotionVerdict  {
     return try!  FfiConverterTypePromotionVerdict_lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_evaluate_promotion(
-        FfiConverterTypeEvaluationProtocol_lower(`protocol`),
+        FfiConverterTypeV6Declaration_lower(`protocol`),
         FfiConverterTypeEvaluationCandidate_lower(candidateA),
         FfiConverterTypeCandidateResult_lower(resultA),
         FfiConverterTypeEvaluationCandidate_lower(candidateB),
@@ -12806,16 +14016,46 @@ public func evaluatePromotion(`protocol`: EvaluationProtocol, candidateA: Evalua
 })
 }
 /**
- * Canonical protocol identity. Any change to the corpus, rubric, sampler,
- * seeds, run counts, or thresholds yields a different protocol — so a
- * threshold cannot be relaxed after seeing results while still claiming the
- * same protocol.
+ * v6-1's composition: two prompts per allowed pair.
+ *
+ * Equal counts per PAIR is the choice, and its consequence is stated rather
+ * than hidden: because `InstructionRendering` appears in three contexts, it
+ * carries 6 of 18 prompts and therefore a third of the macro weight. That is
+ * deliberate — instruction rendering under mindfulness, return-to-task and
+ * stop-and-debrief is where a wrong output actually reaches someone mid
+ * practice. If unequal importance is wanted later, introduce declared
+ * fixed-point task weights; never manipulate prompt counts implicitly.
  */
-public func evaluationProtocolIdentity(`protocol`: EvaluationProtocol) -> String  {
-    return try!  FfiConverterString.lift(try! rustCall() {
+public func frozenCompositionPolicyV1() -> CorpusCompositionPolicy  {
+    return try!  FfiConverterTypeCorpusCompositionPolicy_lift(try! rustCall() {
         uniffiCallStatus in
-    uniffi_neuralcompose_mobile_core_fn_func_evaluation_protocol_identity(
-        FfiConverterTypeEvaluationProtocol_lower(`protocol`),uniffiCallStatus
+    uniffi_neuralcompose_mobile_core_fn_func_frozen_composition_policy_v1(uniffiCallStatus
+    )
+})
+}
+/**
+ * The corpus this build owns. Parsing cannot fail on a committed artifact
+ * that a test proves parses; a panic here would mean the compiled-in bytes
+ * are not the reviewed ones, which is not a recoverable condition.
+ *
+ * Exported: a shell has to be able to OBTAIN the frozen corpus, or it cannot
+ * build a valid declaration at all. Note the direction — this hands the
+ * corpus out, it never takes one in, so it is not an injection point.
+ */
+public func frozenCorpusV1() -> BenchmarkCorpus  {
+    return try!  FfiConverterTypeBenchmarkCorpus_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_frozen_corpus_v1(uniffiCallStatus
+    )
+})
+}
+/**
+ * The five identities this build implements.
+ */
+public func frozenPolicyIdentitiesV6() -> EvaluatorPolicyIdentities  {
+    return try!  FfiConverterTypeEvaluatorPolicyIdentities_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_frozen_policy_identities_v6(uniffiCallStatus
     )
 })
 }
@@ -12829,11 +14069,12 @@ public func meetsThresholds(cost: CostObservation, t: PromotionThresholds) -> [S
 })
 }
 /**
- * Mean of the ten axes, or `None` if any axis is outside 0.0–1.0 or
- * non-finite — a malformed panel scores nothing rather than something.
+ * Mean of the ten raw axes, or `None` if any axis exceeds
+ * `FIXED_POINT_SCALE` — a malformed panel scores nothing rather than
+ * something.
  */
-public func qualityScore(panel: QualityPanel) -> Double?  {
-    return try!  FfiConverterOptionDouble.lift(try! rustCall() {
+public func qualityScore(panel: QualityPanel) -> ExactMillionths?  {
+    return try!  FfiConverterOptionTypeExactMillionths.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_quality_score(
         FfiConverterTypeQualityPanel_lower(panel),uniffiCallStatus
@@ -12848,24 +14089,32 @@ public func renderedPromptHash(rendered: String) -> String  {
     )
 })
 }
-public func semanticPromptHash(promptProfile: String, message: String) -> String  {
+/**
+ * v6: BOTH axes enter the semantic identity. Two prompts with the same words
+ * under different contexts are different benchmark items — averaging them
+ * together would be averaging two different questions.
+ */
+public func semanticPromptHash(taskKind: BenchmarkTaskKind, contextProfile: PromptContextProfile, message: String) -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_semantic_prompt_hash(
-        FfiConverterString.lower(promptProfile),
+        FfiConverterTypeBenchmarkTaskKind_lower(taskKind),
+        FfiConverterTypePromptContextProfile_lower(contextProfile),
         FfiConverterString.lower(message),uniffiCallStatus
     )
 })
 }
 /**
- * v3: hashing an invalid protocol does not make it valid. Admission and
- * promotion both run this first.
+ * Canonical declaration identity. Any change to the corpus, quota map,
+ * evaluator policy identities, rubric, sampler, seeds, run counts or
+ * thresholds yields a different declaration — so a threshold cannot be
+ * relaxed after seeing results while still claiming the same study.
  */
-public func validateEvaluationProtocol(`protocol`: EvaluationProtocol) -> [String]  {
-    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+public func v6DeclarationIdentity(declaration: V6Declaration) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
         uniffiCallStatus in
-    uniffi_neuralcompose_mobile_core_fn_func_validate_evaluation_protocol(
-        FfiConverterTypeEvaluationProtocol_lower(`protocol`),uniffiCallStatus
+    uniffi_neuralcompose_mobile_core_fn_func_v6_declaration_identity(
+        FfiConverterTypeV6Declaration_lower(declaration),uniffiCallStatus
     )
 })
 }
@@ -12875,11 +14124,11 @@ public func validateEvaluationProtocol(`protocol`: EvaluationProtocol) -> [Strin
  * candidates. `admit_result` rebuilds its process set per candidate, so a
  * restart between A and B is only provable here.
  */
-public func validateGlobalLedger(`protocol`: EvaluationProtocol, resultA: CandidateResult, resultB: CandidateResult) -> [String]  {
+public func validateGlobalLedger(`protocol`: V6Declaration, resultA: CandidateResult, resultB: CandidateResult) -> [String]  {
     return try!  FfiConverterSequenceString.lift(try! rustCall() {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_validate_global_ledger(
-        FfiConverterTypeEvaluationProtocol_lower(`protocol`),
+        FfiConverterTypeV6Declaration_lower(`protocol`),
         FfiConverterTypeCandidateResult_lower(resultA),
         FfiConverterTypeCandidateResult_lower(resultB),uniffiCallStatus
     )
@@ -12893,6 +14142,18 @@ public func validateRunEnvironment(env: RunEnvironment) -> [String]  {
         uniffiCallStatus in
     uniffi_neuralcompose_mobile_core_fn_func_validate_run_environment(
         FfiConverterTypeRunEnvironment_lower(env),uniffiCallStatus
+    )
+})
+}
+/**
+ * v3: hashing an invalid declaration does not make it valid. Admission and
+ * promotion both run this first.
+ */
+public func validateV6Declaration(`protocol`: V6Declaration) -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_neuralcompose_mobile_core_fn_func_validate_v6_declaration(
+        FfiConverterTypeV6Declaration_lower(`protocol`),uniffiCallStatus
     )
 })
 }
@@ -13314,7 +14575,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_func_variant_binds_to_contract() != 55408) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_admit_result() != 42920) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_admit_result() != 36759) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_allowed_task_context_pairs() != 51720) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_battery_delta_is_energy_evidence() != 32916) {
@@ -13323,37 +14587,55 @@ private let initializationResult: InitializationResult = {
     if (uniffi_neuralcompose_mobile_core_checksum_func_candidate_identity() != 36234) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_corpus_expected_prompts() != 54600) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_corpus_identity() != 55709) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_neuralcompose_mobile_core_checksum_func_derive_cost_observation() != 50431) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_derive_quality_panel() != 65083) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_derive_quality_panel() != 37227) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion() != 42781) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_derived_quality_score() != 15097) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_evaluation_protocol_identity() != 15982) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_evaluate_promotion() != 54379) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_frozen_composition_policy_v1() != 28667) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_frozen_corpus_v1() != 34066) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_frozen_policy_identities_v6() != 14982) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_meets_thresholds() != 62939) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_quality_score() != 35980) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_quality_score() != 32405) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_rendered_prompt_hash() != 63373) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_semantic_prompt_hash() != 50945) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_semantic_prompt_hash() != 40631) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_evaluation_protocol() != 17041) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_v6_declaration_identity() != 56622) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_global_ledger() != 37692) {
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_global_ledger() != 2625) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_validate_run_environment() != 53649) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_neuralcompose_mobile_core_checksum_func_validate_v6_declaration() != 5366) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_neuralcompose_mobile_core_checksum_func_catalog_entry_digest() != 27683) {
