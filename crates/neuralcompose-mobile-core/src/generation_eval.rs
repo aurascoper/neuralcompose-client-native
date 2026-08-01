@@ -8,6 +8,77 @@
 //!
 //! The protocol is frozen (hashed) BEFORE any candidate is downloaded, so a
 //! threshold cannot be moved after seeing a result.
+//!
+//! # The authority boundary, at compile time
+//!
+//! No field, parameter or constructor on this module's public surface accepts
+//! a corpus digest. The doctests below are that proof, and they come in
+//! **pairs**: a `compile_fail` block on its own proves nothing, because it
+//! passes when the code fails to compile for any reason at all — a typo would
+//! satisfy it. Each companion block differs *only* by the digest and must
+//! compile, so the pair localises the failure to the thing being asserted.
+//!
+//! Reading a corpus digest off the declaration does not compile:
+//!
+//! ```compile_fail
+//! use neuralcompose_mobile_core::generation_eval::V6Declaration;
+//! fn read(d: &V6Declaration) -> &String {
+//!     &d.corpus_sha256_hex
+//! }
+//! ```
+//!
+//! Reading the corpus itself does:
+//!
+//! ```
+//! use neuralcompose_mobile_core::generation_eval::{BenchmarkCorpus, V6Declaration};
+//! fn read(d: &V6Declaration) -> &BenchmarkCorpus {
+//!     &d.corpus
+//! }
+//! ```
+//!
+//! Constructing a corpus that carries a digest alongside its content does not
+//! compile — this is the v5 shape, kept here as the thing that must stay
+//! impossible:
+//!
+//! ```compile_fail
+//! use neuralcompose_mobile_core::generation_eval::{frozen_corpus_v1, BenchmarkCorpus};
+//! let c = frozen_corpus_v1();
+//! let _ = BenchmarkCorpus {
+//!     corpus_id: c.corpus_id,
+//!     prompts: c.prompts,
+//!     corpus_sha256_hex: String::new(),
+//! };
+//! ```
+//!
+//! The same construction without it compiles:
+//!
+//! ```
+//! use neuralcompose_mobile_core::generation_eval::{frozen_corpus_v1, BenchmarkCorpus};
+//! let c = frozen_corpus_v1();
+//! let _ = BenchmarkCorpus {
+//!     corpus_id: c.corpus_id,
+//!     prompts: c.prompts,
+//! };
+//! ```
+//!
+//! And identity is derived from content ALONE — there is no form of
+//! `corpus_identity` that also takes an asserted digest:
+//!
+//! ```compile_fail
+//! use neuralcompose_mobile_core::generation_eval::{corpus_identity, BenchmarkCorpus};
+//! let _f: fn(BenchmarkCorpus, String) -> String = corpus_identity;
+//! ```
+//!
+//! ```
+//! use neuralcompose_mobile_core::generation_eval::{corpus_identity, BenchmarkCorpus};
+//! let _f: fn(BenchmarkCorpus) -> String = corpus_identity;
+//! ```
+//!
+//! No finite compile-fail set can catch every future euphemism for "digest",
+//! so this is one of three layers and not the whole answer: the compile-level
+//! pairs above, the source-surface scan in `tests/m7b_eval_protocol.rs`, and
+//! the runtime check in [`validate_v6_declaration`] that the corpus IS the
+//! build-owned one rather than merely a well-shaped one.
 
 use serde::{Deserialize, Serialize};
 
@@ -1200,7 +1271,40 @@ pub fn validate_v6_declaration(protocol: V6Declaration) -> Vec<String> {
     }
 
     // ---- the corpus, and the quota map that weights it ----
+    //
+    // Two DIFFERENT questions are asked here, and conflating them is what left
+    // a gap in the first pass of this work:
+    //
+    //   1. Is this corpus the one this build owns?      (authority)
+    //   2. Is that corpus well formed?                  (shape)
+    //
+    // Content-addressing answers neither. It only means an identity cannot be
+    // forged — a caller can still submit a DIFFERENT eighteen-prompt corpus
+    // that satisfies all nine quotas, derive its identity perfectly honestly,
+    // and pass. Nothing is forged and the reviewed corpus is replaced anyway.
+    //
+    // So the authority check is exact equality against the compiled-in value,
+    // and the shape checks stay: they are not redundant, because they are what
+    // catches a bad edit to the committed artifact ITSELF, where
+    // `frozen_corpus_v1()` returns the bad corpus and equality holds.
+    //
+    // If a later protocol version needs more than one corpus, add a
+    // build-owned registry and check membership. Do not reopen arbitrary
+    // corpus injection — the caller must never be the one who says what the
+    // study is over.
     let corpus = &protocol.corpus;
+    if corpus != &frozen_corpus_v1() {
+        bad("corpus is not the build-owned m7b corpus");
+    }
+    if protocol.composition_policy != frozen_composition_policy_v1() {
+        bad("composition policy is not the frozen v6 policy");
+    }
+    // Subsumes the field checks above. Those stay because they name WHICH
+    // field is wrong, and because they are what a registry-based successor
+    // would keep when this exact check is relaxed.
+    if protocol.policies != frozen_policy_identities_v6() {
+        bad("evaluator policy identities do not name this evaluator");
+    }
     if corpus.corpus_id.trim().is_empty() {
         bad("corpusId must be non-empty");
     }

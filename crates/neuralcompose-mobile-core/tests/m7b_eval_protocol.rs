@@ -1637,10 +1637,23 @@ fn a_ledger_mixing_scorer_identities_is_rejected() {
 }
 
 // 8. Authority comes from the ABSENCE of an injection point — the same reason
-//    model_pack::RestoreResult is output-only. This is a source-surface check
-//    and is honest about being one: it proves no public signature or field in
-//    the module names a corpus digest, not that the property is impossible to
-//    reintroduce under a different spelling.
+//    model_pack::RestoreResult is output-only.
+//
+//    This is ONE OF THREE LAYERS, and on its own it is the weakest:
+//
+//      * paired compile_fail/compile doctests in the module header, which
+//        prove the field and the two-argument identity function do not exist
+//        and cannot be written;
+//      * this scan, which catches a digest reintroduced under a different
+//        spelling that a fixed compile-fail set would not name;
+//      * the runtime check in validate_v6_declaration that the corpus IS the
+//        build-owned one, because a caller can otherwise submit a different
+//        shape-valid corpus and identify it perfectly honestly.
+//
+//    None of the three subsumes the others. The scan below deliberately
+//    ignores comment text: the compile-fail fixtures have to NAME
+//    `corpus_sha256_hex` in order to prove it will not compile, and a scan
+//    that tripped over its own evidence would be unmaintainable.
 const MODULE_SOURCE: &str = include_str!("../src/generation_eval.rs");
 
 #[test]
@@ -1698,4 +1711,182 @@ fn corpus_from_test_edit() -> BenchmarkCorpus {
     let mut c = frozen_corpus_v1();
     c.prompts[0].message.push_str(" (edited)");
     c
+}
+
+// ============================================================================
+// v6-1 hardening: content-addressed is not the same as build-owned.
+//
+// The first pass of #7 removed the forgeable digest and stopped there. That
+// left a real gap: a caller could submit a DIFFERENT eighteen-prompt corpus
+// satisfying all nine quotas, derive its identity perfectly honestly, and pass
+// validation. Nothing forged, reviewed corpus replaced anyway.
+//
+// Every test below is written so that the SHAPE checks pass and only the
+// AUTHORITY check fires. A test that let both fire would not distinguish the
+// new check from the ones that already existed.
+// ============================================================================
+
+/// Shape-valid and not the build-owned corpus: same ids, same taxonomy, same
+/// nine pair counts, different words.
+fn shape_valid_impostor() -> BenchmarkCorpus {
+    let mut c = frozen_corpus_v1();
+    c.corpus_id = "m7b-impostor-v1".into();
+    for p in c.prompts.iter_mut() {
+        p.message = format!(
+            "A different question for {}, under the same pair.",
+            p.prompt_id
+        );
+    }
+    c
+}
+
+fn assert_shape_checks_are_silent(errs: &[String]) {
+    for shape in [
+        "quota requires exactly",
+        "outside the allowed matrix",
+        "normative nine-pair matrix",
+        "promptCount disagrees",
+        "duplicate promptId",
+        "one entry per allowed pair",
+        "zero quota",
+        "is blank",
+        "must be non-empty",
+    ] {
+        assert!(
+            !errs.iter().any(|e| e.contains(shape)),
+            "the shape check {shape:?} fired, so this case does not isolate the \
+             authority check; errors were {errs:?}"
+        );
+    }
+}
+
+// 1. One word changed. Every quota still satisfied.
+#[test]
+fn editing_a_single_prompt_message_is_rejected_even_though_the_quotas_still_hold() {
+    let mut edited = protocol();
+    edited.corpus.prompts[0]
+        .message
+        .push_str(" Also mention the weather.");
+    let errs = validate_v6_declaration(edited);
+    assert!(
+        errs.iter()
+            .any(|e| e.contains("not the build-owned m7b corpus")),
+        "got {errs:?}"
+    );
+    assert_shape_checks_are_silent(&errs);
+}
+
+// 2. A wholesale replacement that is shape-valid in every respect.
+#[test]
+fn a_shape_valid_replacement_corpus_is_rejected_as_not_build_owned() {
+    let impostor = shape_valid_impostor();
+    assert_ne!(impostor, frozen_corpus_v1());
+    assert_eq!(impostor.prompts.len(), 18);
+
+    let mut swapped = protocol();
+    swapped.corpus = impostor.clone();
+    swapped.prompt_count = impostor.prompts.len() as u32;
+    let errs = validate_v6_declaration(swapped);
+    assert!(
+        errs.iter()
+            .any(|e| e.contains("not the build-owned m7b corpus")),
+        "a corpus can be honestly identified and still not be ours; got {errs:?}"
+    );
+    assert_shape_checks_are_silent(&errs);
+
+    // The impostor's identity is derived just as honestly as the real one's —
+    // which is exactly why content-addressing alone was not enough.
+    assert_ne!(
+        corpus_identity(impostor),
+        corpus_identity(frozen_corpus_v1())
+    );
+
+    // Polarity: the build-owned corpus validates.
+    assert!(validate_v6_declaration(protocol()).is_empty());
+}
+
+// 3. Correct domain prefix, different version. The prefix check passes; the
+//    identity is still not this evaluator's.
+#[test]
+fn a_correctly_domained_but_unknown_policy_id_is_rejected() {
+    for (name, mutate) in [
+        ("selectionPolicyId", 0usize),
+        ("qualityAggregationPolicyId", 1),
+        ("promotionRuleId", 2),
+    ] {
+        let mut d = protocol();
+        match mutate {
+            0 => d.policies.selection_policy_id = "neuralcompose.selection-policy.v6-2".into(),
+            1 => {
+                d.policies.quality_aggregation_policy_id =
+                    "neuralcompose.quality-aggregation-policy.v7-0".into()
+            }
+            _ => d.policies.promotion_rule_id = "neuralcompose.promotion-rule.v6-1-hotfix".into(),
+        }
+        let errs = validate_v6_declaration(d);
+        assert!(
+            errs.iter()
+                .any(|e| e.contains("do not name this evaluator")),
+            "{name}: got {errs:?}"
+        );
+        // The prefix check must stay SILENT here, or this test would pass
+        // without the exact check existing at all.
+        assert!(
+            !errs
+                .iter()
+                .any(|e| e.contains("must be a versioned id under")),
+            "{name}: the prefix check fired, so this case does not isolate the \
+             exact identity check; errors were {errs:?}"
+        );
+    }
+}
+
+// 4. The sharpest one: quota map and corpus edited TOGETHER so they remain
+//    mutually consistent. Every shape check is satisfied by construction.
+#[test]
+fn a_mutually_consistent_corpus_and_quota_pair_is_still_rejected_if_it_is_not_ours() {
+    let mut d = protocol();
+    let widened = d.composition_policy.exact_required_count_per_pair[0].pair;
+    d.composition_policy.exact_required_count_per_pair[0].exact_count = 3;
+    d.corpus.prompts.push(CorpusPrompt {
+        prompt_id: "p19".into(),
+        task_kind: widened.task_kind,
+        context_profile: widened.context_profile,
+        message: "A third prompt for a pair the quota was widened to want three of.".into(),
+    });
+    d.prompt_count = d.corpus.prompts.len() as u32;
+
+    let errs = validate_v6_declaration(d);
+    assert!(
+        errs.iter()
+            .any(|e| e.contains("not the build-owned m7b corpus")),
+        "got {errs:?}"
+    );
+    assert!(
+        errs.iter().any(|e| e.contains("not the frozen v6 policy")),
+        "got {errs:?}"
+    );
+    // Nothing about the SHAPE is wrong: three required, three present, and the
+    // count agrees. Before the authority check existed, this declaration was
+    // accepted — a reweighted study wearing a valid-looking declaration.
+    assert_shape_checks_are_silent(&errs);
+}
+
+// The shape checks are not made redundant by the authority check: they are
+// what catches a bad edit to the committed artifact ITSELF, where
+// frozen_corpus_v1() returns the bad corpus and equality holds.
+#[test]
+fn the_shape_checks_still_guard_the_committed_artifact_itself() {
+    // Simulate the artifact having been edited badly: the "frozen" corpus and
+    // the declaration's corpus agree, so authority passes and only shape can
+    // catch it. Constructed by making the QUOTA disagree with a corpus that is
+    // genuinely the build-owned one.
+    let mut d = protocol();
+    d.composition_policy.exact_required_count_per_pair[0].exact_count = 5;
+    let errs = validate_v6_declaration(d);
+    assert!(
+        errs.iter().any(|e| e.contains("quota requires exactly 5")),
+        "a quota that the build-owned corpus does not satisfy must still be \
+         named by the shape check, got {errs:?}"
+    );
 }
