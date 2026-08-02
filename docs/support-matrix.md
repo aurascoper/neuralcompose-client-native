@@ -39,8 +39,15 @@ hardware has been exercised under these contracts.
 
 - **Snapdragon**: no Snapdragon phone and no Windows-on-Snapdragon machine is
   on record, so neither QNN row can reach `DeviceValidated` today.
-- **ROCm**: AMD's stable ROCm compatibility matrix does not list Ubuntu 26.04,
-  so any ROCm row stays experimental until AMD lists both the exact APU and
-  the OS. Absent from this table by design.
+- **ROCm**: the gap is the GPU, not the OS. Canonical now ships ROCm in the
+  Ubuntu archive (`sudo apt install rocm`, 26.04 universe), so the previous
+  reason given here — that AMD's matrix does not list Ubuntu 26.04 — is no
+  longer true. What remains true is that **the APU's iGPU is not an officially
+  supported ROCm target**: gfx1150 (Radeon 880M/890M, RDNA 3.5) is absent from
+  AMD's supported-hardware list, and running it needs
+  `HSA_OVERRIDE_GFX_VERSION` to borrow another target's kernels. An override is
+  a workaround, not support, and cannot be evidence for a row. Any ROCm row
+  stays experimental until AMD lists the exact APU. Absent from this table by
+  design.
 - **MIGraphX**: excluded from generative-AI use while Microsoft's own
   documentation excludes that scenario.

@@ -48,8 +48,16 @@ jobs:
         include:
           - { label: ubuntu-24.04-x86_64, runner: ubuntu-24.04, canary: false }
           - { label: windows-2025-x86_64, runner: windows-2025, canary: false }
-          - { label: macos-26-arm64, runner: macos-latest, canary: false }
-          - { label: ubuntu-26.04-preview, runner: ubuntu-latest, canary: true }
+          # Labels must name the runner they actually get. `ubuntu-latest`
+          # tracks the newest GA image, and Ubuntu 26.04 is available only as a
+          # public preview under the explicit `ubuntu-26.04` label — so the
+          # 26.04 canary was running 24.04 and silently duplicating the row
+          # above it. Same defect on macOS: `macos-latest` is not `macos-26`,
+          # and that row is a non-canary build authority, which makes it worse.
+          # A row named for an OS it has never touched is promotion by
+          # implication, which ADR-002 exists to prevent.
+          - { label: macos-26-arm64, runner: macos-26, canary: false }
+          - { label: ubuntu-26.04-preview, runner: ubuntu-26.04, canary: true }
           - { label: windows-arm64-preview, runner: windows-11-arm, canary: true }
     steps:
       - uses: actions/checkout@v4
