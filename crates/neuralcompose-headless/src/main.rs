@@ -49,8 +49,8 @@ use std::time::{Duration, Instant};
 
 use neuralcompose_mobile_core::presentation::StreamPhase;
 use neuralcompose_mobile_core::{
-    assess_channel, next_reconnect, ChannelHealthThresholds, ElectrodeReport, MainsThresholds,
-    MonitorConfig, ReconnectDecision, SocketEvent, StreamMonitor,
+    assess_channel, common_mode_hint, next_reconnect, ChannelHealthThresholds, ElectrodeReport,
+    MainsThresholds, MonitorConfig, ReconnectDecision, SocketEvent, StreamMonitor,
 };
 
 const DEFAULT_URL: &str = "ws://127.0.0.1:8788/api/eeg/stream";
@@ -345,7 +345,8 @@ fn emit_check(monitor: &StreamMonitor, now: u64) {
         phase_str(&snap.phase),
         snap.total_received
     );
-    for (r, name) in assess_all(monitor).iter().zip(CHANNEL_NAMES) {
+    let reports = assess_all(monitor);
+    for (r, name) in reports.iter().zip(CHANNEL_NAMES) {
         let line = match r.line_hz {
             Some(f) => format!("{:>9.1} @{:.0}Hz", r.mains_power, f),
             None => "        —".to_string(),
@@ -357,6 +358,12 @@ fn emit_check(monitor: &StreamMonitor, now: u64) {
             r.verdict.as_str(),
             r.verdict.advice()
         );
+    }
+    // A cross-channel pattern no single verdict can express: every per-channel
+    // line says "reseat this pad", which is the wrong advice when the fault is
+    // shared by all of them.
+    if let Some(hint) = common_mode_hint(&reports) {
+        println!("  ! {hint}");
     }
     let _ = std::io::stdout().flush();
 }
