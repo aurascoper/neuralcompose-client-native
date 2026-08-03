@@ -34,6 +34,62 @@ jobs:
       - name: Whitespace and conflict markers
         run: git diff --check HEAD
 
+  # Compiles and RUNS the UniFFI Kotlin bindings against the real cdylib on a
+  # host JVM — `android/core` is explicitly "a host-JVM harness … without any
+  # Android SDK". Unlike the Swift job below this executes code: JNA dlopens
+  # `target/debug/libneuralcompose_mobile_core.so` and the assertions cross the
+  # FFI boundary for real.
+  #
+  # NOT ANDROID EVIDENCE. The `android/arm64` rows are `Contracted`, and a
+  # linux/x86_64 JVM run cannot promote them — different OS, different
+  # architecture, no device. What it does prove is that the generated Kotlin
+  # compiles and that its assertions agree with the Rust they wrap, which until
+  # 2026-08-03 had never been checked on any machine.
+  #
+  # Blocking, unlike the Swift job, because it is deterministic and exercises
+  # real behaviour rather than syntax. If Maven Central flakiness makes it
+  # unreliable, demote it to continue-on-error rather than deleting it.
+  kotlin-bindings-jvm:
+    name: kotlin-bindings (host jvm, linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          # Matches jvmToolchain(21) in android/core/build.gradle.kts. A
+          # mismatch makes Gradle try to provision its own toolchain and fail
+          # on a runner with no network access to a JDK vendor.
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      # The harness dlopens this via jna.library.path; without it every test
+      # errors at class-load with UnsatisfiedLinkError rather than failing an
+      # assertion, which is the M5 lesson the drift guard already records.
+      - name: Build host cdylib
+        run: cargo build --features uniffi -p neuralcompose-mobile-core
+      - name: Kotlin binding tests
+        working-directory: android/core
+        run: gradle test --no-daemon --console=plain
+      # A `test` task with zero tests also reports BUILD SUCCESSFUL, so the
+      # count is asserted rather than the exit code trusted.
+      - name: Assert tests actually ran
+        working-directory: android/core
+        run: |
+          set -eu
+          python3 - <<'EOF'
+          import glob, sys, xml.etree.ElementTree as ET
+          files = glob.glob('build/test-results/test/*.xml')
+          if not files:
+              sys.exit('no test result XML — the test task ran nothing')
+          total = sum(int(ET.parse(f).getroot().get('tests', 0)) for f in files)
+          print(f'kotlin binding tests executed: {total}')
+          if total < 7:
+              sys.exit(f'expected at least 7 tests, saw {total}')
+          EOF
+
   # SYNTAX ONLY. NOT iOS EVIDENCE. NOT A SUPPORT-MATRIX INPUT.
   #
   # Parses the UniFFI-generated Swift on Linux to catch a broken regeneration in
