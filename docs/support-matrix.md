@@ -68,8 +68,12 @@ to rather than silently gaining one. That direction is asserted by
 runner. It is a fast fail for a broken regeneration — seconds instead of a Mac
 round-trip — and it is **not evidence for any row in this table**.
 
-A green run there means the generated bindings parse and type-check under Linux
-Swift. The `ios/arm64` rows are `Contracted`, and evidence produced on Linux can
+A green run there means the generated bindings are **syntactically valid Swift**
+— parse only, no type checking. That limit is forced, not chosen: the generated
+file imports a companion C module uniffi emits as an untracked header whose
+modulemap declares `use "Darwin"`, so on Linux the import is skipped and every
+FFI type is undefined. Supplying it would mean building the Rust cdylib inside
+the container, which is a second full build rather than a fast fail. The `ios/arm64` rows are `Contracted`, and evidence produced on Linux can
 never promote them: a Linux Swift compile is a fact about Linux Swift. Reading
 that job as iOS readiness is the promotion-by-implication this document exists
 to forbid, and the same shape as a canary named `ubuntu-26.04-preview` that was
