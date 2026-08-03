@@ -921,9 +921,14 @@ dependencies = [
 name = "neuralcompose-headless"
 version = "0.1.0"
 dependencies = [
+ "neuralcompose-llama",
  "neuralcompose-mobile-core",
  "tungstenite",
 ]
+
+[[package]]
+name = "neuralcompose-llama"
+version = "0.1.0"
 
 [[package]]
 name = "neuralcompose-mobile-core"

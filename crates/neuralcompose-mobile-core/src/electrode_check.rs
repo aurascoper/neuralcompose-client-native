@@ -258,6 +258,73 @@ pub fn assess_channel(
     }
 }
 
+/// A pattern across channels that no single channel's verdict can express.
+///
+/// Every per-channel verdict says "reseat this pad", which is the wrong advice
+/// when the fault is common to all of them. Mains rejection is DIFFERENTIAL: it
+/// depends on the reference electrode, which on a Muse S sits at Fpz, centre
+/// forehead, and is not one of the four channels measured here. A degraded
+/// reference lifts the line on every channel at once, however well each
+/// individual pad is seated.
+///
+/// EVIDENCE, AND IT IS ONE OBSERVATION. On 2026-08-03 a headband adjustment
+/// improved two electrodes by 114x and 3.4x while making the other two worse by
+/// 145x and 28x, and the shape changed from a five-order-of-magnitude spread
+/// (0.6 to 61694, two channels clean) to roughly one (75.6 to 542.4, none
+/// clean). Four independent contact faults do not converge like that. This is a
+/// HYPOTHESIS from a single session, phrased as a hint rather than a verdict,
+/// and it deliberately does not block: `is_blocking` stays a per-channel
+/// property. If it turns out to be wrong the cost is one misleading sentence,
+/// not a failed check.
+///
+/// Returns `None` unless every channel is at least `Elevated` and the spread
+/// between the noisiest and quietest is under `MAX_COMMON_MODE_SPREAD`. Both
+/// conditions matter: all-elevated alone is consistent with a genuinely bad
+/// headband, and a narrow spread alone is what a correctly fitted one looks
+/// like.
+pub fn common_mode_hint(reports: &[ElectrodeReport]) -> Option<&'static str> {
+    /// Above this ratio between the noisiest and quietest channel, the
+    /// channels are behaving independently and the fault is per-electrode.
+    const MAX_COMMON_MODE_SPREAD: f64 = 10.0;
+
+    if reports.len() < 3 {
+        return None;
+    }
+    // An unmeasurable channel means the pattern cannot be established, and a
+    // pattern claim from partial data is worse than no claim.
+    if reports
+        .iter()
+        .any(|r| r.verdict == ElectrodeVerdict::Unknown || r.line_hz.is_none())
+    {
+        return None;
+    }
+    if !reports.iter().all(|r| {
+        matches!(
+            r.verdict,
+            ElectrodeVerdict::Elevated | ElectrodeVerdict::MainsPickup
+        )
+    }) {
+        return None;
+    }
+    let max = reports
+        .iter()
+        .map(|r| r.mains_power)
+        .fold(f64::MIN, f64::max);
+    let min = reports
+        .iter()
+        .map(|r| r.mains_power)
+        .fold(f64::MAX, f64::min);
+    if min <= 0.0 || max / min >= MAX_COMMON_MODE_SPREAD {
+        return None;
+    }
+    Some(
+        "all channels elevated together and within 10x of each other — that pattern is \
+         common-mode, so suspect the REFERENCE electrode (centre forehead) rather than \
+         the individual pads. Reseat the middle of the band flat. Hypothesis from one \
+         session, not a validated rule.",
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -469,6 +536,84 @@ mod tests {
         ] {
             assert!(!v.advice().is_empty(), "{v:?} needs advice");
         }
+    }
+
+    /// Build a report directly, to test the cross-channel pattern without
+    /// synthesising four signals that hit exact power targets.
+    fn rep(mains_power: f64, verdict: ElectrodeVerdict) -> ElectrodeReport {
+        ElectrodeReport {
+            rms: 50.0,
+            health: ChannelHealthStatus::Healthy,
+            mains_power,
+            line_hz: Some(60.0),
+            verdict,
+        }
+    }
+
+    #[test]
+    fn the_common_mode_hint_fires_on_the_post_adjustment_pattern() {
+        // The four values measured after the 2026-08-03 adjustment: all
+        // elevated or worse, spread 542.4/75.6 = 7.2x.
+        use ElectrodeVerdict::*;
+        let after = [
+            rep(75.6, Elevated),
+            rep(542.4, MainsPickup),
+            rep(87.1, Elevated),
+            rep(170.8, MainsPickup),
+        ];
+        assert!(common_mode_hint(&after).is_some());
+    }
+
+    #[test]
+    fn the_hint_stays_silent_when_channels_behave_independently() {
+        use ElectrodeVerdict::*;
+        // The BEFORE pattern from the same session: two clean, five orders of
+        // magnitude of spread. Per-electrode faults, not common mode.
+        let before = [
+            rep(256.6, MainsPickup),
+            rep(61694.0, MainsPickup),
+            rep(0.6, Ok),
+            rep(6.0, Ok),
+        ];
+        assert!(
+            common_mode_hint(&before).is_none(),
+            "two channels are clean"
+        );
+
+        // All elevated but spread far too wide to be one shared cause.
+        let wide = [
+            rep(30.0, Elevated),
+            rep(61694.0, MainsPickup),
+            rep(40.0, Elevated),
+            rep(50.0, Elevated),
+        ];
+        assert!(common_mode_hint(&wide).is_none(), "spread is 2000x");
+
+        // A well-fitted headband: narrow spread, but nothing elevated.
+        let good = [rep(0.6, Ok), rep(2.5, Ok), rep(5.4, Ok), rep(6.0, Ok)];
+        assert!(common_mode_hint(&good).is_none(), "nothing is elevated");
+    }
+
+    #[test]
+    fn the_hint_refuses_on_partial_or_unmeasurable_data() {
+        use ElectrodeVerdict::*;
+        // A pattern claim from incomplete data is worse than no claim.
+        let with_unknown = [
+            rep(75.6, Elevated),
+            rep(100.0, Elevated),
+            rep(87.1, Elevated),
+            rep(0.0, Unknown),
+        ];
+        assert!(common_mode_hint(&with_unknown).is_none());
+
+        let mut unmeasurable = rep(87.1, Elevated);
+        unmeasurable.line_hz = None;
+        let partial = [rep(75.6, Elevated), rep(100.0, Elevated), unmeasurable];
+        assert!(common_mode_hint(&partial).is_none());
+
+        // Too few channels to establish a pattern at all.
+        assert!(common_mode_hint(&[rep(75.6, Elevated), rep(100.0, Elevated)]).is_none());
+        assert!(common_mode_hint(&[]).is_none());
     }
 
     #[test]
