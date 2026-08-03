@@ -69,6 +69,8 @@ struct Args {
     /// headband — it exercises the model backend and exits.
     embed: Option<String>,
     model: Option<String>,
+    gpu_layers: u32,
+    devices: bool,
     seconds: u64,
     status_every_ms: u64,
     json: bool,
@@ -80,6 +82,8 @@ fn parse_args() -> Result<Args, String> {
         url: DEFAULT_URL.to_string(),
         embed: None,
         model: None,
+        gpu_layers: 0,
+        devices: false,
         seconds: 0,
         status_every_ms: 1000,
         json: false,
@@ -110,6 +114,14 @@ fn parse_args() -> Result<Args, String> {
             "--check" => a.check = true,
             "--embed" => a.embed = Some(it.next().ok_or("--embed needs text")?),
             "--model" => a.model = Some(it.next().ok_or("--model needs a path")?),
+            "--gpu-layers" => {
+                a.gpu_layers = it
+                    .next()
+                    .ok_or("--gpu-layers needs a value")?
+                    .parse()
+                    .map_err(|_| "--gpu-layers must be a non-negative integer")?
+            }
+            "--devices" => a.devices = true,
             "-h" | "--help" => {
                 println!(
                     "neuralcompose-headless — drive the core against a live EEG stream\n\n\
@@ -122,7 +134,9 @@ fn parse_args() -> Result<Args, String> {
                      \x20                       band. Exits non-zero if a channel needs fixing.\n\
                      \x20                       Defaults to 20s at a 2s cadence.\n\
                      --embed <text>          embed text with the llama-cpp-cpu backend and exit\n\
-                     --model <path>          GGUF model for --embed\n"
+                     --model <path>          GGUF model for --embed\n\
+                     --gpu-layers <n>        offload n layers to an accelerator (0 = CPU)\n\
+                     --devices               list the compute devices ggml can see, and exit\n"
                 );
                 std::process::exit(0);
             }
@@ -168,12 +182,16 @@ fn main() {
         }
     };
 
+    if args.devices {
+        std::process::exit(run_devices());
+    }
+
     // Embed mode short-circuits everything below: it touches no socket and no
     // headband, because the model backend and the EEG ingest path are separate
     // claims and running them together would blur which one any evidence is
     // about.
     if let Some(text) = args.embed.clone() {
-        std::process::exit(run_embed(&text, args.model.as_deref()));
+        std::process::exit(run_embed(&text, args.model.as_deref(), args.gpu_layers));
     }
 
     let start = Instant::now();
@@ -465,8 +483,30 @@ fn emit_status(monitor: &StreamMonitor, now: u64, frames: u64, json: bool) {
 /// a number without its provenance is not evidence. The commit is read from the
 /// checkout at build time, so it cannot drift from the binary the way a
 /// hand-copied hash in a document can.
-fn run_embed(text: &str, model: Option<&str>) -> i32 {
-    use neuralcompose_llama::{Embedder, BACKEND_COMMIT, BACKEND_ID, RUNTIME_ABI};
+fn run_devices() -> i32 {
+    if !neuralcompose_llama::is_available() {
+        eprintln!("no model backend in this build (built without LLAMA_CPP_DIR)");
+        return 4;
+    }
+    let devices = neuralcompose_llama::devices();
+    if devices.is_empty() {
+        println!("no compute devices enumerated");
+        return 4;
+    }
+    for (i, d) in devices.iter().enumerate() {
+        println!(
+            "  [{i}] {:<12} {:?}{}  {}",
+            d.name,
+            d.kind,
+            if d.kind.is_accelerator() { " *" } else { "  " },
+            d.description
+        );
+    }
+    0
+}
+
+fn run_embed(text: &str, model: Option<&str>, gpu_layers: u32) -> i32 {
+    use neuralcompose_llama::{Embedder, BACKEND_COMMIT, RUNTIME_ABI};
 
     if !neuralcompose_llama::is_available() {
         eprintln!(
@@ -487,16 +527,33 @@ fn run_embed(text: &str, model: Option<&str>) -> i32 {
         return 4;
     }
 
-    eprintln!("backend {BACKEND_ID} / {RUNTIME_ABI} @ llama.cpp {BACKEND_COMMIT}");
+    eprintln!("runtime {RUNTIME_ABI} @ llama.cpp {BACKEND_COMMIT}");
     eprintln!("model {}", path.display());
 
-    let mut embedder = match Embedder::load(&path, 512) {
+    let mut embedder = match Embedder::load_with(&path, 512, gpu_layers) {
         Ok(e) => e,
         Err(e) => {
             eprintln!("load failed: {e}");
             return 4;
         }
     };
+    // Reported AFTER load, from the outcome rather than the request: asking for
+    // offload does not prove an accelerator was found, and a silent CPU
+    // fallback filed as Vulkan evidence would make a matrix row wrong.
+    match embedder.accelerator() {
+        Some(d) => eprintln!(
+            "backend {} on {} ({})",
+            embedder.backend_id(),
+            d.name,
+            d.description
+        ),
+        None if gpu_layers > 0 => eprintln!(
+            "backend {} — {gpu_layers} layers requested but NO accelerator enumerated",
+            embedder.backend_id()
+        ),
+        None => eprintln!("backend {}", embedder.backend_id()),
+    }
+
     match embedder.embed(text) {
         Ok(v) => {
             eprintln!("dimensions {}", v.len());

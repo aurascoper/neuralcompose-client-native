@@ -47,10 +47,59 @@ pub const BACKEND_COMMIT: &str = {
     }
 };
 
-/// Backend identifier, matching the `Backend ID` column of the support matrix.
+/// Backend identifiers, matching the `Backend ID` column of the support matrix.
 /// A value that disagreed with the matrix would make any evidence produced here
 /// unattributable to a row.
-pub const BACKEND_ID: &str = "llama-cpp-cpu";
+pub const BACKEND_ID_CPU: &str = "llama-cpp-cpu";
+pub const BACKEND_ID_VULKAN: &str = "llama-cpp-vulkan";
+
+/// Kept for callers written before the Vulkan row existed.
+pub const BACKEND_ID: &str = BACKEND_ID_CPU;
+
+/// What kind of device ggml enumerated. Mirrors the shim's NC_DEV_* codes,
+/// which are deliberately this crate's own numbers rather than ggml's enum
+/// passed through — an upstream reordering must not silently change meaning.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeviceKind {
+    Cpu,
+    /// Discrete GPU with dedicated memory.
+    Gpu,
+    /// Integrated GPU sharing host memory. ggml distinguishes this from `Gpu`,
+    /// and on this project's target hardware (Radeon 890M) it is the one that
+    /// appears — so collapsing the two would misdescribe the machine.
+    IGpu,
+    Accel,
+    Other,
+}
+
+impl DeviceKind {
+    /// Only reachable on a real build — a stub enumerates no devices, so
+    /// there is no code to translate.
+    #[cfg(not(nc_llama_stub))]
+    fn from_code(c: i32) -> Self {
+        match c {
+            0 => Self::Cpu,
+            1 => Self::Gpu,
+            2 => Self::IGpu,
+            3 => Self::Accel,
+            _ => Self::Other,
+        }
+    }
+
+    /// True for devices that are not the CPU. This is what distinguishes a
+    /// Vulkan run from a CPU run.
+    pub fn is_accelerator(self) -> bool {
+        matches!(self, Self::Gpu | Self::IGpu | Self::Accel)
+    }
+}
+
+/// One device ggml can see.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Device {
+    pub name: String,
+    pub description: String,
+    pub kind: DeviceKind,
+}
 
 /// Runtime ABI identifier, matching the matrix's `Runtime ABI` column.
 pub const RUNTIME_ABI: &str = "nc-gguf-v1";
@@ -146,8 +195,17 @@ mod ffi {
     // invite someone to call it at the wrong moment.
     unsafe extern "C" {
         pub fn nc_llama_log_quiet();
+        pub fn nc_llama_backend_load_all();
+        pub fn nc_llama_device_count() -> i32;
+        pub fn nc_llama_device_info(
+            index: i32,
+            name_buf: *mut c_char,
+            name_len: i32,
+            desc_buf: *mut c_char,
+            desc_len: i32,
+        ) -> i32;
         pub fn nc_llama_backend_init();
-        pub fn nc_llama_model_load(path: *const c_char) -> *mut c_void;
+        pub fn nc_llama_model_load(path: *const c_char, n_gpu_layers: i32) -> *mut c_void;
         pub fn nc_llama_model_free(model: *mut c_void);
         pub fn nc_llama_n_embd(model: *mut c_void) -> i32;
         pub fn nc_llama_context_new(model: *mut c_void, n_ctx: i32) -> *mut c_void;
@@ -177,6 +235,12 @@ pub struct Embedder {
     #[cfg(not(nc_llama_stub))]
     ctx: *mut std::os::raw::c_void,
     n_embd: usize,
+    /// How many layers were REQUESTED on an accelerator. Not proof any went
+    /// there — see `accelerator`.
+    requested_gpu_layers: u32,
+    /// The accelerator ggml enumerated, if any. `None` means this run is CPU
+    /// regardless of what was requested.
+    accelerator: Option<Device>,
 }
 
 impl Embedder {
@@ -185,6 +249,18 @@ impl Embedder {
     /// `n_ctx` of 0 takes the model's own trained context length.
     #[cfg(not(nc_llama_stub))]
     pub fn load(path: &Path, n_ctx: u32) -> Result<Self, LlamaError> {
+        Self::load_with(path, n_ctx, 0)
+    }
+
+    /// Load with `gpu_layers` offloaded to an accelerator.
+    ///
+    /// Requesting offload does NOT guarantee it happens: if no accelerator is
+    /// enumerated, llama.cpp runs on CPU without complaint. `backend_id()`
+    /// reports what actually happened, not what was asked for, because a
+    /// support-matrix row that recorded the request rather than the outcome
+    /// would be wrong in exactly the case that matters.
+    #[cfg(not(nc_llama_stub))]
+    pub fn load_with(path: &Path, n_ctx: u32, gpu_layers: u32) -> Result<Self, LlamaError> {
         let c_path = CString::new(path.as_os_str().as_encoded_bytes())?;
         // Quiet by default; `NC_LLAMA_VERBOSE` restores llama.cpp's own output,
         // which is what you want when a load is failing and noise when it is not.
@@ -195,8 +271,16 @@ impl Embedder {
         // SAFETY: idempotent in llama.cpp and safe to call more than once.
         unsafe { ffi::nc_llama_backend_init() };
 
+        // Backends ship as separate shared objects and are discovered at
+        // runtime. Without this the Vulkan device is simply absent and the
+        // model runs on CPU while the caller believes otherwise.
+        // SAFETY: idempotent registry population.
+        unsafe { ffi::nc_llama_backend_load_all() };
+
+        let accelerator = devices().into_iter().find(|d| d.kind.is_accelerator());
+
         // SAFETY: `c_path` is a valid NUL-terminated string that outlives the call.
-        let model = unsafe { ffi::nc_llama_model_load(c_path.as_ptr()) };
+        let model = unsafe { ffi::nc_llama_model_load(c_path.as_ptr(), gpu_layers as i32) };
         if model.is_null() {
             return Err(LlamaError::ModelLoad(path.display().to_string()));
         }
@@ -219,12 +303,42 @@ impl Embedder {
             model,
             ctx,
             n_embd: n_embd as usize,
+            requested_gpu_layers: gpu_layers,
+            accelerator: if gpu_layers > 0 { accelerator } else { None },
         })
     }
 
     #[cfg(nc_llama_stub)]
     pub fn load(_path: &Path, _n_ctx: u32) -> Result<Self, LlamaError> {
         Err(LlamaError::Unavailable)
+    }
+
+    #[cfg(nc_llama_stub)]
+    pub fn load_with(_path: &Path, _n_ctx: u32, _gpu_layers: u32) -> Result<Self, LlamaError> {
+        Err(LlamaError::Unavailable)
+    }
+
+    /// The accelerator this instance is actually using, if any.
+    pub fn accelerator(&self) -> Option<&Device> {
+        self.accelerator.as_ref()
+    }
+
+    /// Layers requested on an accelerator. Compare with `accelerator()` — a
+    /// non-zero request with `None` here is a silent fallback to CPU.
+    pub fn requested_gpu_layers(&self) -> u32 {
+        self.requested_gpu_layers
+    }
+
+    /// The support-matrix Backend ID this run's evidence belongs to.
+    ///
+    /// Derived from the OUTCOME, never the request. Offload was requested and
+    /// no accelerator was found means this is a CPU run and must be filed as
+    /// one, however the caller configured it.
+    pub fn backend_id(&self) -> &'static str {
+        match &self.accelerator {
+            Some(_) if self.requested_gpu_layers > 0 => BACKEND_ID_VULKAN,
+            _ => BACKEND_ID_CPU,
+        }
     }
 
     /// Embedding dimensionality.
@@ -296,6 +410,67 @@ impl Drop for Embedder {
             ffi::nc_llama_model_free(self.model);
         }
     }
+}
+
+/// Every device ggml can see, in ggml's own order.
+///
+/// Empty on a stub build. Calls `ggml_backend_load_all` first, because backends
+/// ship as separate shared objects and are invisible until loaded.
+#[cfg(not(nc_llama_stub))]
+pub fn devices() -> Vec<Device> {
+    // Quiet first: backend registration prints device banners to stdout, which
+    // would corrupt the output of any caller parsing this crate's results.
+    if std::env::var_os("NC_LLAMA_VERBOSE").is_none() {
+        // SAFETY: installs a callback that ignores its arguments.
+        unsafe { ffi::nc_llama_log_quiet() };
+    }
+    // SAFETY: idempotent; populates the backend registry.
+    unsafe { ffi::nc_llama_backend_load_all() };
+    // SAFETY: reads a count from the registry.
+    let n = unsafe { ffi::nc_llama_device_count() };
+    if n <= 0 {
+        return Vec::new();
+    }
+    let mut out = Vec::with_capacity(n as usize);
+    for i in 0..n {
+        let mut name = [0i8; 128];
+        let mut desc = [0i8; 256];
+        // SAFETY: both buffers are valid for the lengths passed, and the shim
+        // uses snprintf, which always NUL-terminates within them.
+        let code = unsafe {
+            ffi::nc_llama_device_info(
+                i,
+                name.as_mut_ptr(),
+                name.len() as i32,
+                desc.as_mut_ptr(),
+                desc.len() as i32,
+            )
+        };
+        if code < 0 {
+            continue;
+        }
+        out.push(Device {
+            name: c_buf_to_string(&name),
+            description: c_buf_to_string(&desc),
+            kind: DeviceKind::from_code(code),
+        });
+    }
+    out
+}
+
+#[cfg(nc_llama_stub)]
+pub fn devices() -> Vec<Device> {
+    Vec::new()
+}
+
+#[cfg(not(nc_llama_stub))]
+fn c_buf_to_string(buf: &[i8]) -> String {
+    let bytes: Vec<u8> = buf
+        .iter()
+        .take_while(|c| **c != 0)
+        .map(|c| *c as u8)
+        .collect();
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 /// True when this build can actually run a model.

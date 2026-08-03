@@ -20,9 +20,11 @@
 // time. That is the property being bought.
 
 #include "llama.h"
+#include "ggml-backend.h"
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 // Error codes. Negative, distinct, and stable — Rust maps them to an error
@@ -36,6 +38,16 @@
 #define NC_ERR_BUFFER_SMALL  -6
 #define NC_ERR_NULL_ARG      -7
 #define NC_ERR_EMPTY_INPUT   -8
+#define NC_ERR_BAD_INDEX     -9
+
+// Device type codes, mirroring ggml_backend_dev_type. Kept as our own numbers
+// rather than passing ggml's enum through, so a reordering upstream cannot
+// silently change what a caller thinks a device is.
+#define NC_DEV_CPU   0
+#define NC_DEV_GPU   1
+#define NC_DEV_IGPU  2
+#define NC_DEV_ACCEL 3
+#define NC_DEV_OTHER 4
 
 // llama.cpp logs ~200 lines of loader detail to stderr per model load. That is
 // right for a debugging tool and wrong for a program a user runs to check their
@@ -50,15 +62,58 @@ static void nc_log_silent(enum ggml_log_level level, const char * text, void * u
 void nc_llama_log_quiet(void) { llama_log_set(nc_log_silent, NULL); }
 
 void nc_llama_backend_init(void) { llama_backend_init(); }
+
+// Backends built as separate shared objects (ggml-vulkan.so and friends) are
+// discovered at runtime, not link time. Without this the Vulkan device is
+// simply absent and the model runs on CPU while the caller believes otherwise
+// — which would make a `llama-cpp-vulkan` row's evidence describe a CPU run.
+void nc_llama_backend_load_all(void) { ggml_backend_load_all(); }
+
+int32_t nc_llama_device_count(void) { return (int32_t) ggml_backend_dev_count(); }
+
+// Writes the device's name and description, returns its NC_DEV_* type.
+//
+// This exists so a backend claim can be CHECKED rather than assumed: asking for
+// GPU offload does not prove a GPU was found, and a silent fallback to CPU is
+// exactly the failure that would make a support-matrix row wrong.
+int32_t nc_llama_device_info(
+    int32_t index,
+    char *  name_buf, int32_t name_len,
+    char *  desc_buf, int32_t desc_len
+) {
+    if (index < 0 || (size_t) index >= ggml_backend_dev_count()) { return NC_ERR_BAD_INDEX; }
+    ggml_backend_dev_t dev = ggml_backend_dev_get((size_t) index);
+    if (dev == NULL) { return NC_ERR_BAD_INDEX; }
+
+    if (name_buf != NULL && name_len > 0) {
+        const char * n = ggml_backend_dev_name(dev);
+        snprintf(name_buf, (size_t) name_len, "%s", (n != NULL) ? n : "");
+    }
+    if (desc_buf != NULL && desc_len > 0) {
+        const char * d = ggml_backend_dev_description(dev);
+        snprintf(desc_buf, (size_t) desc_len, "%s", (d != NULL) ? d : "");
+    }
+    switch (ggml_backend_dev_type(dev)) {
+        case GGML_BACKEND_DEVICE_TYPE_CPU:   return NC_DEV_CPU;
+        case GGML_BACKEND_DEVICE_TYPE_GPU:   return NC_DEV_GPU;
+        case GGML_BACKEND_DEVICE_TYPE_IGPU:  return NC_DEV_IGPU;
+        case GGML_BACKEND_DEVICE_TYPE_ACCEL: return NC_DEV_ACCEL;
+        default:                             return NC_DEV_OTHER;
+    }
+}
 void nc_llama_backend_free(void) { llama_backend_free(); }
 
-void * nc_llama_model_load(const char * path) {
+// `n_gpu_layers` is the caller's, and 0 means strictly CPU.
+//
+// It is a parameter rather than a constant because the support matrix has two
+// separate linux/x86_64 rows — `llama-cpp-cpu` and `llama-cpp-vulkan` — and
+// they are distinct claims. A row claiming CPU must not silently offload, and a
+// row claiming Vulkan must not silently fall back; the caller states which it
+// wants and `nc_llama_device_info` lets it verify what it got.
+void * nc_llama_model_load(const char * path, int32_t n_gpu_layers) {
     if (path == NULL) { return NULL; }
     struct llama_model_params mparams = llama_model_default_params();
-    // CPU only. This shim backs the `llama-cpp-cpu` support-matrix row, and a
-    // row claiming CPU must not silently offload to a GPU — that would make the
-    // evidence describe a backend other than the one named.
-    mparams.n_gpu_layers = 0;
+    mparams.n_gpu_layers = n_gpu_layers;
     return (void *) llama_model_load_from_file(path, mparams);
 }
 
