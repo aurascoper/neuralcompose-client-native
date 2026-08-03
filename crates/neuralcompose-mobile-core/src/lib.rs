@@ -10,8 +10,10 @@
 //! object is [`stream::StreamMonitor`]. This crate never reads a clock.
 
 pub mod audio;
+pub mod band_power;
 pub mod buffer;
 pub mod capture;
+pub mod channel_health;
 pub mod config;
 pub mod conformance;
 pub mod model_pack;
@@ -27,7 +29,9 @@ pub mod wire;
 pub use audio::{
     sha256_hex, AudioLifecycle, AudioSnapshot, AudioTransition, RecordingManifest, RecordingPhase,
 };
+pub use band_power::band_power;
 pub use buffer::SampleBuffer;
+pub use channel_health::{ChannelHealthStatus, ChannelHealthThresholds};
 pub use config::{
     derive_ws_url, parse_use_mock, resolve_client_mode, ClientMode, ResolvedClientConfig,
 };
