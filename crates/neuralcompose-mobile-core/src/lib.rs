@@ -14,7 +14,6 @@ pub mod buffer;
 pub mod capture;
 pub mod config;
 pub mod conformance;
-pub mod generation_eval;
 pub mod model_pack;
 pub mod presentation;
 pub mod property_law;

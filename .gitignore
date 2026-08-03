@@ -23,7 +23,3 @@ ios/NeuralComposeClient/Info.plist
 # Bridge tool environments (derived; see each tool's README)
 tools/muse-ble-bridge/.venv/
 tools/muse-osc-bridge/node_modules
-
-# Pinned llama.cpp source + Android build outputs (fetched and built by
-# android/runtime-llama/build-llama-android.sh; never committed)
-android/runtime-llama/build/

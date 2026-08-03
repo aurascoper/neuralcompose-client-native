@@ -18,19 +18,6 @@ contract changes are new versions, coordinated with the server.
   (enforced by `fixtures_golden.rs`). `eeg-frame-batch-8.json` is generated
   deterministically by `cargo run --example gen_fixtures` (drift-checked in
   CI by `scripts/check-fixtures.sh`).
-- `generation-eval/` — the frozen M7-B generation-benchmark corpus.
-  `m7b-corpus-v1.json` is 18 sanitized, synthetic prompts: exactly two per
-  allowed `BenchmarkTaskKind` × `PromptContextProfile` pair, over the nine-pair
-  matrix the protocol permits. **The corpus is owned by Rust**, which
-  `include_bytes!`-es this file and derives its identity from its content;
-  there is no API anywhere that accepts a corpus digest, so the digest cannot
-  be asserted independently of the bytes. `scripts/check-fixtures.sh`
-  re-serializes the parsed value and diffs it against this file, which is what
-  proves the committed artifact and the compiled value are the same thing.
-  Editing a prompt, reordering the list, or changing either taxonomy axis
-  changes the corpus identity and therefore the declaration identity — that is
-  the intent, not a hazard. The quota is exact, not a minimum: quota shape is
-  the macro weighting, so a "small" edit here reweights the study.
 - `constants.json` — shared numeric contract (channel order, buffer size,
   staleness thresholds, reconnect policy, WS path). The Rust core's compiled
   defaults are test-asserted equal to this file.
