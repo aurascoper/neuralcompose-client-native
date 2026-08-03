@@ -64,6 +64,17 @@ to rather than silently gaining one. That direction is asserted by
 
 ## CI jobs that are NOT matrix evidence
 
+`kotlin-bindings-jvm` compiles the generated Kotlin and **runs** it against the
+real cdylib on a host JVM (`android/core` is a host-JVM harness, no Android SDK).
+Its assertions cross the FFI boundary for real, and it is the first thing to
+check the Kotlin bindings on any machine — before 2026-08-03 they had been
+regenerated many times and compiled never.
+
+It is **not evidence for the `android/arm64` rows**, which stay `Contracted`.
+A linux/x86_64 JVM run is a different OS, a different architecture and no
+device. What it proves is that the generated Kotlin compiles and that its
+assertions agree with the Rust they wrap — worth having, and not a promotion.
+
 `swift-bindings-syntax-linux` compiles the UniFFI-generated Swift on a Linux
 runner. It is a fast fail for a broken regeneration — seconds instead of a Mac
 round-trip — and it is **not evidence for any row in this table**.
