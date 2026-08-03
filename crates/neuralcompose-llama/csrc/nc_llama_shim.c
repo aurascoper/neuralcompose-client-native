@@ -126,9 +126,17 @@ int32_t nc_llama_n_embd(void * model) {
     return llama_model_n_embd((const struct llama_model *) model);
 }
 
-void * nc_llama_context_new(void * model, int32_t n_ctx) {
+// `n_threads` of 0 keeps llama.cpp's own default, which is GGML_DEFAULT_N_THREADS
+// — a hard-coded 4, marked "TODO: better default" upstream. On a 24-core machine
+// that silently uses one sixth of the CPU, and a CPU-vs-accelerator benchmark
+// taken against it measures a handicap rather than a backend.
+void * nc_llama_context_new(void * model, int32_t n_ctx, int32_t n_threads) {
     if (model == NULL) { return NULL; }
     struct llama_context_params cparams = llama_context_default_params();
+    if (n_threads > 0) {
+        cparams.n_threads       = n_threads;
+        cparams.n_threads_batch = n_threads;
+    }
     cparams.embeddings = true;
     // UNSPECIFIED means "use the pooling the model's own metadata declares".
     // Forcing MEAN or CLS here would silently disagree with the reference
@@ -143,6 +151,13 @@ void * nc_llama_context_new(void * model, int32_t n_ctx) {
         cparams.n_ubatch = (uint32_t) n_ctx;
     }
     return (void *) llama_init_from_model((struct llama_model *) model, cparams);
+}
+
+// Reads back what llama.cpp actually used, so a thread setting can be VERIFIED
+// rather than assumed to have taken effect.
+int32_t nc_llama_get_n_threads(void * ctx) {
+    if (ctx == NULL) { return NC_ERR_NULL_ARG; }
+    return llama_n_threads((struct llama_context *) ctx);
 }
 
 void nc_llama_context_free(void * ctx) {
