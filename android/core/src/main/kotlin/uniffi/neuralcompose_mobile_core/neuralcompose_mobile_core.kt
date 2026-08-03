@@ -6019,6 +6019,23 @@ data class SupportEvidence (
     var `fixtureRuntimeExecuted`: kotlin.Boolean
     , 
     /**
+     * The REAL CANDIDATE model executed — not a fixture.
+     *
+     * Separate from `fixture_runtime_executed` because the two rungs mean
+     * different things: `RuntimeSmokeValidated` is "a deterministic fixture
+     * model executed successfully", `DeviceValidated` is "the real candidate
+     * model executed on named physical hardware". Without this field the
+     * checker had no way to tell them apart and granted `DeviceValidated` to
+     * a fixture run on named hardware — more permissive than the table it is
+     * described as enforcing. Found 2026-08-03 while promoting the two linux
+     * GGUF rows, whose evidence hit exactly that case.
+     *
+     * A fixture is not a candidate however thoroughly it ran, and naming the
+     * hardware does not change which model executed on it.
+     */
+    var `candidateModelExecuted`: kotlin.Boolean
+    , 
+    /**
      * Exact physical hardware. `None` blocks DeviceValidated outright.
      */
     var `physicalDevice`: kotlin.String?
@@ -6049,6 +6066,7 @@ public object FfiConverterTypeSupportEvidence: FfiConverterRustBuffer<SupportEvi
             FfiConverterBoolean.read(buf),
             FfiConverterBoolean.read(buf),
             FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
@@ -6061,6 +6079,7 @@ public object FfiConverterTypeSupportEvidence: FfiConverterRustBuffer<SupportEvi
             FfiConverterBoolean.allocationSize(value.`contractsAndTestsPass`) +
             FfiConverterBoolean.allocationSize(value.`buildsOnNamedTarget`) +
             FfiConverterBoolean.allocationSize(value.`fixtureRuntimeExecuted`) +
+            FfiConverterBoolean.allocationSize(value.`candidateModelExecuted`) +
             FfiConverterOptionalString.allocationSize(value.`physicalDevice`) +
             FfiConverterOptionalString.allocationSize(value.`osVersion`) +
             FfiConverterOptionalString.allocationSize(value.`backendVersion`) +
@@ -6072,6 +6091,7 @@ public object FfiConverterTypeSupportEvidence: FfiConverterRustBuffer<SupportEvi
             FfiConverterBoolean.write(value.`contractsAndTestsPass`, buf)
             FfiConverterBoolean.write(value.`buildsOnNamedTarget`, buf)
             FfiConverterBoolean.write(value.`fixtureRuntimeExecuted`, buf)
+            FfiConverterBoolean.write(value.`candidateModelExecuted`, buf)
             FfiConverterOptionalString.write(value.`physicalDevice`, buf)
             FfiConverterOptionalString.write(value.`osVersion`, buf)
             FfiConverterOptionalString.write(value.`backendVersion`, buf)

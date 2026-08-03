@@ -22,9 +22,10 @@ As of 2026-08-03 the two `linux/x86_64` GGUF rows are `RuntimeSmokeValidated`
 — a deterministic fixture model executed on named hardware. Every other row
 remains `Contracted`: no runtime has executed under those contracts.
 
-**The two promoted rows ran a FIXTURE model, not the candidate.** They are
-deliberately claimed one rung below what `attained_support_status()` returns for
-their evidence; see "A gap between this table and its checker" below.
+**The two promoted rows ran a FIXTURE model, not the candidate**, which is why
+they stop at `RuntimeSmokeValidated` — and, since 2026-08-03, why
+`attained_support_status()` stops them there too. See "The checker distinguishes
+a fixture from the candidate" below.
 
 | OS | Arch | Backend ID | Runtime ABI | Status | Hardware | OS version | Driver/backend version | Pack ID + digest | Evidence commit | Acceptance doc | Known limitations | Last validated |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -40,28 +41,26 @@ their evidence; see "A gap between this table and its checker" below.
 | windows | arm64 | `windows-ml-qnn` | `nc-onnx-v1` | Contracted | — | — | — | — | (this PR) | `docs/acceptance/m7-a2.md` | Snapdragon only; never a Windows-x64 claim | 2026-07-29 |
 | android | arm64 | `qnn` | `nc-onnx-v1` | Contracted | — | — | — | — | (this PR) | `docs/acceptance/m7-a2.md` | Snapdragon only; Pixel 8a is Tensor G3 and cannot supply this evidence | 2026-07-29 |
 
-## A gap between this table and its checker
+## The checker distinguishes a fixture from the candidate
 
 `attained_support_status()` is described above as "the machine-checkable form of
-this table". For the evidence behind the two promoted rows it returns
-**`DeviceValidated`**, one rung higher than they claim.
-
-The cause is that the function has no notion of *which* model ran. It takes
-`fixture_runtime_executed` plus a named device, OS and backend version, and
-promotes — but this table's prose reserves `DeviceValidated` for "the real
+this table", and until 2026-08-03 it was more permissive than the table it
+enforces. The function had no notion of *which* model ran: it took
+`fixture_runtime_executed` plus a named device, OS and backend version and
+returned `DeviceValidated` — the rung this table reserves for "the real
 candidate model executed on named physical hardware". A fixture run on named
-hardware therefore satisfies the checker while failing the definition.
+hardware satisfied the checker while failing the definition, which is exactly
+the evidence behind the two `RuntimeSmokeValidated` rows above.
 
-This does not affect the rows above, which claim the lower rung deliberately:
-the stated rule is a **ceiling** ("may never claim more than that function
-returns"), and claiming less is always permitted. It matters because a future
-row could be promoted to `DeviceValidated` on fixture evidence and pass the
-check. Pinned by `crates/neuralcompose-mobile-core/tests/tonight_evidence.rs`,
-which documents the discrepancy rather than asserting it is correct.
+`SupportEvidence` now carries `candidate_model_executed`, checked **before** the
+hardware-naming conditions, because no amount of hardware detail turns a fixture
+run into a device validation. The two linux rows name their device, OS and
+backend and still attain `RuntimeSmokeValidated`, which is what they claim.
 
-Closing it needs a distinction the evidence struct does not currently carry —
-whether the executed model was the fixture or the candidate — so it is recorded
-here rather than patched silently.
+The field defaults to `false`, so the change can only ever **lower** an attained
+rung, never raise one — an unmigrated caller loses a rung it was not entitled
+to rather than silently gaining one. That direction is asserted by
+`the_new_field_can_only_lower_an_attained_rung_never_raise_it`.
 
 ## Standing hardware gaps
 

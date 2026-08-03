@@ -145,6 +145,20 @@ pub struct SupportEvidence {
     pub builds_on_named_target: bool,
     /// A deterministic fixture model actually executed — not "it compiled".
     pub fixture_runtime_executed: bool,
+    /// The REAL CANDIDATE model executed — not a fixture.
+    ///
+    /// Separate from `fixture_runtime_executed` because the two rungs mean
+    /// different things: `RuntimeSmokeValidated` is "a deterministic fixture
+    /// model executed successfully", `DeviceValidated` is "the real candidate
+    /// model executed on named physical hardware". Without this field the
+    /// checker had no way to tell them apart and granted `DeviceValidated` to
+    /// a fixture run on named hardware — more permissive than the table it is
+    /// described as enforcing. Found 2026-08-03 while promoting the two linux
+    /// GGUF rows, whose evidence hit exactly that case.
+    ///
+    /// A fixture is not a candidate however thoroughly it ran, and naming the
+    /// hardware does not change which model executed on it.
+    pub candidate_model_executed: bool,
     /// Exact physical hardware. `None` blocks DeviceValidated outright.
     pub physical_device: Option<String>,
     pub os_version: Option<String>,
@@ -170,7 +184,10 @@ pub fn attained_support_status(evidence: SupportEvidence) -> Option<SupportStatu
     if !evidence.fixture_runtime_executed {
         return Some(SupportStatus::BuildValidated);
     }
-    let device_proven = named(&evidence.physical_device)
+    // The candidate model is required BEFORE the naming checks, because no
+    // amount of hardware detail turns a fixture run into a device validation.
+    let device_proven = evidence.candidate_model_executed
+        && named(&evidence.physical_device)
         && named(&evidence.os_version)
         && named(&evidence.backend_version);
     if !device_proven {

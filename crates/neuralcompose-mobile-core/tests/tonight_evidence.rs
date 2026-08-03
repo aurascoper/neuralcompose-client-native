@@ -16,6 +16,7 @@ fn tonight() -> SupportEvidence {
         builds_on_named_target: true,
         // A fixture model — bge-small-en-v1.5, not the real candidate.
         fixture_runtime_executed: true,
+        candidate_model_executed: false,
         physical_device: Some("GPD, AMD Ryzen AI 9 HX 370 w/ Radeon 890M".into()),
         os_version: Some("Ubuntu 26.04 LTS, kernel 7.0.0-28-generic".into()),
         backend_version: Some("llama.cpp d0bfb1981266c271cd0536a8aa7c5e863e7cdf61".into()),
@@ -38,33 +39,52 @@ fn the_promotion_being_applied_is_within_what_the_function_permits() {
 }
 
 #[test]
-fn the_function_and_the_prose_disagree_about_this_evidence() {
-    // DOCUMENTING A DEFECT, not asserting the desired behaviour.
+fn the_function_now_agrees_with_the_prose_about_this_evidence() {
+    // This test previously documented a DEFECT: the table reserves
+    // `DeviceValidated` for "the real candidate model executed on named
+    // physical hardware", but `attained_support_status` had no notion of which
+    // model ran and granted that rung to a fixture run on named hardware —
+    // exactly tonight's evidence. It was more permissive than the table it is
+    // described as enforcing.
     //
-    // The table's prose says `DeviceValidated` means "the real candidate model
-    // executed on named physical hardware". `attained_support_status` has no
-    // notion of which model ran: it takes `fixture_runtime_executed` plus
-    // named device/OS/backend and returns DeviceValidated. So a FIXTURE run on
-    // named hardware — exactly tonight's evidence — reaches the rung the prose
-    // reserves for the candidate model.
-    //
-    // This does not affect the promotion being applied, which claims the lower
-    // rung deliberately. It matters because the function is described as the
-    // machine-checkable form of the table and here it is more permissive than
-    // the table, so a future row could be promoted to DeviceValidated on
-    // fixture evidence and pass the check.
+    // `candidate_model_executed` closes it. Tonight's evidence names the
+    // device, OS and backend and still stops at RuntimeSmokeValidated, because
+    // the model that ran was bge-small-en-v1.5, a fixture.
     assert_eq!(
         attained_support_status(tonight()),
-        Some(SupportStatus::DeviceValidated),
-        "if this ever returns RuntimeSmokeValidated the gap has been closed \
-         and this test should be replaced by one asserting the fix"
+        Some(SupportStatus::RuntimeSmokeValidated),
+        "a fixture run must not reach DeviceValidated however well named"
     );
-    // And the gap is exactly the missing distinction: with the hardware
-    // unnamed, the same fixture evidence lands where the prose expects.
-    let mut anonymous = tonight();
-    anonymous.physical_device = None;
+    assert!(!supports_claim(tonight(), SupportStatus::DeviceValidated));
+
+    // The rung is still reachable — the fix restricts it, it does not remove
+    // it. Swapping the fixture for the candidate on the same hardware promotes.
+    let mut with_candidate = tonight();
+    with_candidate.candidate_model_executed = true;
     assert_eq!(
-        attained_support_status(anonymous),
-        Some(SupportStatus::RuntimeSmokeValidated)
+        attained_support_status(with_candidate),
+        Some(SupportStatus::DeviceValidated)
     );
+}
+
+#[test]
+fn the_new_field_can_only_lower_an_attained_rung_never_raise_it() {
+    // `candidate_model_executed` defaults to false for every existing caller,
+    // so this change can only make a claim MORE conservative. That is the safe
+    // direction for a promotion checker: an unmigrated caller loses a rung it
+    // was not entitled to, rather than silently gaining one.
+    let mut e = tonight();
+    for candidate in [false, true] {
+        e.candidate_model_executed = candidate;
+        let attained = attained_support_status(e.clone()).expect("contracts pass");
+        let without = {
+            let mut w = e.clone();
+            w.candidate_model_executed = false;
+            attained_support_status(w).expect("contracts pass")
+        };
+        assert!(
+            without <= attained,
+            "clearing the flag must never raise the rung"
+        );
+    }
 }

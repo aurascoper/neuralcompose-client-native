@@ -322,7 +322,8 @@ class Gate4Test {
         // Compiling is not running.
         val built = uniffi.neuralcompose_mobile_core.SupportEvidence(
             contractsAndTestsPass = true, buildsOnNamedTarget = true,
-            fixtureRuntimeExecuted = false, physicalDevice = null, osVersion = null,
+            fixtureRuntimeExecuted = false, candidateModelExecuted = false,
+            physicalDevice = null, osVersion = null,
             backendVersion = null, signedPackagingAccepted = false, acceptanceDocument = null,
         )
         assertEquals(
@@ -333,6 +334,32 @@ class Gate4Test {
             false,
             uniffi.neuralcompose_mobile_core.supportsClaim(
                 built, uniffi.neuralcompose_mobile_core.SupportStatus.DEVICE_VALIDATED,
+            ),
+        )
+        // A FIXTURE on fully named hardware stops at RuntimeSmokeValidated.
+        // DeviceValidated is defined as "the real candidate model executed on
+        // named physical hardware"; until 2026-08-03 the checker ignored the
+        // first half and granted the rung to a fixture run.
+        val namedFixture = built.copy(
+            fixtureRuntimeExecuted = true,
+            physicalDevice = "Pixel 8a", osVersion = "Android 16",
+            backendVersion = "llama.cpp b4321",
+        )
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.SupportStatus.RUNTIME_SMOKE_VALIDATED,
+            uniffi.neuralcompose_mobile_core.attainedSupportStatus(namedFixture),
+        )
+        assertEquals(
+            false,
+            uniffi.neuralcompose_mobile_core.supportsClaim(
+                namedFixture, uniffi.neuralcompose_mobile_core.SupportStatus.DEVICE_VALIDATED,
+            ),
+        )
+        // The candidate model on the same hardware promotes.
+        assertEquals(
+            uniffi.neuralcompose_mobile_core.SupportStatus.DEVICE_VALIDATED,
+            uniffi.neuralcompose_mobile_core.attainedSupportStatus(
+                namedFixture.copy(candidateModelExecuted = true),
             ),
         )
         // Channel permutation requires labels.
