@@ -130,7 +130,7 @@ int32_t nc_llama_n_embd(void * model) {
 // — a hard-coded 4, marked "TODO: better default" upstream. On a 24-core machine
 // that silently uses one sixth of the CPU, and a CPU-vs-accelerator benchmark
 // taken against it measures a handicap rather than a backend.
-void * nc_llama_context_new(void * model, int32_t n_ctx, int32_t n_threads) {
+void * nc_llama_context_new(void * model, int32_t n_ctx, int32_t n_threads, int32_t n_ubatch) {
     if (model == NULL) { return NULL; }
     struct llama_context_params cparams = llama_context_default_params();
     if (n_threads > 0) {
@@ -150,7 +150,34 @@ void * nc_llama_context_new(void * model, int32_t n_ctx, int32_t n_threads) {
         cparams.n_batch = (uint32_t) n_ctx;
         cparams.n_ubatch = (uint32_t) n_ctx;
     }
+    // n_ubatch is the PHYSICAL batch: llama.cpp splits a submitted batch into
+    // micro-batches of this size, so it sets where dispatch boundaries fall.
+    // Overriding it after n_ctx is deliberate — it is the manipulated variable
+    // when testing whether a latency step is a boundary effect, and it must be
+    // able to sit BELOW n_ctx for that test to move the boundary into range.
+    if (n_ubatch > 0) {
+        cparams.n_ubatch = (uint32_t) n_ubatch;
+    }
     return (void *) llama_init_from_model((struct llama_model *) model, cparams);
+}
+
+// Reads back the physical batch size llama.cpp adopted. Same discipline as the
+// thread getter: a swept parameter that silently failed to apply would produce
+// a flat result that looks exactly like a refuted hypothesis.
+int32_t nc_llama_get_n_ubatch(void * ctx) {
+    if (ctx == NULL) { return NC_ERR_NULL_ARG; }
+    return (int32_t) llama_n_ubatch((const struct llama_context *) ctx);
+}
+
+// Token count for `text` under this model's vocab, including the special
+// tokens the embedding path adds. The kernel and the batching logic see
+// TOKENS; expressing a measurement in words hides a content-dependent
+// conversion factor and smears any boundary that exists.
+int32_t nc_llama_token_count(void * model, const char * text) {
+    if (model == NULL || text == NULL) { return NC_ERR_NULL_ARG; }
+    const struct llama_vocab * vocab = llama_model_get_vocab((struct llama_model *) model);
+    int32_t n = llama_tokenize(vocab, text, (int32_t) strlen(text), NULL, 0, true, false);
+    return (n < 0) ? -n : n;
 }
 
 // Reads back what llama.cpp actually used, so a thread setting can be VERIFIED

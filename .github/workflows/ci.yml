@@ -34,6 +34,64 @@ jobs:
       - name: Whitespace and conflict markers
         run: git diff --check HEAD
 
+  # SYNTAX ONLY. NOT iOS EVIDENCE. NOT A SUPPORT-MATRIX INPUT.
+  #
+  # Parses the UniFFI-generated Swift on Linux to catch a broken regeneration in
+  # seconds instead of waiting for a Mac. A green run here says the GENERATED
+  # BINDINGS ARE SYNTACTICALLY VALID SWIFT, and nothing else.
+  #
+  # PARSE, NOT TYPE-CHECK, and the distinction is forced rather than chosen.
+  # The generated Swift imports a companion C module (neuralcompose_mobile_coreFFI)
+  # that uniffi emits as an untracked .h + .modulemap, and that modulemap
+  # declares `use "Darwin"`. On Linux the module is absent, the
+  # `#if canImport(...)` guard skips the import, and every FFI type
+  # (RustBuffer, ForeignBytes, ...) is undefined — a first attempt at
+  # -typecheck failed with exactly that. Supplying the module would mean
+  # building the Rust cdylib inside this container, which is a second full
+  # build and not a fast fail.
+  #
+  # It says nothing about ios/arm64. Those rows are `Contracted`, and evidence
+  # produced on Linux can never promote them — reading a green job here as iOS
+  # readiness is exactly the promotion-by-implication ADR-002 exists to forbid,
+  # and the same shape as a canary labelled `ubuntu-26.04-preview` that was
+  # really running 24.04.
+  #
+  # It also does NOT build: the SwiftUI shell (no UIKit/SwiftUI on Linux), the
+  # XCFramework, or anything requiring Xcode. `ios/NeuralComposeCore/Tests`
+  # uses XCTest and is not compiled here.
+  #
+  # Non-blocking on purpose. A Linux Swift toolchain regression must never gate
+  # a merge for a target it cannot speak to.
+  swift-bindings-syntax-linux:
+    name: swift-bindings-syntax (linux, informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container: swift:6.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      # Type-check only — no binary is produced and none is wanted. The
+      # generated file needs its FFI symbols at link time, which do not exist
+      # without building the Rust cdylib for this container; parsing and type
+      # checking is the whole claim.
+      - name: Parse generated Swift bindings
+        # `set -eu` without pipefail: the swift container's default shell is
+        # dash, which has no pipefail, and the first run of this job died on
+        # that before ever reaching swiftc — a red job that had checked
+        # nothing. There are no pipes here, so pipefail bought nothing anyway.
+        run: |
+          set -eu
+          F=ios/NeuralComposeCore/Sources/NeuralComposeCore/neuralcompose_mobile_core.swift
+          test -f "$F" || { echo "generated binding missing: $F"; exit 1; }
+          swiftc -parse -swift-version 5 "$F"
+          echo "generated Swift bindings are syntactically valid Swift"
+      - name: Restate the boundary
+        run: |
+          echo "PARSE ONLY — no type checking, no linking, no iOS anything."
+          echo "This job is not evidence for any ios/arm64 row."
+          echo "See docs/support-matrix.md; those rows remain Contracted."
+
   # Tier 1 skeleton (ADR-002): build authorities are required; preview
   # runners are canaries — visible and investigated, never the sole merge
   # authority until runner stability is acceptable. No model weights, no

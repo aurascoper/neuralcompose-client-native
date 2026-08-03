@@ -74,6 +74,7 @@ struct Args {
     bench: bool,
     bench_iters: u32,
     threads: u32,
+    sweep: bool,
     seconds: u64,
     status_every_ms: u64,
     json: bool,
@@ -90,6 +91,7 @@ fn parse_args() -> Result<Args, String> {
         bench: false,
         bench_iters: 30,
         threads: 0,
+        sweep: false,
         seconds: 0,
         status_every_ms: 1000,
         json: false,
@@ -129,6 +131,7 @@ fn parse_args() -> Result<Args, String> {
             }
             "--devices" => a.devices = true,
             "--bench" => a.bench = true,
+            "--sweep" => a.sweep = true,
             "--threads" => {
                 a.threads = it
                     .next()
@@ -159,6 +162,8 @@ fn parse_args() -> Result<Args, String> {
                      --gpu-layers <n>        offload n layers to an accelerator (0 = CPU)\n\
                      --devices               list the compute devices ggml can see, and exit\n\
                      --bench                 time CPU vs accelerator across input lengths\n\
+                     --sweep                 fine TOKEN sweep x n_ubatch, to separate a dispatch\n\
+                     \x20                       boundary from smooth bandwidth saturation\n\
                      --bench-iters <n>       measured iterations per cell, default 30\n\
                      --threads <n>           CPU threads (0 = all cores; llama.cpp's own\n\
                      \x20                       default is a hard-coded 4)\n"
@@ -209,6 +214,14 @@ fn main() {
 
     if args.devices {
         std::process::exit(run_devices());
+    }
+
+    if args.sweep {
+        std::process::exit(run_sweep(
+            args.model.as_deref(),
+            args.bench_iters,
+            args.threads,
+        ));
     }
 
     if args.bench {
@@ -767,5 +780,204 @@ fn run_bench(model: Option<&str>, iters: u32, threads: u32) -> i32 {
     // Speedup above 1 means the accelerator is faster. Stated explicitly
     // because the column is a ratio and ratios invite being read backwards.
     println!("\n  speedup = cpu median / accel median; >1 means the accelerator wins");
+    0
+}
+
+/// Build text whose TOKEN count is exactly `target`, verified against the model.
+///
+/// The benchmark's word-based cases carry a hidden variable: word-to-token
+/// ratio depends on content, so a band stated in words smears any boundary that
+/// exists in tokens. The kernel and the batching logic see tokens, so the sweep
+/// is expressed in tokens and the count is confirmed with the model's own
+/// tokenizer rather than estimated.
+fn text_of_tokens(e: &neuralcompose_llama::Embedder, target: usize) -> Option<String> {
+    const VOCAB: [&str; 8] = [
+        "signal",
+        "electrode",
+        "cortex",
+        "rhythm",
+        "threshold",
+        "channel",
+        "spectrum",
+        "artifact",
+    ];
+    // Grow one word at a time until the tokenizer reports `target`. Every word
+    // above is a single WordPiece token for this vocab, but that is checked
+    // rather than assumed — a multi-token word would overshoot and the loop
+    // reports failure instead of silently measuring the wrong length.
+    let mut words: Vec<&str> = Vec::new();
+    for i in 0..target * 2 {
+        words.push(VOCAB[i % VOCAB.len()]);
+        let text = words.join(" ");
+        match e.token_count(&text) {
+            Some(n) if n == target => return Some(text),
+            Some(n) if n > target => return None,
+            Some(_) => {}
+            None => return None,
+        }
+    }
+    None
+}
+
+/// Fine token sweep crossed with `n_ubatch`.
+///
+/// THE QUESTION. `--bench` shows a speedup that peaks mid-range and falls at
+/// the long case, reproducibly, even though attention is quadratic and the gap
+/// should widen. Two hypotheses make opposite predictions under one
+/// manipulation:
+///
+/// - **Dispatch boundary.** llama.cpp splits a batch into micro-batches of
+///   `n_ubatch`; each submit costs a fixed round-trip that the CPU path does
+///   not pay. Prediction: the drop is a STEP at a token count, and the step
+///   MOVES when `n_ubatch` moves.
+/// - **Bandwidth saturation.** The iGPU shares memory bandwidth with the CPU.
+///   Prediction: the drop is SMOOTH and does NOT move with `n_ubatch`.
+///
+/// Neither outcome is ambiguous, which is why this is one manipulation rather
+/// than a parameter hunt.
+fn run_sweep(model: Option<&str>, iters: u32, threads: u32) -> i32 {
+    use std::time::Instant;
+
+    use neuralcompose_llama::{devices, Embedder};
+
+    if !neuralcompose_llama::is_available() {
+        eprintln!("no model backend in this build");
+        return 4;
+    }
+    let path = default_model(model);
+    if !path.exists() {
+        eprintln!("no model at {}", path.display());
+        return 4;
+    }
+    if !devices().iter().any(|d| d.kind.is_accelerator()) {
+        eprintln!("no accelerator — this sweep compares CPU against one");
+        return 4;
+    }
+    let threads = if threads == 0 {
+        std::thread::available_parallelism()
+            .map(|n| n.get() as u32)
+            .unwrap_or(4)
+    } else {
+        threads
+    };
+
+    // bge-small's trained context is 512 and its position embeddings are
+    // learned, so beyond that the model is out of distribution and the timing
+    // would not describe anything meaningful. The sweep stops there.
+    const N_CTX: u32 = 512;
+    // Dense at the low end: the peak is there, not mid-range. The word-based
+    // benchmark's "short" case was ~5 tokens and its "medium" ~62, which left
+    // the entire rise between them unmeasured.
+    let token_targets: [usize; 14] = [4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512];
+    // n_ubatch CANNOT be swept for this model, and the reason is structural
+    // rather than empirical: llama.cpp asserts
+    //   GGML_ASSERT(cparams.n_ubatch >= n_tokens && "encoder requires n_ubatch >= n_tokens")
+    // A bidirectional encoder cannot be micro-batched — every token attends to
+    // every other — so there is no dispatch boundary to cross and no boundary
+    // hypothesis to test. Requesting a smaller n_ubatch does not produce a
+    // different dispatch pattern; it aborts the process.
+    //
+    // The three legal columns measured before that abort were 5.41 / 5.45 /
+    // 5.47 at 32 tokens: identical, as they must be. Kept as a single column.
+    let ubatches: [u32; 1] = [512];
+
+    let probe = match Embedder::load_tuned(&path, N_CTX, 0, threads, 0) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("probe load failed: {e}");
+            return 4;
+        }
+    };
+    let texts: Vec<(usize, String)> = token_targets
+        .iter()
+        .filter_map(|t| text_of_tokens(&probe, *t).map(|s| (*t, s)))
+        .collect();
+    drop(probe);
+    if texts.len() < token_targets.len() {
+        eprintln!(
+            "only built {} of {} exact token lengths",
+            texts.len(),
+            token_targets.len()
+        );
+    }
+
+    let measure = |e: &mut Embedder, text: &str| -> Option<f64> {
+        for _ in 0..3 {
+            e.embed(text).ok()?;
+        }
+        let mut s = Vec::with_capacity(iters as usize);
+        for _ in 0..iters {
+            let t0 = Instant::now();
+            e.embed(text).ok()?;
+            s.push(t0.elapsed().as_secs_f64() * 1000.0);
+        }
+        s.sort_by(|a, b| a.partial_cmp(b).expect("no NaN from a clock"));
+        Some(s[s.len() / 2])
+    };
+
+    let mut cpu = match Embedder::load_tuned(&path, N_CTX, 0, threads, 0) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("cpu load failed: {e}");
+            return 4;
+        }
+    };
+    eprintln!(
+        "model {} | {iters} iters/cell | cpu threads {} | n_ctx {N_CTX}",
+        path.display(),
+        cpu.active_threads()
+    );
+
+    print!("\n  {:>7}", "tokens");
+    for u in ubatches {
+        print!(" {:>16}", format!("ub={u} speedup"));
+    }
+    println!("  {:>10}", "cpu ms");
+    println!("  {}", "-".repeat(7 + 17 * ubatches.len() + 12));
+
+    for (tokens, text) in &texts {
+        let Some(c) = measure(&mut cpu, text) else {
+            eprintln!("cpu embed failed at {tokens} tokens");
+            return 4;
+        };
+        print!("  {tokens:>7}");
+        for u in ubatches {
+            // Skip rather than abort: llama.cpp treats n_ubatch < n_tokens as a
+            // fatal assertion for encoders, so an out-of-range cell would kill
+            // the process mid-sweep and lose every row already measured.
+            if (u as usize) < *tokens {
+                print!(" {:>16}", "n/a");
+                continue;
+            }
+            let mut g = match Embedder::load_tuned(&path, N_CTX, 99, threads, u) {
+                Ok(e) => e,
+                Err(e) => {
+                    eprintln!("accel load failed at ubatch {u}: {e}");
+                    return 4;
+                }
+            };
+            // VERIFY the swept parameter took effect. A silently-ignored
+            // n_ubatch would give three identical columns, which reads exactly
+            // like the boundary hypothesis being refuted.
+            let active = g.active_ubatch();
+            if active != u as i32 {
+                eprintln!("\nn_ubatch {u} requested but {active} active — sweep is invalid");
+                return 4;
+            }
+            match measure(&mut g, text) {
+                Some(gm) => print!(" {:>16.2}", c / gm),
+                None => {
+                    eprintln!("accel embed failed at {tokens} tokens, ubatch {u}");
+                    return 4;
+                }
+            }
+        }
+        println!("  {c:>10.2}");
+    }
+    println!(
+        "\n  n_ubatch is not a free variable for an encoder: llama.cpp asserts\n  \
+         n_ubatch >= n_tokens, so the batch is never split and no dispatch\n  \
+         boundary exists to explain a step."
+    );
     0
 }
