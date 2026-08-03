@@ -16,6 +16,7 @@ pub mod capture;
 pub mod channel_health;
 pub mod config;
 pub mod conformance;
+pub mod electrode_check;
 pub mod model_pack;
 pub mod presentation;
 pub mod property_law;
@@ -35,6 +36,7 @@ pub use channel_health::{ChannelHealthStatus, ChannelHealthThresholds};
 pub use config::{
     derive_ws_url, parse_use_mock, resolve_client_mode, ClientMode, ResolvedClientConfig,
 };
+pub use electrode_check::{assess_channel, ElectrodeReport, ElectrodeVerdict, MainsThresholds};
 pub use presentation::{
     format_banner_en, format_label_en, present, Presentation, StreamPhase, StreamTone,
 };

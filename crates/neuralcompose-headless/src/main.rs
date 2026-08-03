@@ -49,17 +49,26 @@ use std::time::{Duration, Instant};
 
 use neuralcompose_mobile_core::presentation::StreamPhase;
 use neuralcompose_mobile_core::{
-    next_reconnect, ChannelHealthThresholds, MonitorConfig, ReconnectDecision, SocketEvent,
-    StreamMonitor,
+    assess_channel, next_reconnect, ChannelHealthThresholds, ElectrodeReport, MainsThresholds,
+    MonitorConfig, ReconnectDecision, SocketEvent, StreamMonitor,
 };
 
 const DEFAULT_URL: &str = "ws://127.0.0.1:8788/api/eeg/stream";
+
+/// The Muse S rate, and the rate the frozen wire contract is served at by both
+/// `tools/muse-ble-bridge` and `tools/fixture-eeg-server`. The contract carries
+/// timestamps but not a declared rate, so this is an assumption of the shell
+/// rather than something the core is told — and it matters only for the mains
+/// check, which needs Hz to locate a band. A wrong value here would move the
+/// 50/60 Hz window and silently mis-locate the line.
+const SAMPLE_RATE_HZ: f64 = 256.0;
 
 struct Args {
     url: String,
     seconds: u64,
     status_every_ms: u64,
     json: bool,
+    check: bool,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -68,12 +77,15 @@ fn parse_args() -> Result<Args, String> {
         seconds: 0,
         status_every_ms: 1000,
         json: false,
+        check: false,
     };
+    let (mut saw_seconds, mut saw_cadence) = (false, false);
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
         match flag.as_str() {
             "--url" => a.url = it.next().ok_or("--url needs a value")?,
             "--seconds" => {
+                saw_seconds = true;
                 a.seconds = it
                     .next()
                     .ok_or("--seconds needs a value")?
@@ -81,6 +93,7 @@ fn parse_args() -> Result<Args, String> {
                     .map_err(|_| "--seconds must be an integer")?
             }
             "--status-every-ms" => {
+                saw_cadence = true;
                 a.status_every_ms = it
                     .next()
                     .ok_or("--status-every-ms needs a value")?
@@ -88,17 +101,32 @@ fn parse_args() -> Result<Args, String> {
                     .map_err(|_| "--status-every-ms must be an integer")?
             }
             "--json" => a.json = true,
+            "--check" => a.check = true,
             "-h" | "--help" => {
                 println!(
                     "neuralcompose-headless — drive the core against a live EEG stream\n\n\
                      --url <ws://…>          default {DEFAULT_URL}\n\
                      --seconds <n>           stop after n seconds (0 = run until interrupted)\n\
                      --status-every-ms <n>   status cadence, default 1000\n\
-                     --json                  emit one JSON status object per tick\n"
+                     --json                  emit one JSON status object per tick\n\
+                     --check                 electrode fitting check: per-channel cause and\n\
+                     \x20                       what to do, updating live while you adjust the\n\
+                     \x20                       band. Exits non-zero if a channel needs fixing.\n\
+                     \x20                       Defaults to 20s at a 2s cadence.\n"
                 );
                 std::process::exit(0);
             }
             other => return Err(format!("unrecognised argument {other:?}")),
+        }
+    }
+    // Check mode is a fitting aid, so it wants a bounded run and a cadence slow
+    // enough to react to. Explicit flags still win — this only fills defaults.
+    if a.check {
+        if !saw_seconds {
+            a.seconds = 20;
+        }
+        if !saw_cadence {
+            a.status_every_ms = 2000;
         }
     }
     Ok(a)
@@ -209,7 +237,11 @@ fn main() {
             let t = now_ms(start);
             if t.saturating_sub(last_status) >= args.status_every_ms {
                 last_status = t;
-                emit_status(&monitor, t, frames_total, args.json);
+                if args.check {
+                    emit_check(&monitor, t);
+                } else {
+                    emit_status(&monitor, t, frames_total, args.json);
+                }
             }
         }
 
@@ -227,7 +259,11 @@ fn main() {
     }
 
     let t = now_ms(start);
-    emit_status(&monitor, t, frames_total, args.json);
+    if args.check {
+        emit_check(&monitor, t);
+    } else {
+        emit_status(&monitor, t, frames_total, args.json);
+    }
     let snap = monitor.stream_snapshot(t);
     eprintln!(
         "\nsummary: {} frames, {} samples accepted, {} connection generation(s), final phase {}",
@@ -242,6 +278,87 @@ fn main() {
         eprintln!("no samples were accepted — not evidence of a working runtime");
         std::process::exit(1);
     }
+
+    if args.check {
+        let reports = assess_all(&monitor);
+        let bad: Vec<&str> = reports
+            .iter()
+            .zip(CHANNEL_NAMES)
+            .filter(|(r, _)| r.verdict.is_blocking())
+            .map(|(_, n)| n)
+            .collect();
+        // `unknown` is counted as not-ready separately from blocking: a channel
+        // nothing could be measured on has not passed, and reporting it as
+        // passing is the one failure mode that would make this check worse than
+        // no check at all.
+        let unmeasured: Vec<&str> = reports
+            .iter()
+            .zip(CHANNEL_NAMES)
+            .filter(|(r, _)| r.verdict == neuralcompose_mobile_core::ElectrodeVerdict::Unknown)
+            .map(|(_, n)| n)
+            .collect();
+        if bad.is_empty() && unmeasured.is_empty() {
+            eprintln!("electrode check: PASS — all four channels usable");
+        } else {
+            if !bad.is_empty() {
+                eprintln!("electrode check: FAIL — fix {}", bad.join(", "));
+            }
+            if !unmeasured.is_empty() {
+                eprintln!(
+                    "electrode check: {} could not be measured",
+                    unmeasured.join(", ")
+                );
+            }
+            std::process::exit(3);
+        }
+    }
+}
+
+const CHANNEL_NAMES: [&str; 4] = ["TP9", "AF7", "AF8", "TP10"];
+
+/// Assess every channel from the core's own buffered samples.
+///
+/// The window is whatever the core is holding — roughly five seconds at 256 Hz
+/// — which is deliberately the RECENT past, because the point of check mode is
+/// to react while the user's hands are on the headband. `band_power` refuses
+/// below one second, so an early tick reports `unknown` rather than guessing.
+fn assess_all(monitor: &StreamMonitor) -> Vec<ElectrodeReport> {
+    let ch = monitor.snapshot();
+    ch.channels
+        .iter()
+        .map(|c| {
+            assess_channel(
+                c,
+                SAMPLE_RATE_HZ,
+                ChannelHealthThresholds::default(),
+                MainsThresholds::default(),
+            )
+        })
+        .collect()
+}
+
+fn emit_check(monitor: &StreamMonitor, now: u64) {
+    let snap = monitor.stream_snapshot(now);
+    println!(
+        "\n[{:>6}ms] {} — {} samples",
+        now,
+        phase_str(&snap.phase),
+        snap.total_received
+    );
+    for (r, name) in assess_all(monitor).iter().zip(CHANNEL_NAMES) {
+        let line = match r.line_hz {
+            Some(f) => format!("{:>9.1} @{:.0}Hz", r.mains_power, f),
+            None => "        —".to_string(),
+        };
+        let mark = if r.verdict.is_blocking() { "✗" } else { " " };
+        println!(
+            "  {mark} {name:<5} {:7.1} µV  mains {line}  {:<17} {}",
+            r.rms,
+            r.verdict.as_str(),
+            r.verdict.advice()
+        );
+    }
+    let _ = std::io::stdout().flush();
 }
 
 fn emit_status(monitor: &StreamMonitor, now: u64, frames: u64, json: bool) {
@@ -290,7 +407,7 @@ fn emit_status(monitor: &StreamMonitor, now: u64, frames: u64, json: bool) {
             }
         );
     } else {
-        let names = ["TP9", "AF7", "AF8", "TP10"];
+        let names = CHANNEL_NAMES;
         // The CORE classifies; this shell only prints. Before the thresholds
         // were ported, a run showing 513 and 881 uV read as "high" to a human
         // eye when the repo's own committed rule called both saturated.
