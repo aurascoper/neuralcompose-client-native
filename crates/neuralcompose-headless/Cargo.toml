@@ -1,0 +1,18 @@
+[package]
+name = "neuralcompose-headless"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+# A SEPARATE crate on purpose. `lib.rs` in the core states that shells own all
+# I/O — sockets, timers, permissions, lifecycle — and feed the core raw payloads
+# plus monotonic timestamps. Putting a socket client in the core's own crate
+# would pull tokio/tungstenite into the dependency graph of a library whose
+# entire contract is that it has none. This crate IS a shell, and the third one:
+# SwiftUI, Compose, and now a headless Linux binary.
+[dependencies]
+neuralcompose-mobile-core = { path = "../neuralcompose-mobile-core" }
+# Already a vetted dev-dependency of the core (0.28), so this promotes an
+# existing choice to a new crate rather than making a new supply-chain decision.
+tungstenite = "0.28"
