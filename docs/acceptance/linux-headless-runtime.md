@@ -133,6 +133,65 @@ reading it.
    living outside the core, and it is recorded here rather than quietly worked
    around.
 
+## Electrode check — added because the diagnosis was being done by hand
+
+The classifier above reports `AF7 297.32 saturated` and stops. Its own
+documentation lists three causes for that one word — muscle, motion, or 50/60 Hz
+interference — with three different remedies, so the number told the user
+something was wrong and nothing about what to do. In practice that meant asking
+an assistant to run a spectrum, which is neither available at 2am nor free.
+
+`electrode_check` is that analysis moved into the core. Mains-band power
+separates high contact impedance from the other causes, because a poorly
+contacted electrode couples ambient line noise and a well-contacted one shunts
+it. Measured on the three recordings of this session, AF7 against AF8 — same
+electrode type, opposite sides, same instant:
+
+| band | AF7 / AF8 |
+|---|---|
+| drift 0.5–4 Hz | 0.2× |
+| beta 13–30 Hz | 51.8× |
+| mains 59–61 Hz | **7665.8×** |
+
+Drift being *lower* on the bad channel rules out motion; the 2 Hz-wide line
+holding most of the 60–100 Hz energy rules out muscle. Neither conclusion is
+reachable from RMS.
+
+**Absolute, not fractional, and the reason is a near-miss.** A fractional form
+(mains ÷ total) inverts on quiet channels: in the eyes-closed recording TP10
+scored 0.41 against AF7's 0.16 — and TP10 is the channel that *passed* the alpha
+check at 1.98× while AF7 failed it at 0.72. A fractional threshold would have
+condemned the best channel in the session.
+
+**Calibration, stated as the limitation it is.** One subject, one session, one
+mains environment. Clean observations were 0.79 / 2.52 / 5.45 / 8.11 / 10.61 /
+17.80 / 23.41; contaminated ones 125.0 / 780.3 / 1806.0 / 6059.8. That is a
+factor-of-two gap between the worst clean and best dirty reading, which does not
+justify a sharp line, so `watch = 25` and `high = 100` bracket an explicit
+`elevated` tier rather than pretending to a boundary. One observation — TP9 in
+the eyes-closed recording, 45.4 — falls in it. These carry the same caveat as
+the 2 / 200 µV thresholds beside them: engineering heuristics, **not**
+physiologically validated cutoffs.
+
+One retrospective consistency check exists and it is **not** validation: the two
+channels this would call clean, TP10 and TP9-at-rest, are the two that produced
+the 1.98× and 1.90× alpha effects, and AF7 — dirty in all three recordings —
+produced 0.72 and no effect. Mains power predicted which channels carried the
+physiology. Single session, post hoc, n=1.
+
+Verified in both directions, which is the part that makes it usable:
+
+| stream | result |
+|---|---|
+| Fixture server, clean 8–14 Hz tones, no line | **PASS**, all four `ok`, exit 0 |
+| Live headband, pads off the skin | **FAIL**, all four `mains-pickup`, exit 3 |
+
+The first of those matters more than the second. A check that only ever fails is
+not a check, and an earlier attempt at this validation was vacuous — the fixture
+server could not bind because the BLE bridge already held port 8788, so the
+client silently reconnected to the headband and "confirmed" a pass against the
+same contaminated data it was meant to be contrasted with.
+
 ## Non-claims
 
 - **No support-matrix row is promoted, and this record is not evidence for
@@ -156,3 +215,13 @@ reading it.
 - **`muse-ble-bridge` remains described in `tools/README.md` as "not a product
   surface"**, while being the sole ingest path used for every measurement above.
   That contradiction is unresolved and is not resolved by this record.
+- **The electrode check's mains thresholds have never been tested against a
+  channel that is genuinely borderline.** Every calibration observation is either
+  far below `watch` or far above `high` except one. The `elevated` tier is a
+  statement about what is *unknown*, not a measured category.
+- **The check has never been run on a correctly fitted headband.** It was built
+  after the pads came off, so its `PASS` path is evidenced only by the synthetic
+  fixture. The first on-head run is outstanding.
+- **50 Hz detection is untested on hardware.** Both grids are measured and the
+  unit tests cover a synthetic 50 Hz line, but every real recording here was in a
+  60 Hz environment.
