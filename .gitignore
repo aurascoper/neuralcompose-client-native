@@ -23,3 +23,12 @@ ios/NeuralComposeClient/Info.plist
 # Bridge tool environments (derived; see each tool's README)
 tools/muse-ble-bridge/.venv/
 tools/muse-osc-bridge/node_modules
+
+# Agent scratch. Present in the working tree since before 2026-08-03 but never
+# committed, so it protected one machine and no other checkout. Committed
+# because these are written into whatever repo an agent is launched from, and
+# two hosts writing artifacts into two checkouts of related work is the ledger
+# fork one level up — divergent artifacts with separate provenance and no
+# append-only gate to catch them.
+.pi-subagents/
+outputs/
