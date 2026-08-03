@@ -229,6 +229,61 @@ mod ffi {
     }
 }
 
+/// Process-global llama.cpp initialisation, run exactly once.
+///
+/// `llama_backend_init` and `ggml_backend_load_all` mutate a process-global
+/// backend registry and are NOT safe to call concurrently. Every `Embedder`
+/// construction used to call both, and Rust runs tests in parallel threads, so
+/// two simultaneous loads raced on first-time registration: the full workspace
+/// suite crashed with SIGSEGV or SIGABRT roughly one run in three while every
+/// binary passed in isolation.
+///
+/// `Once` is the whole fix. It does not make `Embedder` `Send` or `Sync` —
+/// those are still withheld — it only guarantees the one-time global setup
+/// happens once and that later callers block until it has finished.
+#[cfg(not(nc_llama_stub))]
+fn init_backend_once() {
+    static BACKEND_INIT: std::sync::Once = std::sync::Once::new();
+    BACKEND_INIT.call_once(|| {
+        // Quiet before load_all: backend registration prints device banners to
+        // stdout, which would corrupt any caller parsing this crate's output.
+        if std::env::var_os("NC_LLAMA_VERBOSE").is_none() {
+            // SAFETY: installs a callback that ignores its arguments.
+            unsafe { ffi::nc_llama_log_quiet() };
+        }
+        // SAFETY: called exactly once, before any other llama.cpp entry point.
+        unsafe {
+            ffi::nc_llama_backend_load_all();
+            ffi::nc_llama_backend_init();
+        }
+    });
+}
+
+/// Serialises operations that touch llama.cpp's shared device state.
+///
+/// MEASURED, NOT PRECAUTIONARY. Creating and destroying contexts concurrently
+/// on the Vulkan backend segfaults: `vulkan_agreement` crashed 4 times in 10
+/// runs with Rust's default parallel test threads and 0 times in 10 with
+/// `--test-threads=1`. Model load, context creation and teardown all mutate
+/// per-device state inside ggml-vulkan that is not guarded there.
+///
+/// This does NOT make `Embedder` `Send` or `Sync`; those are still withheld.
+/// It only guarantees that two threads never build or tear down a context at
+/// the same moment. `embed` is deliberately left outside the lock — each
+/// `Embedder` owns its own context and stays on one thread, so inference does
+/// not contend, and serialising it would remove the concurrency the
+/// accelerator exists to provide.
+///
+/// Poisoning is ignored: a panic in one thread's load must not permanently
+/// disable loading for every other thread.
+#[cfg(not(nc_llama_stub))]
+fn device_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(|| std::sync::Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 /// A loaded embedding model and its context.
 ///
 /// Owns both, frees both on drop, and is deliberately NOT `Sync`: a
@@ -305,22 +360,22 @@ impl Embedder {
         ubatch: u32,
     ) -> Result<Self, LlamaError> {
         let c_path = CString::new(path.as_os_str().as_encoded_bytes())?;
-        // Quiet by default; `NC_LLAMA_VERBOSE` restores llama.cpp's own output,
-        // which is what you want when a load is failing and noise when it is not.
-        if std::env::var_os("NC_LLAMA_VERBOSE").is_none() {
-            // SAFETY: installs a callback that ignores its arguments.
-            unsafe { ffi::nc_llama_log_quiet() };
-        }
-        // SAFETY: idempotent in llama.cpp and safe to call more than once.
-        unsafe { ffi::nc_llama_backend_init() };
-
-        // Backends ship as separate shared objects and are discovered at
-        // runtime. Without this the Vulkan device is simply absent and the
+        // One-time global setup, serialised. Backends ship as separate shared
+        // objects and are invisible until loaded, so this must happen before
+        // the device probe below or the Vulkan device is simply absent and the
         // model runs on CPU while the caller believes otherwise.
-        // SAFETY: idempotent registry population.
-        unsafe { ffi::nc_llama_backend_load_all() };
+        init_backend_once();
+        // Held across model load, device probe and context creation — all three
+        // touch shared device state. Released when this scope ends.
+        let _device = device_lock();
 
-        let accelerator = devices().into_iter().find(|d| d.kind.is_accelerator());
+        // `devices_unlocked`, NOT `devices`: the lock is already held here and
+        // `std::sync::Mutex` is not reentrant, so calling the public function
+        // would self-deadlock. A first attempt did exactly that and every test
+        // run hung instead of crashing.
+        let accelerator = devices_unlocked()
+            .into_iter()
+            .find(|d| d.kind.is_accelerator());
 
         // SAFETY: `c_path` is a valid NUL-terminated string that outlives the call.
         let model = unsafe { ffi::nc_llama_model_load(c_path.as_ptr(), gpu_layers as i32) };
@@ -512,6 +567,10 @@ impl Embedder {
 #[cfg(not(nc_llama_stub))]
 impl Drop for Embedder {
     fn drop(&mut self) {
+        // Teardown races with construction on the same device state, so it
+        // takes the same lock. Without this, one thread freeing a context
+        // while another builds one is the crash this guards.
+        let _device = device_lock();
         // SAFETY: both pointers were produced by the matching constructors and
         // are freed exactly once. Context before model: the context holds a
         // reference to the model's weights.
@@ -528,14 +587,14 @@ impl Drop for Embedder {
 /// ship as separate shared objects and are invisible until loaded.
 #[cfg(not(nc_llama_stub))]
 pub fn devices() -> Vec<Device> {
-    // Quiet first: backend registration prints device banners to stdout, which
-    // would corrupt the output of any caller parsing this crate's results.
-    if std::env::var_os("NC_LLAMA_VERBOSE").is_none() {
-        // SAFETY: installs a callback that ignores its arguments.
-        unsafe { ffi::nc_llama_log_quiet() };
-    }
-    // SAFETY: idempotent; populates the backend registry.
-    unsafe { ffi::nc_llama_backend_load_all() };
+    init_backend_once();
+    let _device = device_lock();
+    devices_unlocked()
+}
+
+/// Enumerate devices assuming the caller already holds the device lock.
+#[cfg(not(nc_llama_stub))]
+fn devices_unlocked() -> Vec<Device> {
     // SAFETY: reads a count from the registry.
     let n = unsafe { ffi::nc_llama_device_count() };
     if n <= 0 {
