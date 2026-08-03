@@ -62,6 +62,23 @@ rung, never raise one — an unmigrated caller loses a rung it was not entitled
 to rather than silently gaining one. That direction is asserted by
 `the_new_field_can_only_lower_an_attained_rung_never_raise_it`.
 
+## CI jobs that are NOT matrix evidence
+
+`swift-bindings-syntax-linux` compiles the UniFFI-generated Swift on a Linux
+runner. It is a fast fail for a broken regeneration — seconds instead of a Mac
+round-trip — and it is **not evidence for any row in this table**.
+
+A green run there means the generated bindings parse and type-check under Linux
+Swift. The `ios/arm64` rows are `Contracted`, and evidence produced on Linux can
+never promote them: a Linux Swift compile is a fact about Linux Swift. Reading
+that job as iOS readiness is the promotion-by-implication this document exists
+to forbid, and the same shape as a canary named `ubuntu-26.04-preview` that was
+in fact running 24.04.
+
+The job is `continue-on-error` for the same reason: a Linux toolchain regression
+must not gate a merge for a target it cannot speak to. It builds no SwiftUI
+shell, no XCFramework, and runs no XCTest — none of which exist on Linux.
+
 ## Standing hardware gaps
 
 - **Snapdragon**: no Snapdragon phone and no Windows-on-Snapdragon machine is

@@ -34,6 +34,50 @@ jobs:
       - name: Whitespace and conflict markers
         run: git diff --check HEAD
 
+  # SYNTAX ONLY. NOT iOS EVIDENCE. NOT A SUPPORT-MATRIX INPUT.
+  #
+  # Compiles the UniFFI-generated Swift on Linux to catch a broken regeneration
+  # in seconds instead of waiting for a Mac. That is the entire value, and the
+  # naming is deliberate: a green run here says the GENERATED BINDINGS PARSE AND
+  # TYPE-CHECK UNDER LINUX SWIFT, and nothing else.
+  #
+  # It says nothing about ios/arm64. Those rows are `Contracted`, and evidence
+  # produced on Linux can never promote them — reading a green job here as iOS
+  # readiness is exactly the promotion-by-implication ADR-002 exists to forbid,
+  # and the same shape as a canary labelled `ubuntu-26.04-preview` that was
+  # really running 24.04.
+  #
+  # It also does NOT build: the SwiftUI shell (no UIKit/SwiftUI on Linux), the
+  # XCFramework, or anything requiring Xcode. `ios/NeuralComposeCore/Tests`
+  # uses XCTest and is not compiled here.
+  #
+  # Non-blocking on purpose. A Linux Swift toolchain regression must never gate
+  # a merge for a target it cannot speak to.
+  swift-bindings-syntax-linux:
+    name: swift-bindings-syntax (linux, informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container: swift:6.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      # Type-check only — no binary is produced and none is wanted. The
+      # generated file needs its FFI symbols at link time, which do not exist
+      # without building the Rust cdylib for this container; parsing and type
+      # checking is the whole claim.
+      - name: Type-check generated Swift bindings
+        run: |
+          set -euo pipefail
+          F=ios/NeuralComposeCore/Sources/NeuralComposeCore/neuralcompose_mobile_core.swift
+          test -f "$F" || { echo "generated binding missing: $F"; exit 1; }
+          swiftc -typecheck -swift-version 5 "$F"
+          echo "generated Swift bindings type-check under Linux Swift"
+      - name: Restate the boundary
+        run: |
+          echo "SYNTAX ONLY. This job is not evidence for any ios/arm64 row."
+          echo "See docs/support-matrix.md; those rows remain Contracted."
+
   # Tier 1 skeleton (ADR-002): build authorities are required; preview
   # runners are canaries — visible and investigated, never the sole merge
   # authority until runner stability is acceptable. No model weights, no

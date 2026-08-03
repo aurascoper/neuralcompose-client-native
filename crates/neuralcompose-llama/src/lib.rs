@@ -208,9 +208,16 @@ mod ffi {
         pub fn nc_llama_model_load(path: *const c_char, n_gpu_layers: i32) -> *mut c_void;
         pub fn nc_llama_model_free(model: *mut c_void);
         pub fn nc_llama_n_embd(model: *mut c_void) -> i32;
-        pub fn nc_llama_context_new(model: *mut c_void, n_ctx: i32, n_threads: i32) -> *mut c_void;
+        pub fn nc_llama_context_new(
+            model: *mut c_void,
+            n_ctx: i32,
+            n_threads: i32,
+            n_ubatch: i32,
+        ) -> *mut c_void;
         pub fn nc_llama_context_free(ctx: *mut c_void);
         pub fn nc_llama_get_n_threads(ctx: *mut c_void) -> i32;
+        pub fn nc_llama_get_n_ubatch(ctx: *mut c_void) -> i32;
+        pub fn nc_llama_token_count(model: *mut c_void, text: *const c_char) -> i32;
         pub fn nc_llama_embed(
             model: *mut c_void,
             ctx: *mut c_void,
@@ -279,6 +286,24 @@ impl Embedder {
         gpu_layers: u32,
         threads: u32,
     ) -> Result<Self, LlamaError> {
+        Self::load_tuned(path, n_ctx, gpu_layers, threads, 0)
+    }
+
+    /// Adds control of `n_ubatch`, the PHYSICAL batch size.
+    ///
+    /// llama.cpp splits a submitted batch into micro-batches of this size, so
+    /// it determines where dispatch boundaries fall. `0` leaves it at whatever
+    /// `n_ctx` implies. It is exposed because it is the manipulated variable
+    /// when asking whether a latency step is a boundary effect: if a step moves
+    /// when this moves, the boundary is the cause.
+    #[cfg(not(nc_llama_stub))]
+    pub fn load_tuned(
+        path: &Path,
+        n_ctx: u32,
+        gpu_layers: u32,
+        threads: u32,
+        ubatch: u32,
+    ) -> Result<Self, LlamaError> {
         let c_path = CString::new(path.as_os_str().as_encoded_bytes())?;
         // Quiet by default; `NC_LLAMA_VERBOSE` restores llama.cpp's own output,
         // which is what you want when a load is failing and noise when it is not.
@@ -311,7 +336,9 @@ impl Embedder {
         }
 
         // SAFETY: `model` is a valid handle.
-        let ctx = unsafe { ffi::nc_llama_context_new(model, n_ctx as i32, threads as i32) };
+        let ctx = unsafe {
+            ffi::nc_llama_context_new(model, n_ctx as i32, threads as i32, ubatch as i32)
+        };
         if ctx.is_null() {
             unsafe { ffi::nc_llama_model_free(model) };
             return Err(LlamaError::ContextCreate);
@@ -342,6 +369,17 @@ impl Embedder {
         _n_ctx: u32,
         _gpu_layers: u32,
         _threads: u32,
+    ) -> Result<Self, LlamaError> {
+        Err(LlamaError::Unavailable)
+    }
+
+    #[cfg(nc_llama_stub)]
+    pub fn load_tuned(
+        _path: &Path,
+        _n_ctx: u32,
+        _gpu_layers: u32,
+        _threads: u32,
+        _ubatch: u32,
     ) -> Result<Self, LlamaError> {
         Err(LlamaError::Unavailable)
     }
@@ -382,6 +420,35 @@ impl Embedder {
     #[cfg(nc_llama_stub)]
     pub fn active_threads(&self) -> i32 {
         0
+    }
+
+    /// The physical batch size llama.cpp adopted, read back rather than
+    /// remembered — a swept parameter that silently failed to apply produces a
+    /// flat result indistinguishable from a refuted hypothesis.
+    #[cfg(not(nc_llama_stub))]
+    pub fn active_ubatch(&self) -> i32 {
+        // SAFETY: `ctx` is valid for the lifetime of `self`.
+        unsafe { ffi::nc_llama_get_n_ubatch(self.ctx) }
+    }
+
+    #[cfg(nc_llama_stub)]
+    pub fn active_ubatch(&self) -> i32 {
+        0
+    }
+
+    /// How many tokens `text` becomes under this model's vocab, including the
+    /// special tokens the embedding path adds.
+    #[cfg(not(nc_llama_stub))]
+    pub fn token_count(&self, text: &str) -> Option<usize> {
+        let c = CString::new(text).ok()?;
+        // SAFETY: `model` is valid; `c` is NUL-terminated and outlives the call.
+        let n = unsafe { ffi::nc_llama_token_count(self.model, c.as_ptr()) };
+        (n >= 0).then_some(n as usize)
+    }
+
+    #[cfg(nc_llama_stub)]
+    pub fn token_count(&self, _text: &str) -> Option<usize> {
+        None
     }
 
     /// Embedding dimensionality.
