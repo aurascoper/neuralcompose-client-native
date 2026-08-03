@@ -12,6 +12,7 @@ publish = false
 # entire contract is that it has none. This crate IS a shell, and the third one:
 # SwiftUI, Compose, and now a headless Linux binary.
 [dependencies]
+neuralcompose-llama = { path = "../neuralcompose-llama" }
 neuralcompose-mobile-core = { path = "../neuralcompose-mobile-core" }
 # Already a vetted dev-dependency of the core (0.28), so this promotes an
 # existing choice to a new crate rather than making a new supply-chain decision.

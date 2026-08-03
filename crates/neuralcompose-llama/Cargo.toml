@@ -1,0 +1,10 @@
+[package]
+name = "neuralcompose-llama"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# No dependencies, by design. The FFI is hand-written against a C shim and the
+# build script drives the system compiler directly, so this crate adds nothing
+# to the workspace's dependency surface.
+[dependencies]

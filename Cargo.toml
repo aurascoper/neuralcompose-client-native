@@ -1,3 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["crates/neuralcompose-mobile-core", "crates/neuralcompose-headless"]
+members = [
+    "crates/neuralcompose-mobile-core",
+    "crates/neuralcompose-headless",
+    "crates/neuralcompose-llama",
+]

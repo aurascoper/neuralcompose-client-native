@@ -65,6 +65,10 @@ const SAMPLE_RATE_HZ: f64 = 256.0;
 
 struct Args {
     url: String,
+    /// Text to embed. `Some` puts the binary in embed mode: no socket, no
+    /// headband — it exercises the model backend and exits.
+    embed: Option<String>,
+    model: Option<String>,
     seconds: u64,
     status_every_ms: u64,
     json: bool,
@@ -74,6 +78,8 @@ struct Args {
 fn parse_args() -> Result<Args, String> {
     let mut a = Args {
         url: DEFAULT_URL.to_string(),
+        embed: None,
+        model: None,
         seconds: 0,
         status_every_ms: 1000,
         json: false,
@@ -102,6 +108,8 @@ fn parse_args() -> Result<Args, String> {
             }
             "--json" => a.json = true,
             "--check" => a.check = true,
+            "--embed" => a.embed = Some(it.next().ok_or("--embed needs text")?),
+            "--model" => a.model = Some(it.next().ok_or("--model needs a path")?),
             "-h" | "--help" => {
                 println!(
                     "neuralcompose-headless — drive the core against a live EEG stream\n\n\
@@ -112,7 +120,9 @@ fn parse_args() -> Result<Args, String> {
                      --check                 electrode fitting check: per-channel cause and\n\
                      \x20                       what to do, updating live while you adjust the\n\
                      \x20                       band. Exits non-zero if a channel needs fixing.\n\
-                     \x20                       Defaults to 20s at a 2s cadence.\n"
+                     \x20                       Defaults to 20s at a 2s cadence.\n\
+                     --embed <text>          embed text with the llama-cpp-cpu backend and exit\n\
+                     --model <path>          GGUF model for --embed\n"
                 );
                 std::process::exit(0);
             }
@@ -157,6 +167,14 @@ fn main() {
             std::process::exit(2);
         }
     };
+
+    // Embed mode short-circuits everything below: it touches no socket and no
+    // headband, because the model backend and the EEG ingest path are separate
+    // claims and running them together would blur which one any evidence is
+    // about.
+    if let Some(text) = args.embed.clone() {
+        std::process::exit(run_embed(&text, args.model.as_deref()));
+    }
 
     let start = Instant::now();
     let monitor = StreamMonitor::new(MonitorConfig::default());
@@ -438,4 +456,57 @@ fn emit_status(monitor: &StreamMonitor, now: u64, frames: u64, json: bool) {
         );
     }
     let _ = std::io::stdout().flush();
+}
+
+/// Embed one string and print the result.
+///
+/// Prints the backend identifiers and the llama.cpp commit alongside the
+/// vector, because ADR-002's runtime rungs require a NAMED backend version and
+/// a number without its provenance is not evidence. The commit is read from the
+/// checkout at build time, so it cannot drift from the binary the way a
+/// hand-copied hash in a document can.
+fn run_embed(text: &str, model: Option<&str>) -> i32 {
+    use neuralcompose_llama::{Embedder, BACKEND_COMMIT, BACKEND_ID, RUNTIME_ABI};
+
+    if !neuralcompose_llama::is_available() {
+        eprintln!(
+            "no model backend in this build (built without LLAMA_CPP_DIR).\n\
+             rebuild with LLAMA_CPP_DIR=<llama.cpp checkout> to enable --embed."
+        );
+        return 4;
+    }
+    let path = match model {
+        Some(p) => std::path::PathBuf::from(p),
+        None => {
+            let home = std::env::var("HOME").unwrap_or_default();
+            std::path::PathBuf::from(home).join("models/bge-small-en-v1.5-f32.gguf")
+        }
+    };
+    if !path.exists() {
+        eprintln!("no model at {} — pass --model <path.gguf>", path.display());
+        return 4;
+    }
+
+    eprintln!("backend {BACKEND_ID} / {RUNTIME_ABI} @ llama.cpp {BACKEND_COMMIT}");
+    eprintln!("model {}", path.display());
+
+    let mut embedder = match Embedder::load(&path, 512) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("load failed: {e}");
+            return 4;
+        }
+    };
+    match embedder.embed(text) {
+        Ok(v) => {
+            eprintln!("dimensions {}", v.len());
+            let head: Vec<String> = v.iter().take(8).map(|x| format!("{x:.7}")).collect();
+            println!("[{}, ...]", head.join(", "));
+            0
+        }
+        Err(e) => {
+            eprintln!("embed failed: {e}");
+            4
+        }
+    }
 }
