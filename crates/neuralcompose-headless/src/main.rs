@@ -49,7 +49,8 @@ use std::time::{Duration, Instant};
 
 use neuralcompose_mobile_core::presentation::StreamPhase;
 use neuralcompose_mobile_core::{
-    next_reconnect, MonitorConfig, ReconnectDecision, SocketEvent, StreamMonitor,
+    next_reconnect, ChannelHealthThresholds, MonitorConfig, ReconnectDecision, SocketEvent,
+    StreamMonitor,
 };
 
 const DEFAULT_URL: &str = "ws://127.0.0.1:8788/api/eeg/stream";
@@ -266,7 +267,7 @@ fn emit_status(monitor: &StreamMonitor, now: u64, frames: u64, json: bool) {
         println!(
             "{{\"t_ms\":{},\"frames\":{},\"samples\":{},\"generation\":{},\"cached\":{},\
              \"phase\":\"{}\",\"silent_banner\":{},\"disconnected_banner\":{},\
-             \"rms\":[{}]}}",
+             \"rms\":[{}],\"health\":[{}]}}",
             now,
             frames,
             snap.total_received,
@@ -278,14 +279,30 @@ fn emit_status(monitor: &StreamMonitor, now: u64, frames: u64, json: bool) {
             rms.iter()
                 .map(|v| format!("{v:.3}"))
                 .collect::<Vec<_>>()
-                .join(",")
+                .join(","),
+            {
+                let th = ChannelHealthThresholds::default();
+                rms.iter()
+                    .zip(ch.channels.iter())
+                    .map(|(v, c)| format!("\"{}\"", th.status(*v, c.len() as u64).as_str()))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            }
         );
     } else {
         let names = ["TP9", "AF7", "AF8", "TP10"];
+        // The CORE classifies; this shell only prints. Before the thresholds
+        // were ported, a run showing 513 and 881 uV read as "high" to a human
+        // eye when the repo's own committed rule called both saturated.
+        let th = ChannelHealthThresholds::default();
         let bars: Vec<String> = rms
             .iter()
             .zip(names)
-            .map(|(v, n)| format!("{n} {v:7.2}"))
+            .zip(ch.channels.iter())
+            .map(|((v, n), c)| {
+                let st = th.status(*v, c.len() as u64);
+                format!("{n} {v:7.2} {}", st.as_str())
+            })
             .collect();
         println!(
             "[{:>7}ms] {:<14} samples {:>7} cached {:>5} | {}",

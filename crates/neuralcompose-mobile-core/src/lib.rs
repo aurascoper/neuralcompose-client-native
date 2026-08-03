@@ -12,6 +12,7 @@
 pub mod audio;
 pub mod buffer;
 pub mod capture;
+pub mod channel_health;
 pub mod config;
 pub mod conformance;
 pub mod model_pack;
@@ -28,6 +29,7 @@ pub use audio::{
     sha256_hex, AudioLifecycle, AudioSnapshot, AudioTransition, RecordingManifest, RecordingPhase,
 };
 pub use buffer::SampleBuffer;
+pub use channel_health::{ChannelHealthStatus, ChannelHealthThresholds};
 pub use config::{
     derive_ws_url, parse_use_mock, resolve_client_mode, ClientMode, ResolvedClientConfig,
 };
