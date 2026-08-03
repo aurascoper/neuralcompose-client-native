@@ -203,3 +203,31 @@ fn the_identifiers_this_evidence_would_be_filed_under_are_correct() {
     assert_eq!(BACKEND_ID, "llama-cpp-cpu");
     assert_eq!(RUNTIME_ABI, "nc-gguf-v1");
 }
+
+#[test]
+fn cpu_output_is_identical_across_thread_counts() {
+    // This is not a performance test — it asks whether the CPU backend's
+    // determinism claim survives changing the thread count.
+    //
+    // It matters because llama.cpp's default is a hard-coded 4 threads, so any
+    // caller who sets a sensible value gets a DIFFERENT configuration from the
+    // one the reference values were captured under. If summation order across
+    // threads changed the result, `RuntimeSmokeValidated`'s "deterministic"
+    // would have to be qualified as "deterministic at a fixed thread count",
+    // and the agreement test would be pinned to an accidental default.
+    let Some(_) = embedder() else { return };
+    let path = model_path();
+    let text = "the headband is on";
+
+    let mut baseline = Embedder::load_full(&path, 512, 0, 1).expect("1 thread");
+    let first = baseline.embed(text).expect("embed");
+
+    for threads in [2u32, 4, 8, 24] {
+        let mut e = Embedder::load_full(&path, 512, 0, threads).expect("load");
+        let got = e.embed(text).expect("embed");
+        assert_eq!(
+            got, first,
+            "output changed at {threads} threads — determinism is thread-dependent"
+        );
+    }
+}

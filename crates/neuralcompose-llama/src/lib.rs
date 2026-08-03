@@ -208,8 +208,9 @@ mod ffi {
         pub fn nc_llama_model_load(path: *const c_char, n_gpu_layers: i32) -> *mut c_void;
         pub fn nc_llama_model_free(model: *mut c_void);
         pub fn nc_llama_n_embd(model: *mut c_void) -> i32;
-        pub fn nc_llama_context_new(model: *mut c_void, n_ctx: i32) -> *mut c_void;
+        pub fn nc_llama_context_new(model: *mut c_void, n_ctx: i32, n_threads: i32) -> *mut c_void;
         pub fn nc_llama_context_free(ctx: *mut c_void);
+        pub fn nc_llama_get_n_threads(ctx: *mut c_void) -> i32;
         pub fn nc_llama_embed(
             model: *mut c_void,
             ctx: *mut c_void,
@@ -261,6 +262,23 @@ impl Embedder {
     /// would be wrong in exactly the case that matters.
     #[cfg(not(nc_llama_stub))]
     pub fn load_with(path: &Path, n_ctx: u32, gpu_layers: u32) -> Result<Self, LlamaError> {
+        Self::load_full(path, n_ctx, gpu_layers, 0)
+    }
+
+    /// Full control, including CPU thread count.
+    ///
+    /// `threads` of 0 keeps llama.cpp's own default — a hard-coded 4, marked
+    /// "TODO: better default" upstream. That is faithful but a poor baseline:
+    /// on a 24-core machine it uses one sixth of the CPU, and any CPU-vs-
+    /// accelerator comparison against it measures a handicap rather than a
+    /// backend. Callers making performance claims must set it explicitly.
+    #[cfg(not(nc_llama_stub))]
+    pub fn load_full(
+        path: &Path,
+        n_ctx: u32,
+        gpu_layers: u32,
+        threads: u32,
+    ) -> Result<Self, LlamaError> {
         let c_path = CString::new(path.as_os_str().as_encoded_bytes())?;
         // Quiet by default; `NC_LLAMA_VERBOSE` restores llama.cpp's own output,
         // which is what you want when a load is failing and noise when it is not.
@@ -293,7 +311,7 @@ impl Embedder {
         }
 
         // SAFETY: `model` is a valid handle.
-        let ctx = unsafe { ffi::nc_llama_context_new(model, n_ctx as i32) };
+        let ctx = unsafe { ffi::nc_llama_context_new(model, n_ctx as i32, threads as i32) };
         if ctx.is_null() {
             unsafe { ffi::nc_llama_model_free(model) };
             return Err(LlamaError::ContextCreate);
@@ -318,6 +336,16 @@ impl Embedder {
         Err(LlamaError::Unavailable)
     }
 
+    #[cfg(nc_llama_stub)]
+    pub fn load_full(
+        _path: &Path,
+        _n_ctx: u32,
+        _gpu_layers: u32,
+        _threads: u32,
+    ) -> Result<Self, LlamaError> {
+        Err(LlamaError::Unavailable)
+    }
+
     /// The accelerator this instance is actually using, if any.
     pub fn accelerator(&self) -> Option<&Device> {
         self.accelerator.as_ref()
@@ -339,6 +367,21 @@ impl Embedder {
             Some(_) if self.requested_gpu_layers > 0 => BACKEND_ID_VULKAN,
             _ => BACKEND_ID_CPU,
         }
+    }
+
+    /// The thread count llama.cpp actually adopted.
+    ///
+    /// Read back from the context rather than remembered from the request, so
+    /// a setting that silently failed to apply is visible instead of assumed.
+    #[cfg(not(nc_llama_stub))]
+    pub fn active_threads(&self) -> i32 {
+        // SAFETY: `ctx` is valid for the lifetime of `self`.
+        unsafe { ffi::nc_llama_get_n_threads(self.ctx) }
+    }
+
+    #[cfg(nc_llama_stub)]
+    pub fn active_threads(&self) -> i32 {
+        0
     }
 
     /// Embedding dimensionality.

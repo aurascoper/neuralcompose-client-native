@@ -71,6 +71,9 @@ struct Args {
     model: Option<String>,
     gpu_layers: u32,
     devices: bool,
+    bench: bool,
+    bench_iters: u32,
+    threads: u32,
     seconds: u64,
     status_every_ms: u64,
     json: bool,
@@ -84,6 +87,9 @@ fn parse_args() -> Result<Args, String> {
         model: None,
         gpu_layers: 0,
         devices: false,
+        bench: false,
+        bench_iters: 30,
+        threads: 0,
         seconds: 0,
         status_every_ms: 1000,
         json: false,
@@ -122,6 +128,21 @@ fn parse_args() -> Result<Args, String> {
                     .map_err(|_| "--gpu-layers must be a non-negative integer")?
             }
             "--devices" => a.devices = true,
+            "--bench" => a.bench = true,
+            "--threads" => {
+                a.threads = it
+                    .next()
+                    .ok_or("--threads needs a value")?
+                    .parse()
+                    .map_err(|_| "--threads must be a non-negative integer")?
+            }
+            "--bench-iters" => {
+                a.bench_iters = it
+                    .next()
+                    .ok_or("--bench-iters needs a value")?
+                    .parse()
+                    .map_err(|_| "--bench-iters must be a positive integer")?
+            }
             "-h" | "--help" => {
                 println!(
                     "neuralcompose-headless — drive the core against a live EEG stream\n\n\
@@ -136,7 +157,11 @@ fn parse_args() -> Result<Args, String> {
                      --embed <text>          embed text with the llama-cpp-cpu backend and exit\n\
                      --model <path>          GGUF model for --embed\n\
                      --gpu-layers <n>        offload n layers to an accelerator (0 = CPU)\n\
-                     --devices               list the compute devices ggml can see, and exit\n"
+                     --devices               list the compute devices ggml can see, and exit\n\
+                     --bench                 time CPU vs accelerator across input lengths\n\
+                     --bench-iters <n>       measured iterations per cell, default 30\n\
+                     --threads <n>           CPU threads (0 = all cores; llama.cpp's own\n\
+                     \x20                       default is a hard-coded 4)\n"
                 );
                 std::process::exit(0);
             }
@@ -184,6 +209,14 @@ fn main() {
 
     if args.devices {
         std::process::exit(run_devices());
+    }
+
+    if args.bench {
+        std::process::exit(run_bench(
+            args.model.as_deref(),
+            args.bench_iters,
+            args.threads,
+        ));
     }
 
     // Embed mode short-circuits everything below: it touches no socket and no
@@ -566,4 +599,173 @@ fn run_embed(text: &str, model: Option<&str>, gpu_layers: u32) -> i32 {
             4
         }
     }
+}
+
+/// Resolve the fixture model path shared by `--embed` and `--bench`.
+fn default_model(model: Option<&str>) -> std::path::PathBuf {
+    match model {
+        Some(p) => std::path::PathBuf::from(p),
+        None => {
+            let home = std::env::var("HOME").unwrap_or_default();
+            std::path::PathBuf::from(home).join("models/bge-small-en-v1.5-f32.gguf")
+        }
+    }
+}
+
+/// Deterministic input of approximately `words` words.
+///
+/// Built from a fixed vocabulary with no randomness, so two runs of the
+/// benchmark measure the same work. Input LENGTH is the variable that matters
+/// here: an accelerator pays a fixed dispatch cost per call, so a short input
+/// measures overhead and a long one measures throughput. Reporting only one
+/// would let either backend look better than it is.
+fn bench_text(words: usize) -> String {
+    const VOCAB: [&str; 8] = [
+        "signal",
+        "electrode",
+        "cortex",
+        "rhythm",
+        "threshold",
+        "channel",
+        "spectrum",
+        "artifact",
+    ];
+    let mut s = String::new();
+    for i in 0..words {
+        if i > 0 {
+            s.push(' ');
+        }
+        s.push_str(VOCAB[i % VOCAB.len()]);
+    }
+    s
+}
+
+/// Time CPU against the accelerator across three input lengths.
+fn run_bench(model: Option<&str>, iters: u32, threads: u32) -> i32 {
+    use std::time::Instant;
+
+    use neuralcompose_llama::{devices, Embedder};
+
+    if !neuralcompose_llama::is_available() {
+        eprintln!("no model backend in this build (built without LLAMA_CPP_DIR)");
+        return 4;
+    }
+    let path = default_model(model);
+    if !path.exists() {
+        eprintln!("no model at {} — pass --model <path.gguf>", path.display());
+        return 4;
+    }
+    if iters == 0 {
+        eprintln!("--bench-iters must be at least 1");
+        return 2;
+    }
+
+    let has_accel = devices().iter().any(|d| d.kind.is_accelerator());
+
+    // bge-small's trained context is 512 tokens. The long case is sized to
+    // approach that without exceeding it; going over would silently truncate
+    // and make the two backends do different amounts of work.
+    let cases: [(&str, usize); 3] = [("short", 3), ("medium", 60), ("long", 300)];
+
+    // One measurement: median and p90 over `iters`, after warmup.
+    //
+    // Median rather than mean because a single scheduler preemption or page
+    // fault skews a mean and says nothing about the backend. p90 is reported
+    // alongside so a long tail is visible rather than hidden by the median.
+    let measure = |e: &mut Embedder, text: &str| -> Option<(f64, f64)> {
+        for _ in 0..3 {
+            e.embed(text).ok()?;
+        }
+        let mut samples = Vec::with_capacity(iters as usize);
+        for _ in 0..iters {
+            let t0 = Instant::now();
+            e.embed(text).ok()?;
+            samples.push(t0.elapsed().as_secs_f64() * 1000.0);
+        }
+        samples.sort_by(|a, b| a.partial_cmp(b).expect("no NaN from a clock"));
+        let median = samples[samples.len() / 2];
+        let p90 = samples[(samples.len() * 9 / 10).min(samples.len() - 1)];
+        Some((median, p90))
+    };
+
+    // A CPU baseline on llama.cpp's default 4 threads would measure a handicap
+    // rather than a backend, so 0 means "every core this machine has".
+    let threads = if threads == 0 {
+        std::thread::available_parallelism()
+            .map(|n| n.get() as u32)
+            .unwrap_or(4)
+    } else {
+        threads
+    };
+
+    let mut cpu = match Embedder::load_full(&path, 512, 0, threads) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("cpu load failed: {e}");
+            return 4;
+        }
+    };
+    let mut gpu = if has_accel {
+        match Embedder::load_full(&path, 512, 99, threads) {
+            Ok(e) => Some(e),
+            Err(e) => {
+                eprintln!("accelerator load failed: {e}");
+                return 4;
+            }
+        }
+    } else {
+        None
+    };
+
+    eprintln!(
+        "model {} | {iters} iterations per cell, 3 warmup, median of sorted samples",
+        path.display()
+    );
+    eprintln!(
+        "cpu threads requested {threads}, llama.cpp reports {} active",
+        cpu.active_threads()
+    );
+    match &gpu {
+        Some(g) => eprintln!(
+            "cpu = {} | accel = {} on {}",
+            cpu.backend_id(),
+            g.backend_id(),
+            g.accelerator().map(|d| d.name.as_str()).unwrap_or("?")
+        ),
+        None => eprintln!("cpu = {} | no accelerator enumerated", cpu.backend_id()),
+    }
+
+    println!(
+        "\n  {:<8} {:>6} {:>12} {:>9} {:>12} {:>9} {:>9}",
+        "case", "words", "cpu ms", "p90", "accel ms", "p90", "speedup"
+    );
+    println!("  {}", "-".repeat(70));
+
+    for (name, words) in cases {
+        let text = bench_text(words);
+        let Some((c_med, c_p90)) = measure(&mut cpu, &text) else {
+            eprintln!("cpu embed failed on {name}");
+            return 4;
+        };
+        match gpu.as_mut() {
+            Some(g) => {
+                let Some((g_med, g_p90)) = measure(g, &text) else {
+                    eprintln!("accelerator embed failed on {name}");
+                    return 4;
+                };
+                println!(
+                    "  {name:<8} {words:>6} {c_med:>12.3} {c_p90:>9.3} {g_med:>12.3} {g_p90:>9.3} {:>8.2}x",
+                    c_med / g_med
+                );
+            }
+            None => println!(
+                "  {name:<8} {words:>6} {c_med:>12.3} {c_p90:>9.3} {:>12} {:>9} {:>9}",
+                "—", "—", "—"
+            ),
+        }
+    }
+    // Speedup above 1 means the accelerator is faster. Stated explicitly
+    // because the column is a ratio and ratios invite being read backwards.
+    println!("\n  speedup = cpu median / accel median; >1 means the accelerator wins");
+    0
 }
