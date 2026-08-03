@@ -67,8 +67,12 @@ jobs:
       # without building the Rust cdylib for this container; parsing and type
       # checking is the whole claim.
       - name: Type-check generated Swift bindings
+        # `set -eu` without pipefail: the swift container's default shell is
+        # dash, which has no pipefail, and the first run of this job died on
+        # that before ever reaching swiftc — a red job that had checked
+        # nothing. There are no pipes here, so pipefail bought nothing anyway.
         run: |
-          set -euo pipefail
+          set -eu
           F=ios/NeuralComposeCore/Sources/NeuralComposeCore/neuralcompose_mobile_core.swift
           test -f "$F" || { echo "generated binding missing: $F"; exit 1; }
           swiftc -typecheck -swift-version 5 "$F"
