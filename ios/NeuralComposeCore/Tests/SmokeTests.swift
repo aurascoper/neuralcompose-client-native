@@ -311,15 +311,27 @@ final class SmokeTests: XCTestCase {
         // Compiling is not running; running a fixture is not device validation.
         let built = SupportEvidence(
             contractsAndTestsPass: true, buildsOnNamedTarget: true,
-            fixtureRuntimeExecuted: false, physicalDevice: nil, osVersion: nil,
+            fixtureRuntimeExecuted: false, candidateModelExecuted: false,
+            physicalDevice: nil, osVersion: nil,
             backendVersion: nil, signedPackagingAccepted: false, acceptanceDocument: nil)
         XCTAssertEqual(attainedSupportStatus(evidence: built), .buildValidated)
         XCTAssertFalse(supportsClaim(evidence: built, claimed: .runtimeSmokeValidated))
-        var devicey = built
-        devicey.fixtureRuntimeExecuted = true
-        devicey.physicalDevice = "iPhone 17"
-        devicey.osVersion = "26.0"
-        devicey.backendVersion = "b4321"
+
+        // A FIXTURE on fully named hardware is still not device validation.
+        // The rung is defined as "the real candidate model executed on named
+        // physical hardware"; until 2026-08-03 the checker ignored the first
+        // half and this assertion read .deviceValidated.
+        var namedFixture = built
+        namedFixture.fixtureRuntimeExecuted = true
+        namedFixture.physicalDevice = "iPhone 17"
+        namedFixture.osVersion = "26.0"
+        namedFixture.backendVersion = "b4321"
+        XCTAssertEqual(attainedSupportStatus(evidence: namedFixture), .runtimeSmokeValidated)
+        XCTAssertFalse(supportsClaim(evidence: namedFixture, claimed: .deviceValidated))
+
+        // Swapping the fixture for the candidate on the same hardware promotes.
+        var devicey = namedFixture
+        devicey.candidateModelExecuted = true
         XCTAssertEqual(attainedSupportStatus(evidence: devicey), .deviceValidated)
         XCTAssertFalse(supportsClaim(evidence: devicey, claimed: .releaseSupported))
 

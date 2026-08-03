@@ -4700,6 +4700,22 @@ public struct SupportEvidence: Equatable, Hashable {
      */
     public var fixtureRuntimeExecuted: Bool
     /**
+     * The REAL CANDIDATE model executed — not a fixture.
+     *
+     * Separate from `fixture_runtime_executed` because the two rungs mean
+     * different things: `RuntimeSmokeValidated` is "a deterministic fixture
+     * model executed successfully", `DeviceValidated` is "the real candidate
+     * model executed on named physical hardware". Without this field the
+     * checker had no way to tell them apart and granted `DeviceValidated` to
+     * a fixture run on named hardware — more permissive than the table it is
+     * described as enforcing. Found 2026-08-03 while promoting the two linux
+     * GGUF rows, whose evidence hit exactly that case.
+     *
+     * A fixture is not a candidate however thoroughly it ran, and naming the
+     * hardware does not change which model executed on it.
+     */
+    public var candidateModelExecuted: Bool
+    /**
      * Exact physical hardware. `None` blocks DeviceValidated outright.
      */
     public var physicalDevice: String?
@@ -4715,11 +4731,27 @@ public struct SupportEvidence: Equatable, Hashable {
          * A deterministic fixture model actually executed — not "it compiled".
          */fixtureRuntimeExecuted: Bool, 
         /**
+         * The REAL CANDIDATE model executed — not a fixture.
+         *
+         * Separate from `fixture_runtime_executed` because the two rungs mean
+         * different things: `RuntimeSmokeValidated` is "a deterministic fixture
+         * model executed successfully", `DeviceValidated` is "the real candidate
+         * model executed on named physical hardware". Without this field the
+         * checker had no way to tell them apart and granted `DeviceValidated` to
+         * a fixture run on named hardware — more permissive than the table it is
+         * described as enforcing. Found 2026-08-03 while promoting the two linux
+         * GGUF rows, whose evidence hit exactly that case.
+         *
+         * A fixture is not a candidate however thoroughly it ran, and naming the
+         * hardware does not change which model executed on it.
+         */candidateModelExecuted: Bool, 
+        /**
          * Exact physical hardware. `None` blocks DeviceValidated outright.
          */physicalDevice: String?, osVersion: String?, backendVersion: String?, signedPackagingAccepted: Bool, acceptanceDocument: String?) {
         self.contractsAndTestsPass = contractsAndTestsPass
         self.buildsOnNamedTarget = buildsOnNamedTarget
         self.fixtureRuntimeExecuted = fixtureRuntimeExecuted
+        self.candidateModelExecuted = candidateModelExecuted
         self.physicalDevice = physicalDevice
         self.osVersion = osVersion
         self.backendVersion = backendVersion
@@ -4746,6 +4778,7 @@ public struct FfiConverterTypeSupportEvidence: FfiConverterRustBuffer {
                 contractsAndTestsPass: FfiConverterBool.read(from: &buf), 
                 buildsOnNamedTarget: FfiConverterBool.read(from: &buf), 
                 fixtureRuntimeExecuted: FfiConverterBool.read(from: &buf), 
+                candidateModelExecuted: FfiConverterBool.read(from: &buf), 
                 physicalDevice: FfiConverterOptionString.read(from: &buf), 
                 osVersion: FfiConverterOptionString.read(from: &buf), 
                 backendVersion: FfiConverterOptionString.read(from: &buf), 
@@ -4758,6 +4791,7 @@ public struct FfiConverterTypeSupportEvidence: FfiConverterRustBuffer {
         FfiConverterBool.write(value.contractsAndTestsPass, into: &buf)
         FfiConverterBool.write(value.buildsOnNamedTarget, into: &buf)
         FfiConverterBool.write(value.fixtureRuntimeExecuted, into: &buf)
+        FfiConverterBool.write(value.candidateModelExecuted, into: &buf)
         FfiConverterOptionString.write(value.physicalDevice, into: &buf)
         FfiConverterOptionString.write(value.osVersion, into: &buf)
         FfiConverterOptionString.write(value.backendVersion, into: &buf)

@@ -497,6 +497,7 @@ fn support_promotion_requires_its_own_evidence() {
         contracts_and_tests_pass: true,
         builds_on_named_target: false,
         fixture_runtime_executed: false,
+        candidate_model_executed: false,
         physical_device: None,
         os_version: None,
         backend_version: None,
@@ -544,7 +545,37 @@ fn support_promotion_requires_its_own_evidence() {
         attained_support_status(half_named),
         Some(SupportStatus::RuntimeSmokeValidated)
     );
+    // NAMING THE HARDWARE IS NOT ENOUGH: the rung is defined as "the real
+    // candidate model executed on named physical hardware", and until
+    // 2026-08-03 the checker ignored the first half. A fully named fixture run
+    // must still stop at RuntimeSmokeValidated.
+    let named_but_fixture_only = SupportEvidence {
+        physical_device: Some("Pixel 8a".into()),
+        os_version: Some("Android 16".into()),
+        backend_version: Some("llama.cpp b4321".into()),
+        ..smoked.clone()
+    };
+    assert_eq!(
+        attained_support_status(named_but_fixture_only.clone()),
+        Some(SupportStatus::RuntimeSmokeValidated),
+        "a fixture is not a candidate however well the hardware is named"
+    );
+    assert!(!supports_claim(
+        named_but_fixture_only,
+        SupportStatus::DeviceValidated
+    ));
+    // And the candidate model alone, without named hardware, is also not enough.
+    let candidate_but_unnamed = SupportEvidence {
+        candidate_model_executed: true,
+        ..smoked.clone()
+    };
+    assert_eq!(
+        attained_support_status(candidate_but_unnamed),
+        Some(SupportStatus::RuntimeSmokeValidated),
+        "the candidate model on unnamed hardware is not device validation either"
+    );
     let device_validated = SupportEvidence {
+        candidate_model_executed: true,
         physical_device: Some("Pixel 8a".into()),
         os_version: Some("Android 16".into()),
         backend_version: Some("llama.cpp b4321".into()),
