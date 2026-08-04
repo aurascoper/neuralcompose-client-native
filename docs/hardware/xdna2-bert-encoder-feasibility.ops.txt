@@ -1,0 +1,195 @@
+# §14 raw output — reproduced 2026-08-04 on ok-cyberdeck
+
+## A: canonical opset-11 export (BAAI/bge-small-en-v1.5 onnx/model.onnx)
+```
+=== MODEL ===
+ir_version       6
+producer         pytorch 2.0.1
+opset            'ai.onnx' = 11
+
+=== INPUTS ===
+  input_ids: INT64[batch_size, sequence_length]
+  attention_mask: INT64[batch_size, sequence_length]
+  token_type_ids: INT64[batch_size, sequence_length]
+=== OUTPUTS ===
+  last_hidden_state: FLOAT[batch_size, sequence_length, 384]
+
+=== INITIALIZER DTYPES === {'FLOAT': 197}
+initializers: 197, total elements: 33,212,160
+
+=== OPERATOR HISTOGRAM (whole graph, incl. subgraphs) ===
+  Constant                       285
+  Add                            172
+  Gather                         100
+  Unsqueeze                       99
+  Shape                           97
+  MatMul                          96
+  Mul                             50
+  ReduceMean                      50
+  Div                             49
+  Concat                          48
+  Reshape                         48
+  Transpose                       48
+  Sub                             26
+  Pow                             25
+  Sqrt                            25
+  Erf                             12
+  Softmax                         12
+  Cast                             1
+  Slice                            1
+  TOTAL                         1244   distinct op types: 19
+  domains: {'ai.onnx': 1244}
+op               count  BF16  A16W8  A8W8  XINT8  note
+------------------------------------------------------------------------
+Add                172  Y     Y      Y     Y      
+Gather             100  Y     -      -     -      
+MatMul              96  Y     Y      Y     Y      
+Div                 49  Y     Y      Y     Y      
+Reshape             48  Y     Y      Y     Y      
+Transpose           48  Y     Y      Y     Y      
+Sub                 26  Y     Y      Y     Y      
+Sqrt                25  Y     Y      Y     Y      
+Erf                 12  Y     -      -     Y      
+Softmax             12  -     Y      Y     Y      *** NOT in BF16 column ***
+Slice                1  Y     Y      Y     Y      
+
+NOT PRESENT IN THE TABLE AT ALL (neither supported nor refused):
+  Constant           285
+  Unsqueeze           99
+  Shape               97
+  Mul                 50
+  ReduceMean          50
+  Concat              48
+  Pow                 25
+  Cast                 1
+
+=== STRUCTURAL CHECKS ===
+  LayerNormalization         absent
+  Gelu                       absent
+  Tanh                       absent
+  Attention                  absent
+  MultiHeadAttention         absent
+  SkipLayerNormalization     absent
+  EmbedLayerNormalization    absent
+  FastGelu                   absent
+  Expand                     absent
+  Where                      absent
+  Equal                      absent
+  Clip                       absent
+  Einsum                     absent
+
+=== SHAPE DYNAMISM ===
+  input_ids            ['batch_size', 'sequence_length']  DYNAMIC: batch_size,sequence_length
+  attention_mask       ['batch_size', 'sequence_length']  DYNAMIC: batch_size,sequence_length
+  token_type_ids       ['batch_size', 'sequence_length']  DYNAMIC: batch_size,sequence_length
+  last_hidden_state    ['batch_size', 'sequence_length', 384]  DYNAMIC: batch_size,sequence_length
+
+  shape-manipulation nodes (Shape/Concat/Unsqueeze/Reshape/Gather/Slice/Cast): 394
+  compute nodes (MatMul/Softmax/Erf): 120
+  total nodes: 1244
+```
+
+## B: opset-17 static (1,512), AMD's prescribed recipe
+```
+=== MODEL ===
+ir_version       8
+producer         pytorch 2.13.0
+opset            'ai.onnx' = 17
+
+=== INPUTS ===
+  input_ids: INT64[1, 512]
+  attention_mask: INT64[1, 512]
+  token_type_ids: INT64[1, 512]
+=== OUTPUTS ===
+  last_hidden_state: FLOAT[1, 512, 384]
+
+=== INITIALIZER DTYPES === {'FLOAT': 197}
+initializers: 197, total elements: 33,212,160
+
+=== OPERATOR HISTOGRAM (whole graph, incl. subgraphs) ===
+  Constant                       155
+  Add                            123
+  MatMul                          96
+  Mul                             50
+  Reshape                         50
+  Transpose                       48
+  LayerNormalization              25
+  Where                           25
+  Div                             12
+  Erf                             12
+  IsNaN                           12
+  Softmax                         12
+  Gather                           5
+  Cast                             3
+  And                              2
+  ConstantOfShape                  2
+  Shape                            2
+  Concat                           1
+  Equal                            1
+  Expand                           1
+  Flatten                          1
+  GreaterOrEqual                   1
+  TOTAL                          639   distinct op types: 22
+  domains: {'ai.onnx': 639}
+op               count  BF16  A16W8  A8W8  XINT8  note
+------------------------------------------------------------------------
+Add                123  Y     Y      Y     Y      
+MatMul              96  Y     Y      Y     Y      
+Reshape             50  Y     Y      Y     Y      
+Transpose           48  Y     Y      Y     Y      
+LayerNormalization    25  -     -      -     Y      *** NOT in BF16 column ***
+Div                 12  Y     Y      Y     Y      
+Erf                 12  Y     -      -     Y      
+Softmax             12  -     Y      Y     Y      *** NOT in BF16 column ***
+Gather               5  Y     -      -     -      
+
+NOT PRESENT IN THE TABLE AT ALL (neither supported nor refused):
+  Constant           155
+  Mul                 50
+  Where               25
+  IsNaN               12
+  Cast                 3
+  And                  2
+  ConstantOfShape      2
+  Shape                2
+  Concat               1
+  Equal                1
+  Expand               1
+  Flatten              1
+  GreaterOrEqual       1
+
+=== STRUCTURAL CHECKS ===
+  LayerNormalization         PRESENT x25
+  Gelu                       absent
+  Tanh                       absent
+  Attention                  absent
+  MultiHeadAttention         absent
+  SkipLayerNormalization     absent
+  EmbedLayerNormalization    absent
+  FastGelu                   absent
+  Expand                     PRESENT x1
+  Where                      PRESENT x25
+  Equal                      PRESENT x1
+  Clip                       absent
+  Einsum                     absent
+
+=== SHAPE DYNAMISM ===
+  input_ids            [1, 512]  static
+  attention_mask       [1, 512]  static
+  token_type_ids       [1, 512]  static
+  last_hidden_state    [1, 512, 384]  static
+
+  shape-manipulation nodes (Shape/Concat/Unsqueeze/Reshape/Gather/Slice/Cast): 61
+  compute nodes (MatMul/Softmax/Erf): 120
+  total nodes: 639
+```
+
+## Numeric equivalence of A and B
+```
+opset11(dynamic)  vs  opset17(static,1x512) -- same weights, different graph
+  [0] cos=1.000000000  max_diff=1.080e-07  The quick brown fox jumps over the lazy do
+  [1] cos=0.999999881  max_diff=1.155e-07  Vector databases index embeddings for retr
+
+  semantic margin  opset11 cos(t0,t1)=0.266288   opset17 cos(t0,t1)=0.266288
+  dim=384  finite=True
+```
