@@ -26,6 +26,7 @@ them, and the directory layout should not undercut it.
 |---|---|
 | `xdna-npu-detection-evidence.md` | XDNA 2 NPU on `ok-cyberdeck`: device, driver bind, firmware selection, access model. |
 | `xrt-userspace-intree-amdxdna-audit.md` | Whether AMD's XRT userspace can drive the in-tree `amdxdna`, whether a BF16 encoder compiles on Linux, and what Ubuntu version is actually required. |
+| `xdna2-bert-encoder-feasibility.md` | Whether `bge-small-en-v1.5` can be compiled and run on XDNA 2 under Linux: operator support, BF16 against an f32-referenced index, Linux prior art, acquisition, artifact lifetime, and daemon access. **Supersedes the acquisition conclusion of the XRT audit** — Ubuntu 26.04 ships XRT itself, so that step needs no AMD `.deb` at all. |
 
 Both were produced on the machine they describe and are copied here verbatim, including their
 withdrawal notices and corrections. **Corrections are struck through in place rather than deleted**,
