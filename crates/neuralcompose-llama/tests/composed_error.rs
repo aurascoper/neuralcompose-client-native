@@ -30,14 +30,73 @@ const ALL_LAYERS: u32 = 99;
 
 /// Several strings, because a cancellation seen on one input is a coincidence
 /// until it survives inputs of different length and content.
-const TEXTS: &[&str] = &[
+///
+/// All UNDER 32 tokens (7 / 4 / 6, by the model's own tokenizer), so a
+/// `--gpu-layers 0` arm on these is genuinely the CPU.
+const SHORT_TEXTS: &[&str] = &[
     "the headband is on",
     "neural compose",
     "quarterly tax filing deadline",
+];
+
+/// 36 tokens — AT OR ABOVE the op-offload threshold.
+///
+/// ggml-vulkan offloads matmuls once the batch dimension reaches 32, so with
+/// default settings a `--gpu-layers 0` run on this string is NOT a CPU run and
+/// every "CPU vs GPU" number derived from it is GPU vs GPU. It is measurable
+/// only with `GGML_OP_OFFLOAD_MIN_BATCH` set high enough to suppress that.
+const LONG_TEXTS: &[&str] = &[
     "a considerably longer sentence that runs past the thirty-two token \
      boundary where the cpu backend stops parallelising, so that the \
      comparison also covers the regime the performance claim describes",
 ];
+
+fn offload_suppressed() -> bool {
+    std::env::var("GGML_OP_OFFLOAD_MIN_BATCH")
+        .ok()
+        .and_then(|v| v.parse::<i64>().ok())
+        .is_some_and(|n| n > 512)
+}
+
+/// The texts this run may legitimately measure.
+///
+/// A dropped input is ANNOUNCED, never silently skipped: a table that quietly
+/// covers three of four inputs reads exactly like one that covered all four.
+fn texts() -> Vec<&'static str> {
+    let mut v = SHORT_TEXTS.to_vec();
+    if offload_suppressed() {
+        v.extend_from_slice(LONG_TEXTS);
+    } else {
+        eprintln!(
+            "  NOTE: skipping {} input(s) of >=32 tokens — at that length a\n  \
+             --gpu-layers 0 arm is silently the GPU. Re-run with\n  \
+             GGML_OP_OFFLOAD_MIN_BATCH=999999 to include them.",
+            LONG_TEXTS.len()
+        );
+    }
+    v
+}
+
+/// EVERY text feeding a cross-backend number must have a real CPU arm.
+///
+/// This is the rule PR #31 was bought with. `vulkan_agreement.rs` already
+/// asserted that bit-identical output across backends is a failure, and that
+/// assertion is correct — it never fired because every string it tests is
+/// under 32 tokens, so it never met an input in the range where the defect
+/// lives. A correct assertion is only as good as the inputs it runs on, so the
+/// guard here runs over the *same* list the claim is computed from, by
+/// construction rather than by someone remembering to keep them in sync.
+fn assert_cpu_arm_is_really_the_cpu(cpu: &[Vec<f32>], gpu: &[Vec<f32>], texts: &[&str]) {
+    for (i, ((c, g), t)) in cpu.iter().zip(gpu).zip(texts).enumerate() {
+        assert_ne!(
+            c, g,
+            "[{i}] {t:?}: the --gpu-layers 0 arm is bit-identical to the \
+             --gpu-layers 99 arm, so it is NOT a CPU baseline — ggml-vulkan \
+             offloaded it. Every composed-error number from this text would be \
+             GPU vs GPU. Set GGML_OP_OFFLOAD_MIN_BATCH=999999."
+        );
+    }
+}
 
 fn model_dir() -> PathBuf {
     std::env::var_os("NC_TEST_MODEL_DIR")
@@ -49,10 +108,10 @@ fn path_for(quant: &str) -> PathBuf {
     model_dir().join(format!("bge-small-en-v1.5-{quant}.gguf"))
 }
 
-fn embed_all(quant: &str, gpu_layers: u32) -> Vec<Vec<f32>> {
+fn embed_all(quant: &str, gpu_layers: u32, texts: &[&str]) -> Vec<Vec<f32>> {
     let p = path_for(quant);
     let mut e = Embedder::load_with(&p, 512, gpu_layers).expect("load");
-    TEXTS.iter().map(|t| e.embed(t).expect("embed")).collect()
+    texts.iter().map(|t| e.embed(t).expect("embed")).collect()
 }
 
 fn max_diff(a: &[f32], b: &[f32]) -> f32 {
@@ -109,10 +168,14 @@ fn quantisation_and_backend_error_compose_in_quadrature_not_linearly() {
         return;
     }
 
-    let cpu_f32 = embed_all("f32", 0);
-    let gpu_f32 = embed_all("f32", ALL_LAYERS);
+    let texts = texts();
+    let cpu_f32 = embed_all("f32", 0, &texts);
+    let gpu_f32 = embed_all("f32", ALL_LAYERS, &texts);
 
-    for (i, t) in TEXTS.iter().enumerate() {
+    // Before any number is computed from it, prove the baseline is a baseline.
+    assert_cpu_arm_is_really_the_cpu(&cpu_f32, &gpu_f32, &texts);
+
+    for (i, t) in texts.iter().enumerate() {
         println!(
             "\n  [{i}] {:?}\n      backend alone at f32: max {:.3e}  l2 {:.3e}",
             t,
@@ -126,10 +189,12 @@ fn quantisation_and_backend_error_compose_in_quadrature_not_linearly() {
     }
 
     for q in QUANTS {
-        let cpu_q = embed_all(q, 0);
-        let gpu_q = embed_all(q, ALL_LAYERS);
+        let cpu_q = embed_all(q, 0, &texts);
+        let gpu_q = embed_all(q, ALL_LAYERS, &texts);
+        // The quantised arms need the same proof the f32 arms just got.
+        assert_cpu_arm_is_really_the_cpu(&cpu_q, &gpu_q, &texts);
 
-        for (i, _) in TEXTS.iter().enumerate() {
+        for (i, _) in texts.iter().enumerate() {
             // The two error sources, measured separately...
             let quant_only = max_diff(&cpu_f32[i], &cpu_q[i]);
             let backend_only = max_diff(&cpu_q[i], &gpu_q[i]);
