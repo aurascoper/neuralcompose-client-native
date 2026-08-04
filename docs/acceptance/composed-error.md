@@ -211,6 +211,39 @@ What catches the failure downstream is `assert_cpu_arm_is_really_the_cpu` (`:89-
 which runs over the same list the claim is computed from and fails on bit-identical
 arms. The suppression check alone would lie; the guard is what makes the arm trustworthy.
 
+### §8.1 The suppression was verified, not assumed
+
+Run before the measurement it gates, on 2026-08-04. Both arms of
+`a_zero_gpu_layer_run_silently_uses_the_gpu` under `NC_LLAMA_VERBOSE=1
+GGML_SCHED_DEBUG=2` — the verbose flag is required, because `GGML_SCHED_DEBUG` output
+routes through `GGML_LOG_DEBUG` and `nc_llama_log_quiet()` (`lib.rs:250`) silences it by
+default, so a control run would print nothing and read as a clean zero.
+
+The test emits 22 graphs: ten context reserves per `Embedder`, then one compute each.
+**Every graph is backend-pure** — no graph mixed CPU and Vulkan matmuls, so the
+partial-offload case in §10 did not arise here. The two computes are identifiable by
+tensor size: `Qcur-0` at `48K` is 32 tokens × 384 × 4 bytes, against `768K` for the
+worst-case 512-token reserves.
+
+| graph | what it is | control | `MIN_BATCH=999999` |
+|---|---|---|---|
+| 21 | `ngl=0` embed, 32 tokens | **all-Vulkan** (72/72) | **all-CPU** (72/72) |
+| 22 | `ngl=99` embed, 32 tokens | all-Vulkan (72/72) | all-Vulkan (72/72) |
+
+Aggregate over all 22 graphs: `MUL_MAT` nodes total 1584 in both arms, with exactly
+**216 moving from Vulkan to CPU** (1008→792 and 576→792). The variable altered **only
+the baseline arm**; the GPU arm is untouched at identical tensor size. That is the same
+manipulation-with-control that `vulkan-performance-claim.md:30-33` established from
+timings, shown here at the scheduler level.
+
+Assertions agree with the log: the control took the `assert_eq!` branch and printed
+`CONFIRMED` (`:291-295`), the suppressed arm took `assert_ne!` (`:278-282`). Both passed.
+
+**One instrument note.** The scheduler prints the backend field truncated to five
+characters, so node lines read `[  Vulka  ]`, not `Vulkan0`. A filter matching `Vulkan0`
+against node lines returns empty in *both* arms and reads as a clean suppression. Only
+the `## SPLIT #n:` headers carry the full device name. Match `Vulka`, or read splits.
+
 ## §9 What CI does not cover
 
 CI never executes this test. `.github/workflows/ci.yml` runs `cargo test` on
