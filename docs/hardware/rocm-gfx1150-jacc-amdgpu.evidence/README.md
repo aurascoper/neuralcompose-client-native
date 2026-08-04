@@ -54,4 +54,19 @@ d79095e1b528657182cd7ea4c15e68ae99f5ad4842067e18bc1c94522c62a7e7  pkg-state-preR
 49e5975665037cef468249e4f7e349c25fc0a4b05467fe0fadb31bf2af1b8ef1  rocm-smi-11.5.0.txt
 35d1b5ec2450a7dbff52272e7e541e964999ed1fea1bf3459888defe02acbfb3  rocm-smi-unset.txt
 a031f088f422980fb66debafd494f8e6f8a4fd7dbbe175eef97bb1680cfcbb53  rollback-proof.txt
+8cb191a7ace9313ed6fc29a87fa721df8fbc4ba981a0fff13e08381c27fd4074  repro-rocrand.cpp
+892788db0fb50bc3e3206d51d380a7198a89957a3995a94a3cf0790cf068d05c  repro-rocblas.cpp
+b54b8efcfa8ec3ea7deb0ca7777e709f5134e8f693aac60007163f610a17de90  repro-rocsparse.c
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  repro-rocrand-output.txt
+5a674b3139cc0b0e2be6c86a852f589187dabae7e7da33dfd8a182300977486b  repro-rocblas-output.txt
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  repro-rocsparse-output.txt
 ```
+
+Added 2026-08-04, same day, after the Launchpad decision: three Julia-free C
+reproductions (compiled with the distro hipcc, exact commands in each file's
+header comment) and their captured stdout/stderr. Two of the output files are
+**empty by fact, not by accident** — their sha256 is the empty-file hash because
+rocrand and rocsparse segfault (exit 139) before producing any output; the
+rocblas run aborts (exit 134) after printing the TensileLibrary error. The full
+nine-target lazy `.dat` list in `repro-rocblas-output.txt` is what corrected the
+parent document's gfx942-only claim.

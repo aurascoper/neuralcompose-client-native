@@ -108,8 +108,10 @@ shell, no XCFramework, and runs no XCTest — none of which exist on Linux.
   2026-08-04, this is wrong for the archive stack: Ubuntu's ROCm 7.1 HSA
   runtime enumerates gfx1150 natively with the override unset
   (`docs/hardware/rocm-gfx1150-jacc-amdgpu.md`). What actually fails is the
-  packaged math libraries — rocRAND segfaults, rocBLAS ships only gfx942 GEMM
-  kernels, rocSPARSE crashes its version query. **That is now the reason any
+  packaged math libraries — rocRAND segfaults, rocBLAS ~~ships only gfx942
+  GEMM kernels~~ ships GEMM kernels for nine targets including gfx1151 while
+  omitting exactly gfx1150 (corrected same day), rocSPARSE segfaults in
+  `create_handle`. **That is now the reason any
   ROCm row stays experimental**: not an override requirement that turned out
   not to exist, but three vendor libraries broken for this target in three
   distinct ways — on top of AMD still not listing the APU, which is still not

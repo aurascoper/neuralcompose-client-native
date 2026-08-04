@@ -1,0 +1,13 @@
+
+rocBLAS error: Cannot read /usr/lib/x86_64-linux-gnu/rocblas/5.1.0/library/TensileLibrary.dat: No such file or directory for GPU arch : gfx1150
+ List of available TensileLibrary Files : 
+"/usr/lib/x86_64-linux-gnu/rocblas/5.1.0/library/TensileLibrary_lazy_gfx942.dat"
+"/usr/lib/x86_64-linux-gnu/rocblas/5.1.0/library/TensileLibrary_lazy_gfx90a.dat"
+"/usr/lib/x86_64-linux-gnu/rocblas/5.1.0/library/TensileLibrary_lazy_gfx908.dat"
+"/usr/lib/x86_64-linux-gnu/rocblas/5.1.0/library/TensileLibrary_lazy_gfx1030.dat"
+"/usr/lib/x86_64-linux-gnu/rocblas/5.1.0/library/TensileLibrary_lazy_gfx1200.dat"
+"/usr/lib/x86_64-linux-gnu/rocblas/5.1.0/library/TensileLibrary_lazy_gfx1151.dat"
+"/usr/lib/x86_64-linux-gnu/rocblas/5.1.0/library/TensileLibrary_lazy_gfx1100.dat"
+"/usr/lib/x86_64-linux-gnu/rocblas/5.1.0/library/TensileLibrary_lazy_gfx1101.dat"
+"/usr/lib/x86_64-linux-gnu/rocblas/5.1.0/library/TensileLibrary_lazy_gfx1201.dat"
+create_handle: 0
