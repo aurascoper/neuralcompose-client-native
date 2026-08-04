@@ -166,7 +166,7 @@ the full loop with `HTTP_PROXY`/`HTTPS_PROXY` pointed at a dead port and
 ```sh
 env HTTP_PROXY=http://127.0.0.1:9 HTTPS_PROXY=http://127.0.0.1:9 \
     NO_PROXY=127.0.0.1,localhost HF_HUB_OFFLINE=1 \
-    ./turn.sh samples/jfk.wav          # completed in 13.8 s
+    ./turn.sh ~/src/whisper.cpp/samples/jfk.wav          # completed in 13.8 s
 ```
 
 `NO_PROXY` must include loopback or `curl` will try to proxy its own request to
@@ -187,8 +187,24 @@ whisper model, and whatever GGUF you point llama-server at. Copy the venv, the
 `models/` directory and the GGUF to an air-gapped machine and nothing else is
 needed.
 
-Both `.venv` and `models/` are gitignored, so they never travel with the repo —
-you create them per checkout.
+Both `.venv` and `models/` are gitignored, so they never travel with the repo.
+
+### A fresh checkout of this directory does not run
+
+`git clone` gives you four text files. **You must create `.venv` and `models/`
+here before `./turn.sh` will do anything** — it exits with a message rather than
+failing obscurely, but it will not run. Do the setup above, or point at an
+existing one:
+
+```sh
+cd tools/spoken-loop
+ln -s /path/to/existing/.venv .venv       # both are gitignored, symlink or real
+ln -s /path/to/existing/models models
+```
+
+`turn.sh` must also be run **from this directory** — it is at
+`tools/spoken-loop/turn.sh`, not the repository root — and any WAV you pass is a
+path from wherever you are, not from here.
 
 ## Verified on 2026-08-04
 
@@ -204,7 +220,7 @@ you create them per checkout.
 | Kokoro-82M | 5.08 s of audio in 1.92 s wall — **2.6× realtime** on CPU, incl. model load |
 | Kokoro intelligibility | whisper round-trip clean; only "prosody" missed, and closer than espeak's |
 | onnxruntime providers | `['AzureExecutionProvider', 'CPUExecutionProvider']` — **no GPU provider**, so it cannot race llama-server's Vulkan context |
-| **Full loop** | `./turn.sh samples/jfk.wav` → heard → replied → spoke, **17.6 s** |
+| **Full loop** | `./turn.sh ~/src/whisper.cpp/samples/jfk.wav` → heard → replied → spoke, **17.6 s** |
 
 ### Tell the model its reply will be spoken
 

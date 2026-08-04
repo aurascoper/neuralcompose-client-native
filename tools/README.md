@@ -56,8 +56,13 @@ One spoken turn on Linux: mic → whisper.cpp (CPU) → llama-server (Vulkan, HT
 no headband.
 
 ```sh
-cd tools/spoken-loop && ./turn.sh          # or ./turn.sh some.wav to skip the mic
+cd tools/spoken-loop                       # must be run from its own directory
+./turn.sh                                  # speak, then press Enter
+./turn.sh ~/src/whisper.cpp/samples/jfk.wav   # or feed a WAV and skip the mic
 ```
+
+**A fresh checkout does not run**: `.venv` and `models/` are gitignored and must
+be created first — see that directory's README.
 
 Read `tools/spoken-loop/README.md` first. Three things it establishes that are
 easy to get wrong by assumption:
