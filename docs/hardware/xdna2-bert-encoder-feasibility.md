@@ -78,6 +78,13 @@ And even with a compiler in hand, whether a BERT encoder compiles **to the NPU**
 rather than silently partitioning to CPU is **UNVERIFIED in AMD's own 1.8.0
 documentation, which contradicts itself on exactly that point** (§3.2).
 
+**The graph itself has since been exported and inventoried (§14),** which narrows
+that question considerably and reverses part of it: `LayerNormalization` — the
+operator §3 is built around — **is absent from the canonical opset-11 export**,
+appearing only at the opset 17 AMD's own example prescribes. `Softmax` is the one
+op flagged in both forms. The larger exposure turns out to be the **40–53% of
+nodes AMD's operator table never mentions at all**.
+
 ---
 
 ## §1 — Scope, method, and what "verified" means here
@@ -231,6 +238,15 @@ support path**. Only a plain `torch.onnx.export` graph is covered.
 (ops_support.rst lines 9–238, RyzenAI 1.8.0, retrieved 2026-08-04.)
 
 ### §3.2 The central unresolved contradiction — DOWNGRADED to UNVERIFIED
+
+> **Read §14 first.** This whole subsection argues about `LayerNormalization`'s
+> blank BF16 cell. The graph was subsequently exported and inventoried, and
+> **`LayerNormalization` does not appear in the canonical opset-11 export at
+> all** — it is decomposed into 25 `ReduceMean`/`Sub`/`Pow`/`Sqrt`/`Div` groups.
+> It appears only at opset 17, which is what AMD's own example script prescribes.
+> The contradiction below is real as a *documentation* contradiction; whether it
+> binds on this model depends on an export choice neither AMD's docs nor this
+> section had considered.
 
 The research phase reported "LayerNorm/Softmax/Gelu have no BF16 → a BERT encoder
 falls back to CPU" as a **BLOCKER**. **That inference is refuted and does not
@@ -1806,16 +1822,14 @@ wrong was wrong in the direction of an argument the document was making.
 
 Recorded as gaps rather than quietly dropped:
 
-- **Q1 — the target graph is never inventoried.** §3.1 asserts which operators "a
-  BERT encoder needs" without enumerating `bge-small-en-v1.5`'s actual ONNX
-  graph. At minimum `Mul`, `Pow`, `ReduceMean`, `Cast`, `Unsqueeze`, and the
-  `Expand`/`Where`/`Equal` attention-mask construction go unchecked against the
-  1.8.0 table, as does the `Tanh` pooler that §5.3 shows AMD's own example reads
-  via `outputs[1]`. **The audit's central question is about one specific graph
-  and never enumerates that graph.** Closing it needs only an ONNX export and
-  `onnx.checker` — and there is **no ONNX file anywhere on this host**
-  (VERIFIED-HERE, `find ~ -name '*.onnx'` → empty; `~/models` holds four GGUFs
-  only). The export is an unbuilt prerequisite, not an assumed starting point.
+- **Q1 — the target graph is never inventoried.** ~~§3.1 asserts which operators
+  "a BERT encoder needs" without enumerating `bge-small-en-v1.5`'s actual ONNX
+  graph.~~ **CLOSED 2026-08-04 — see §14.** The graph was exported and read. The
+  gap was real and closing it changed a conclusion: `LayerNormalization`, the
+  operator §3.2 is built around, **is absent from the canonical opset-11 export
+  entirely** and appears only when exporting at opset 17 the way AMD's own script
+  prescribes. The guesses recorded here were partly wrong — `Tanh` is absent from
+  both exports because neither contains a pooler — and are corrected in §14.5.
 - **Q1 — "24–37 partition boundaries"** (§3.5) carries no status class and no
   derivation, in a section that declares the quantity ABSENT. Treat it as an
   order-of-magnitude guess, not a finding.
@@ -1837,3 +1851,138 @@ The critic found the document essentially clean: `SupplementaryGroups=render`
 disclaimed. One bare imperative — "Set `cache_dir` explicitly" (§7.1) — has been
 conditionalised. No command in this document installs, builds, loads a module, or
 changes group membership.
+
+---
+
+## §14 — The graph, inventoried (closes §13.3's first gap)
+
+§13.3 recorded that this audit "never enumerates the graph its central question is
+about." That gap is now closed by producing the ONNX and reading it, on
+**2026-08-04**. Everything in this section is **VERIFIED-HERE**: it is a property
+of a file on this machine, not a claim read from a document.
+
+**It changes the answer to §3.2.** The operator that §3 spends its length on —
+`LayerNormalization`, blank in AMD's BF16 column — **may not exist in the graph at
+all.** Whether it does is decided by the opset you export at, and the two
+defensible choices fail in *different* ways.
+
+### §14.1 The two artifacts
+
+| | A — canonical | B — AMD's prescribed recipe |
+|---|---|---|
+| Source | `BAAI/bge-small-en-v1.5`, file `onnx/model.onnx`, revision `5c38ec7c405ec4b44b94cc5a9bb96e735b38267a` | `torch.onnx.export` of the same revision's weights |
+| Path | `~/models/onnx/bge-small-en-v1.5.onnx` | `~/models/onnx/bge-small-en-v1.5-opset17-static.onnx` |
+| sha256 | `828e1496d7fabb79cfa4dcd84fa38625c0d3d21da474a00f08db0f559940cf35` | `1fff37c9fb9e98e6b21eb0ec7abe83ace3c65ced6917affa081c52d846860cec` |
+| Producer | pytorch 2.0.1, ir_version 6 | pytorch 2.13.0, ir_version 8 |
+| **Opset** | **11** | **17** |
+| Shapes | fully dynamic (`batch_size`, `sequence_length`) | static `(1, 512)` |
+| Nodes | **1244**, 19 distinct op types | **639**, 22 distinct op types |
+
+B mirrors AMD's own
+`LLM-examples/RAG-OGA/custom_embedding/export_bge_onnx.py` (§3.2): legacy tracer,
+`opset_version=17`, static `(1,512)`, fp32 weights left for the compiler to cast.
+
+**Both carry 197 fp32 initializers totalling 33,212,160 elements** — confirming
+the "33.2M parameters" figure this audit had been quoting from the model card.
+
+**They are the same network.** Mean-pooled and L2-normalised through
+`onnxruntime` 1.28.0 CPU, cosine `1.000000000` and `0.999999881` on two probe
+strings, `max_diff` ≤ `1.155e-07`, with an identical semantic margin
+(`cos(t0,t1) = 0.266288` from both). **Every operator difference below is export
+form, not a different model.**
+
+### §14.2 Against AMD's table — the two exports fail differently
+
+Cross-checked mechanically against the §3.1 table.
+
+**A (opset 11) — `LayerNormalization` and `Gelu` are not present.** Opset 11 has
+neither operator, so the tracer emits the decomposed forms. Verified structurally,
+not assumed: **25 `Sqrt ← Add ← ReduceMean` subgraphs** (12 layers × 2 + 1
+embedding norm — exactly the expected count) and **12 `Div → Erf` subgraphs**
+(one per layer).
+
+| Flagged op | Count | BF16 cell |
+|---|---|---|
+| `Softmax` | 12 | **blank** |
+
+That is the **entire** BF16-column exposure. `Gather` (100), `Erf` (12), `MatMul`
+(96), `Add`, `Div`, `Sqrt`, `Sub`, `Reshape`, `Transpose`, `Slice` are all `Y`.
+
+**B (opset 17) — the fusion AMD's own recipe asks for creates the problem.**
+
+| Flagged op | Count | BF16 cell |
+|---|---|---|
+| `LayerNormalization` | **25** | **blank** |
+| `Softmax` | 12 | **blank** |
+
+**Exporting the way AMD's example prescribes is what puts 25 nodes on the blank
+cell.** Exporting at opset 11 avoids it by decomposing into ops the table mostly
+marks `Y`.
+
+### §14.3 The bigger hole: operators the table does not mention at all
+
+Neither supported nor refused — the table simply has no row:
+
+| | A (opset 11) | B (opset 17) |
+|---|---|---|
+| Unlisted op types | `Constant` 285, `Unsqueeze` 99, `Shape` 97, `Mul` 50, `ReduceMean` 50, `Concat` 48, `Pow` 25, `Cast` 1 | `Constant` 155, `Mul` 50, `Where` 25, `IsNaN` 12, `Cast` 3, `And` 2, `ConstantOfShape` 2, `Shape` 2, `Concat`/`Equal`/`Expand`/`Flatten`/`GreaterOrEqual` 1 each |
+| Unlisted nodes | **655 of 1244 (53%)** | **255 of 639 (40%)** |
+
+**In A this is load-bearing, not incidental.** `Mul`, `ReduceMean` and `Pow` are
+*precisely* the ops the decomposed LayerNorm and GELU are made of — 125 nodes
+carrying the arithmetic the fused operators would have carried. Avoiding the
+blank `LayerNormalization` cell by decomposing only helps if its constituents are
+supported, and **the table does not say.** This is a larger and less visible
+exposure than the `Softmax` row §3 was built around.
+
+### §14.4 Shape dynamism, and the cost of the static fix
+
+| | A | B |
+|---|---|---|
+| Shape-manipulation nodes | **394** | 61 |
+| Compute nodes (`MatMul`/`Softmax`/`Erf`) | 120 | 120 |
+| Ratio | **3.3 : 1 plumbing to compute** | 0.5 : 1 |
+
+A's fully dynamic axes generate `Shape → Gather → Unsqueeze → Concat → Reshape`
+chains throughout — the classic pattern that defeats compilers wanting static
+shapes, and the likely reason AMD's script pins `(1,512)`.
+
+**But the static fix has a price this audit had not costed: B accepts batch size 1
+only.** Verified — feeding two texts to B raises
+`INVALID_ARGUMENT … Got: 2 Expected: 1`. A memory server embedding *N* documents
+pays *N* separate dispatches, with no batching to amortise per-dispatch overhead
+against. Read that together with §8.4's ≥5 s runtime-PM autosuspend and §8.2's
+finding that every context takes all 8 columns regardless of model size.
+
+### §14.5 Corrections to this audit's own predictions
+
+§13.3 guessed which operators would need checking. Now measured:
+
+| §13.3 predicted | Actual |
+|---|---|
+| `Tanh` — "the pooler AMD's example reads via `outputs[1]`" | **Absent from both.** Neither export contains a pooler; the sole output is `last_hidden_state`. Mean pooling happens **outside the graph**, in the caller. The `outputs[1]` concern does not arise. |
+| `Expand`/`Where`/`Equal` — attention-mask construction | **Absent from A. Present in B** (`Where` 25, `Expand` 1, `Equal` 1). Right for opset 17, wrong for opset 11. |
+| `Mul`, `Pow`, `ReduceMean`, `Cast`, `Unsqueeze` | **Present in A and unlisted in the table** — correctly identified, and the exposure is larger than the guess implied (§14.3). |
+
+**One caveat on B's provenance.** It was exported with `transformers` 5.14.1,
+whose masking path emits `IsNaN` (12) + `Where` (25) + `And` + `GreaterOrEqual`
+NaN-guard machinery that AMD's older example would not have produced. **The
+operator set of a "plain `torch.onnx.export`" is a function of the `transformers`
+version, not just the opset**, so B is *an* opset-17 export rather than *the* one.
+Tool versions: `onnx` 1.22.0, `torch` 2.13.0+cpu, `transformers` 5.14.1,
+`onnxruntime` 1.28.0.
+
+### §14.6 What this does and does not settle
+
+**Settles:** the graph is now enumerated; it contains no fused transformer
+operator and no `com.microsoft` domain node, so it is the *plain export* case that
+§3.1 says is the only one AMD documents; both exports are numerically the same
+model; the 33.2M figure is confirmed; and **the LayerNormalization question is
+conditional on the opset, which no document in this audit had noticed.**
+
+**Does not settle:** whether the VAIML compiler *actually* partitions any of these
+to CPU. That still needs the compiler, which §0's Blocker 1 says is EULA-gated —
+and §3.4's finding stands that partitioning is silent by default. This section
+narrows the question from "which ops does a BERT encoder need" to a specific,
+checkable one: **`Softmax` in both, `LayerNormalization` in the opset-17 form, and
+the 40–53% of nodes AMD's table never mentions.**
