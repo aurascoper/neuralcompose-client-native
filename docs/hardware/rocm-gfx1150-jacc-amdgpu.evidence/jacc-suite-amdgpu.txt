@@ -1,0 +1,303 @@
+     Testing JACC
+      Status `/tmp/jl_FRdkDG/Project.toml`
+  [c7e460c6] ArgParse v1.2.0
+  [6e4b80f9] BenchmarkTools v1.8.0
+  [3cb15238] ChangePrecision v1.1.1
+  [0979c8fe] JACC v1.3.1 `~/jacc-gfx1150/JACC.jl`
+  [21216c6a] Preferences v1.5.2
+⌅ [e0db7c4e] ReTest v0.3.4
+  [10745b16] Statistics v1.11.1
+  [fd094767] Suppressor v0.2.8
+  [37e2e46d] LinearAlgebra v1.12.0
+  [44cfe95a] Pkg v1.12.1
+      Status `/tmp/jl_FRdkDG/Manifest.toml`
+  [79e6a3ab] Adapt v4.7.0
+  [c7e460c6] ArgParse v1.2.0
+  [4fba245c] ArrayInterface v7.28.1
+  [a9b6321e] Atomix v1.1.3
+  [6e4b80f9] BenchmarkTools v1.8.0
+  [62783981] BitTwiddlingConvenienceFunctions v0.1.6
+  [2a0fbf3d] CPUSummary v0.2.7
+  [3cb15238] ChangePrecision v1.1.1
+  [fb6a15b2] CloseOpenIntervals v0.1.13
+  [f70d9fcc] CommonWorldInvalidations v1.1.2
+  [34da2185] Compat v4.18.1
+  [adafc99b] CpuId v0.3.1
+  [615f187c] IfElse v0.1.1
+  [bd334432] InlineTest v0.2.0
+  [0979c8fe] JACC v1.3.1 `~/jacc-gfx1150/JACC.jl`
+  [682c06a0] JSON v1.6.1
+  [10f19ff3] LayoutPointers v0.1.17
+  [d125e4d3] ManualMemory v0.1.8
+  [69de0a69] Parsers v2.8.6
+  [f517fe37] Polyester v0.7.19
+  [1d0040c9] PolyesterWeave v0.2.2
+  [aea7be01] PrecompileTools v1.3.4
+  [21216c6a] Preferences v1.5.2
+⌅ [e0db7c4e] ReTest v0.3.4
+  [94e857df] SIMDTypes v0.1.0
+  [431bcebd] SciMLPublic v1.2.4
+  [aedffcd0] Static v1.4.5
+  [0d7ed370] StaticArrayInterface v1.10.0
+  [10745b16] Statistics v1.11.1
+  [7792a7ef] StrideArraysCore v0.5.9
+  [ec057cc2] StructUtils v2.8.2
+  [fd094767] Suppressor v0.2.8
+  [b718987f] TextWrap v1.0.2
+  [8290d209] ThreadingUtilities v0.5.6
+  [013be700] UnsafeAtomics v0.3.1
+  [0dad84c5] ArgTools v1.1.2
+  [56f22d72] Artifacts v1.11.0
+  [2a0f44e3] Base64 v1.11.0
+  [ade2ca70] Dates v1.11.0
+  [8ba89e20] Distributed v1.11.0
+  [f43a241f] Downloads v1.7.0
+  [7b1f6079] FileWatching v1.11.0
+  [b77e0a4c] InteractiveUtils v1.11.0
+  [ac6e5ff7] JuliaSyntaxHighlighting v1.12.0
+  [b27032c2] LibCURL v0.6.4
+  [76f85450] LibGit2 v1.11.0
+  [8f399da3] Libdl v1.11.0
+  [37e2e46d] LinearAlgebra v1.12.0
+  [56ddb016] Logging v1.11.0
+  [d6f4376e] Markdown v1.11.0
+  [ca575930] NetworkOptions v1.3.0
+  [44cfe95a] Pkg v1.12.1
+  [de0858da] Printf v1.11.0
+  [9abbd945] Profile v1.11.0
+  [9a3f8284] Random v1.11.0
+  [ea8e919c] SHA v0.7.0
+  [9e88b42a] Serialization v1.11.0
+  [6462fe0b] Sockets v1.11.0
+  [f489334b] StyledStrings v1.11.0
+  [fa267f1f] TOML v1.0.3
+  [a4e569a6] Tar v1.10.0
+  [8dfed614] Test v1.11.0
+  [cf7118a7] UUIDs v1.11.0
+  [4ec0a83e] Unicode v1.11.0
+  [e66e0078] CompilerSupportLibraries_jll v1.3.0+1
+  [deac9b47] LibCURL_jll v8.15.0+0
+  [e37daf67] LibGit2_jll v1.9.0+0
+  [29816b5a] LibSSH2_jll v1.11.3+1
+  [14a3606d] MozillaCACerts_jll v2025.11.4
+  [4536629a] OpenBLAS_jll v0.3.29+0
+  [458c3c95] OpenSSL_jll v3.5.4+0
+  [83775a58] Zlib_jll v1.3.1+2
+  [8e850b90] libblastrampoline_jll v5.15.0+0
+  [8e850ede] nghttp2_jll v1.64.0+1
+  [3f19e933] p7zip_jll v17.7.0+0
+        Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading.
+Precompiling for configuration --code-coverage=none --color=auto --check-bounds=yes --warn-overwrite=yes --depwarn=yes --inline=yes --startup-file=no --track-allocation=none
+    474.2 ms  ✓ Adapt
+    486.9 ms  ✓ IfElse
+    494.1 ms  ✓ SciMLPublic
+    545.6 ms  ✓ TextWrap
+    519.4 ms  ✓ Suppressor
+    573.3 ms  ✓ SIMDTypes
+    576.1 ms  ✓ CommonWorldInvalidations
+    599.6 ms  ✓ ManualMemory
+    620.2 ms  ✓ Statistics
+    567.2 ms  ✓ InlineTest
+    895.2 ms  ✓ Preferences
+    981.2 ms  ✓ CpuId
+    680.5 ms  ✓ ChangePrecision
+    846.3 ms  ✓ ArgParse
+    447.5 ms  ✓ PrecompileTools
+   1555.0 ms  ✓ StructUtils
+   1925.9 ms  ✓ Compat
+   1747.9 ms  ✓ ArrayInterface
+   1660.6 ms  ✓ ThreadingUtilities
+   2268.0 ms  ✓ UnsafeAtomics
+    395.6 ms  ✓ Compat → CompatLinearAlgebraExt
+    410.9 ms  ✓ Atomix
+   5369.5 ms  ✓ Parsers
+   8375.4 ms  ✓ Static
+   8514.5 ms  ✓ ReTest
+    382.5 ms  ✓ BitTwiddlingConvenienceFunctions
+    958.4 ms  ✓ CPUSummary
+   3970.2 ms  ✓ JSON
+    494.7 ms  ✓ PolyesterWeave
+   1528.5 ms  ✓ StaticArrayInterface
+    397.8 ms  ✓ CloseOpenIntervals
+    468.4 ms  ✓ LayoutPointers
+    601.3 ms  ✓ StrideArraysCore
+    510.5 ms  ✓ Polyester
+   3898.5 ms  ✓ BenchmarkTools
+   2232.9 ms  ✓ JACC
+  36 dependencies successfully precompiled in 15 seconds. 31 already precompiled.
+     Testing Running tests...
+    Updating registry at `~/.julia/registries/General.toml`
+   Resolving package versions...
+    Updating `/tmp/jl_FRdkDG/Project.toml`
+  [21141c5a] + AMDGPU v2.7.1
+    Updating `/tmp/jl_FRdkDG/Manifest.toml`
+  [21141c5a] + AMDGPU v2.7.1
+  [621f4979] + AbstractFFTs v1.5.0
+  [1520ce14] + AbstractTrees v0.4.5
+  [6a4ca0a5] + AcceleratedKernels v0.4.3
+  [dce04be8] + ArgCheck v2.5.0
+  [ab4f0b2a] + BFloat16s v0.6.1
+  [fa961155] + CEnum v0.5.0
+  [9db33cc3] + CompilerCaching v0.4.1
+  [a8cc5b0e] + Crayons v4.2.0
+  [9a962f9c] + DataAPI v1.16.0
+  [e2d170a0] + DataValueInterfaces v1.0.0
+  [e2ba6199] + ExprTools v0.1.11
+  [0c68f7d7] + GPUArrays v11.5.8
+  [46192b85] + GPUArraysCore v0.2.0
+  [61eb1bfa] + GPUCompiler v2.1.1
+  [096a3bc2] + GPUToolbox v3.0.0
+  [076d061b] + HashArrayMappedTries v0.2.0
+  [eafb193a] + Highlights v0.6.2
+  [82899510] + IteratorInterfaceExtensions v1.0.0
+  [692b3bcd] + JLLWrappers v1.8.0
+  [63c18a36] + KernelAbstractions v0.9.42
+  [929cbde3] + LLVM v9.11.0
+  [b964fa9f] + LaTeXStrings v1.4.0
+  [1914dd2f] + MacroTools v0.5.16
+  [bac558e1] + OrderedCollections v2.0.1
+  [08abe8d2] + PrettyTables v3.4.4
+  [74087812] + Random123 v1.7.1
+  [e6cf234a] + RandomNumbers v1.6.0
+  [189a3867] + Reexport v1.2.2
+  [ae029012] + Requires v1.3.1
+  [7e506255] + ScopedValues v1.6.2
+  [90137ffa] + StaticArrays v1.9.18
+  [1e83bf80] + StaticArraysCore v1.4.4
+  [892a3eda] + StringManipulation v0.4.7
+  [3783bdb8] + TableTraits v1.0.1
+  [bd369af6] + Tables v1.13.0
+  [e689c965] + Tracy v0.1.6
+⌅ [f42328cb] + TreeSitter v0.2.3
+  [cc5c0156] + AMDGPU_LLVM_Backend_jll v22.1.8+0
+  [dad2f222] + LLVMExtra_jll v0.0.44+0
+⌅ [86de99a1] + LLVM_jll v18.1.7+4
+  [ad6e5548] + LibTracyClient_jll v0.13.1+0
+⌅ [873c0968] + ROCmDeviceLibs_jll v6.2.1+2
+  [8b5cbfcf] + tree_sitter_gcn_jll v0.1.0+0
+⌅ [695101d5] + tree_sitter_jll v0.25.10+0
+  [44208993] + tree_sitter_llvm_jll v1.1.0+0
+  [71e3f6e6] + tree_sitter_ptx_jll v0.1.0+0
+  [f0e86581] + tree_sitter_spirv_jll v0.1.0+0
+  [4af54fe1] + LazyArtifacts v1.11.0
+  [3fa0cd96] + REPL v1.11.0
+  [2f01184e] + SparseArrays v1.12.0
+  [bea87d4a] + SuiteSparse_jll v7.8.3+2
+  [8f36deef] + libLLVM_jll v18.1.7+5
+        Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
+Precompiling packages...
+    495.4 ms  ✓ Reexport
+    499.9 ms  ✓ DataValueInterfaces
+    476.2 ms  ✓ ArgCheck
+    496.1 ms  ✓ DataAPI
+    604.6 ms  ✓ IteratorInterfaceExtensions
+    676.4 ms  ✓ AbstractFFTs
+    702.8 ms  ✓ AbstractTrees
+    714.3 ms  ✓ LaTeXStrings
+    775.5 ms  ✓ ExprTools
+    847.9 ms  ✓ CompilerCaching
+    976.9 ms  ✓ RandomNumbers
+    656.9 ms  ✓ HashArrayMappedTries
+    686.4 ms  ✓ GPUArraysCore
+    716.1 ms  ✓ StaticArraysCore
+    789.6 ms  ✓ Requires
+    723.6 ms  ✓ ArrayInterface → ArrayInterfaceSparseArraysExt
+    719.6 ms  ✓ Statistics → SparseArraysExt
+    537.7 ms  ✓ TableTraits
+    730.3 ms  ✓ JLLWrappers
+    859.3 ms  ✓ Adapt → AdaptSparseArraysExt
+    489.6 ms  ✓ ScopedValues
+   1668.9 ms  ✓ BFloat16s
+    639.7 ms  ✓ ArrayInterface → ArrayInterfaceGPUArraysCoreExt
+    626.9 ms  ✓ ArrayInterface → ArrayInterfaceStaticArraysCoreExt
+    608.7 ms  ✓ StructUtils → StructUtilsStaticArraysCoreExt
+    876.6 ms  ✓ Random123
+   2240.8 ms  ✓ CEnum
+    865.6 ms  ✓ LLVM_jll
+    723.4 ms  ✓ ROCmDeviceLibs_jll
+    842.1 ms  ✓ AMDGPU_LLVM_Backend_jll
+   1011.5 ms  ✓ LibTracyClient_jll
+   2540.2 ms  ✓ OrderedCollections
+    673.1 ms  ✓ tree_sitter_jll
+   2626.2 ms  ✓ Crayons
+    794.7 ms  ✓ tree_sitter_spirv_jll
+    825.4 ms  ✓ tree_sitter_llvm_jll
+    740.8 ms  ✓ tree_sitter_gcn_jll
+    793.3 ms  ✓ tree_sitter_ptx_jll
+   2106.2 ms  ✓ AbstractFFTs → AbstractFFTsTestExt
+    922.6 ms  ✓ Tracy
+   1792.0 ms  ✓ LLVMExtra_jll
+   1623.3 ms  ✓ Tables
+   1828.8 ms  ✓ TreeSitter
+   4522.2 ms  ✓ MacroTools
+    441.7 ms  ✓ StructUtils → StructUtilsTablesExt
+   3920.6 ms  ✓ StringManipulation
+   2319.6 ms  ✓ Highlights
+   7068.1 ms  ✓ StaticArrays
+    586.0 ms  ✓ StaticArrays → StaticArraysStatisticsExt
+    445.2 ms  ✓ Adapt → AdaptStaticArraysExt
+    561.1 ms  ✓ StaticArrayInterface → StaticArrayInterfaceStaticArraysExt
+   6872.9 ms  ✓ LLVM
+   1070.9 ms  ✓ LLVM → BFloat16sExt
+   1202.8 ms  ✓ GPUToolbox
+   1472.3 ms  ✓ UnsafeAtomics → UnsafeAtomicsLLVM
+   3426.1 ms  ✓ KernelAbstractions
+    573.0 ms  ✓ KernelAbstractions → LinearAlgebraExt
+    677.6 ms  ✓ KernelAbstractions → SparseArraysExt
+   1806.8 ms  ✓ AcceleratedKernels
+   4174.9 ms  ✓ GPUArrays
+  16729.1 ms  ✓ PrettyTables
+  22197.3 ms  ✓ GPUCompiler
+  25606.3 ms  ✓ AMDGPU
+   2216.7 ms  ✓ ArrayInterface → ArrayInterfaceAMDGPUExt
+   2762.7 ms  ✓ JACC → AMDGPUExt
+  65 dependencies successfully precompiled in 61 seconds. 73 already precompiled.
+[ Info: Added AMDGPU (be careful about committing Project.toml)
+[ Info: AMDGPU backend loaded
+ERROR: LoadError: Some tests did not pass: 44 passed, 2 failed, 0 errored, 0 broken.
+in expression starting at /home/aurascoper/jacc-gfx1150/JACC.jl/test/runtests.jl:10
+                      Pass  
+TestBackend       |      2  
+array_types       |     20  
+stream            |      5  
+                      Pass    Fail   Total
+preferences       |     44       2      46
+
+preferences: Test Failed at /home/aurascoper/jacc-gfx1150/JACC.jl/test/backend/preferences.jl:16
+  Expression: (JACC.Preferences.Backend._PLACE[])[bkstr] == "weakdeps"
+   Evaluated: "deps" == "weakdeps"
+
+preferences: Test Failed at /home/aurascoper/jacc-gfx1150/JACC.jl/test/backend/preferences.jl:59
+  Expression: haskey((JACC.proj()).weakdeps, JACC.get_package_name(bkstr))
+
+
+Main.JACCTests    |     71       2      73
+Warning: Resource leak detected by SharedSignalPool, 8 Signals leaked.
+ERROR: Package JACC errored during testing
+Stacktrace:
+  [1] pkgerror(msg::String)
+    @ Pkg.Types ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Pkg/src/Types.jl:68
+  [2] test(ctx::Pkg.Types.Context, pkgs::Vector{PackageSpec}; coverage::Bool, julia_args::Cmd, test_args::Cmd, test_fn::Nothing, force_latest_compatible_version::Bool, allow_earlier_backwards_compatible_versions::Bool, allow_reresolve::Bool)
+    @ Pkg.Operations ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Pkg/src/Operations.jl:2538
+  [3] test
+    @ ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Pkg/src/Operations.jl:2387 [inlined]
+  [4] test(ctx::Pkg.Types.Context, pkgs::Vector{PackageSpec}; coverage::Bool, test_fn::Nothing, julia_args::Cmd, test_args::Cmd, force_latest_compatible_version::Bool, allow_earlier_backwards_compatible_versions::Bool, allow_reresolve::Bool, kwargs::@Kwargs{io::IOContext{IO}})
+    @ Pkg.API ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Pkg/src/API.jl:552
+  [5] test(pkgs::Vector{PackageSpec}; io::IOContext{IO}, kwargs::@Kwargs{})
+    @ Pkg.API ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Pkg/src/API.jl:169
+  [6] test(pkgs::Vector{PackageSpec})
+    @ Pkg.API ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Pkg/src/API.jl:158
+  [7] test(pkgs::Vector{String}; kwargs::@Kwargs{})
+    @ Pkg.API ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Pkg/src/API.jl:157
+  [8] test
+    @ ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Pkg/src/API.jl:157 [inlined]
+  [9] test(pkg::String)
+    @ Pkg.API ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Pkg/src/API.jl:156
+ [10] top-level scope
+    @ none:1
+ [11] eval(m::Module, e::Any)
+    @ Core ./boot.jl:489
+ [12] exec_options(opts::Base.JLOptions)
+    @ Base ./client.jl:283
+ [13] _start()
+    @ Base ./client.jl:550

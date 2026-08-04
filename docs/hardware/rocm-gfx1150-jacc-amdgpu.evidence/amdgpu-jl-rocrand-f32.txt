@@ -1,0 +1,9 @@
+
+[51454] signal 11 (1): Segmentation fault
+in expression starting at none:1
+unknown function (ip: 0x7a3b59274516) at /usr/lib/x86_64-linux-gnu/libamdhip64.so
+unknown function (ip: 0x7a3b59529dbf) at /usr/lib/x86_64-linux-gnu/libamdhip64.so
+unknown function (ip: 0x7a3b594cbe30) at /usr/lib/x86_64-linux-gnu/libamdhip64.so
+unknown function (ip: 0x7a3b594e7ae1) at /usr/lib/x86_64-linux-gnu/libamdhip64.so
+unknown function (ip: 0x7a3b408f4de1) at /usr/lib/x86_64-linux-gnu/librocrand.so
+unknown function (ip: 0x7a3b408f1a1d) at /usr/lib/x86_64-linux-gnu/librocrand.so

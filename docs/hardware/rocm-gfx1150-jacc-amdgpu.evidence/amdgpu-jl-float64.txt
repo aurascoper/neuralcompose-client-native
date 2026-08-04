@@ -1,0 +1,2 @@
+Float64 elementwise ok: true
+Warning: Resource leak detected by SharedSignalPool, 1 Signals leaked.

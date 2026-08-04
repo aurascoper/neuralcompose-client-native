@@ -1,0 +1,334 @@
+NOTE: This is only a simulation!
+      apt-get needs root privileges for real execution.
+      Keep also in mind that locking is deactivated,
+      so don't depend on the relevance to the real current situation!
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Solving dependencies...
+The following additional packages will be installed:
+  amd-dbgapi-dev clang-21 clang-tools-21 gfortran gfortran-15
+  gfortran-15-x86-64-linux-gnu gfortran-x86-64-linux-gnu hip-utils hipcc
+  hipify-perl lib32gcc-s1 lib32stdc++6 libamd-comgr-dev libamd-comgr3
+  libamd-smi-dev libamd-smi26 libamd3 libamdhip64-7 libamdhip64-dev libblas3
+  libboost-atomic1.90.0 libboost-filesystem1.90.0 libc6-i386 libcamd3
+  libccolamd3 libcholmod5 libclang-common-21-dev libclang-rt-21-dev libdrm-dev
+  libdrm-nouveau2 libdrm-radeon1 libffi-dev libfile-which-perl libfmt10 libgc1
+  libgcc-16-dev libgfortran-15-dev libgfortran5 libhipblas-common-dev
+  libhipblas-dev libhipblas3 libhipblas3-tests libhipblas3-tests-data
+  libhipcub-dev libhipcub-tests libhipfft-dev libhipfft0 libhipfft0-tests
+  libhipfftw0 libhiprand-dev libhiprand1 libhiprand1-tests libhiprtc-builtins7
+  libhiprtc7 libhipsolver-dev libhipsolver-fortran-dev libhipsolver-fortran1
+  libhipsolver1 libhipsolver1-tests libhipsolver1-tests-data libhipsparse-dev
+  libhipsparse4 libhipsparse4-tests libhsa-runtime-dev libhsa-runtime64-1
+  libhsa-runtime64-tests libhsakmt1 libhwloc-plugins libhwloc15 liblapack3
+  liblzma-dev libmiopen-dev libmiopen1 libmiopen1-tests libncurses-dev
+  liboam-dev liboam7 libobjc-15-dev libobjc4 libpciaccess-dev libpfm4
+  librccl-dev librccl1 librccl1-tests librocalution-dev librocalution1
+  librocblas-dev librocblas5 librocblas5-tests librocblas5-tests-data
+  librocfft-dev librocfft0 librocfft0-tests librocm-dbgapi0 librocm-smi-dev
+  librocm-smi64-7 librocprim-dev librocprim-tests librocrand-dev librocrand1
+  librocrand1-tests librocsolver-dev librocsolver0 librocsolver0-tests
+  librocsparse-dev librocsparse1 librocsparse1-tests librocsparse1-tests-data
+  librocthrust-dev librocthrust-tests libroctx-dev libroctx64-4
+  libstdc++-16-dev liburi-encode-perl libxml2-dev libxnvctrl0 libze1 lld-21
+  llvm llvm-21 llvm-21-dev llvm-21-linker-tools llvm-21-runtime llvm-21-tools
+  llvm-runtime rocm-dev rocm-device-libs-21 rocm-tests rocminfo zlib1g-dev
+Suggested packages:
+  clang-21-doc wasi-libc gfortran-multilib gfortran-doc gfortran-15-multilib
+  gfortran-15-doc libcoarrays-dev libhipblas-doc libhipfft-doc libhiprand-doc
+  libhipsolver-doc libhipsparse-doc libhwloc-contrib-plugins liblzma-doc
+  ncurses-doc librccl-doc librocblas-doc librocfft-doc librocrand-doc
+  librocsolver-doc librocsparse-doc libstdc++-16-doc llvm-21-doc
+The following NEW packages will be installed:
+  amd-dbgapi-dev clang-21 clang-tools-21 gfortran gfortran-15
+  gfortran-15-x86-64-linux-gnu gfortran-x86-64-linux-gnu hip-utils hipcc
+  hipify-perl lib32gcc-s1 lib32stdc++6 libamd-comgr-dev libamd-comgr3
+  libamd-smi-dev libamd-smi26 libamd3 libamdhip64-7 libamdhip64-dev libblas3
+  libboost-atomic1.90.0 libboost-filesystem1.90.0 libc6-i386 libcamd3
+  libccolamd3 libcholmod5 libclang-common-21-dev libclang-rt-21-dev libdrm-dev
+  libdrm-nouveau2 libdrm-radeon1 libffi-dev libfile-which-perl libfmt10 libgc1
+  libgcc-16-dev libgfortran-15-dev libgfortran5 libhipblas-common-dev
+  libhipblas-dev libhipblas3 libhipblas3-tests libhipblas3-tests-data
+  libhipcub-dev libhipcub-tests libhipfft-dev libhipfft0 libhipfft0-tests
+  libhipfftw0 libhiprand-dev libhiprand1 libhiprand1-tests libhiprtc-builtins7
+  libhiprtc7 libhipsolver-dev libhipsolver-fortran-dev libhipsolver-fortran1
+  libhipsolver1 libhipsolver1-tests libhipsolver1-tests-data libhipsparse-dev
+  libhipsparse4 libhipsparse4-tests libhsa-runtime-dev libhsa-runtime64-1
+  libhsa-runtime64-tests libhsakmt1 libhwloc-plugins libhwloc15 liblapack3
+  liblzma-dev libmiopen-dev libmiopen1 libmiopen1-tests libncurses-dev
+  liboam-dev liboam7 libobjc-15-dev libobjc4 libpciaccess-dev libpfm4
+  librccl-dev librccl1 librccl1-tests librocalution-dev librocalution1
+  librocblas-dev librocblas5 librocblas5-tests librocblas5-tests-data
+  librocfft-dev librocfft0 librocfft0-tests librocm-dbgapi0 librocm-smi-dev
+  librocm-smi64-7 librocprim-dev librocprim-tests librocrand-dev librocrand1
+  librocrand1-tests librocsolver-dev librocsolver0 librocsolver0-tests
+  librocsparse-dev librocsparse1 librocsparse1-tests librocsparse1-tests-data
+  librocthrust-dev librocthrust-tests libroctx-dev libroctx64-4
+  libstdc++-16-dev liburi-encode-perl libxml2-dev libxnvctrl0 libze1 lld-21
+  llvm llvm-21 llvm-21-dev llvm-21-linker-tools llvm-21-runtime llvm-21-tools
+  llvm-runtime rocm rocm-dev rocm-device-libs-21 rocm-tests rocminfo
+  zlib1g-dev
+0 upgraded, 131 newly installed, 0 to remove and 2 not upgraded.
+Inst libamd-comgr3 (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocm-dbgapi0 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst amd-dbgapi-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libgc1 (1:8.2.12-1 Ubuntu:26.04/resolute [amd64])
+Inst libobjc4 (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libobjc-15-dev (15.2.0-16ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libclang-common-21-dev (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst llvm-21-linker-tools (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst clang-21 (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst clang-tools-21 (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libgfortran5 (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libgfortran-15-dev (15.2.0-16ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst gfortran-15-x86-64-linux-gnu (15.2.0-16ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst gfortran-15 (15.2.0-16ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst gfortran-x86-64-linux-gnu (4:15.2.0-5ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst gfortran (4:15.2.0-5ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libfile-which-perl (1.27-2 Ubuntu:26.04/resolute [all])
+Inst liburi-encode-perl (1.1.1-3 Ubuntu:26.04/resolute [all])
+Inst llvm-21-runtime (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst llvm-runtime (1:21.1.6-71 Ubuntu:26.04/resolute [amd64])
+Inst libpfm4 (4.13.0+git106-g3e4031b-1 Ubuntu:26.04/resolute [amd64])
+Inst llvm-21 (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst llvm (1:21.1.6-71 Ubuntu:26.04/resolute [amd64])
+Inst lld-21 (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libc6-i386 (2.43-2ubuntu2.3 Ubuntu:26.04/resolute-updates, Ubuntu:26.04/resolute-security [amd64])
+Inst lib32gcc-s1 (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst lib32stdc++6 (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libclang-rt-21-dev (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst rocm-device-libs-21 (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhsakmt1 (7.1.0+dfsg-0ubuntu9 Ubuntu:26.04/resolute [amd64])
+Inst libhsa-runtime64-1 (7.1.0+dfsg-0ubuntu9 Ubuntu:26.04/resolute [amd64])
+Inst rocminfo (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libamdhip64-7 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst libhiprtc-builtins7 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst libhiprtc7 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst libamd-comgr-dev (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhsa-runtime-dev (7.1.0+dfsg-0ubuntu9 Ubuntu:26.04/resolute [amd64])
+Inst libamdhip64-dev (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst libgcc-16-dev (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libstdc++-16-dev (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst hipcc (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst hip-utils (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst hipify-perl (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [all])
+Inst libdrm-radeon1 (2.4.131-1 Ubuntu:26.04/resolute [amd64])
+Inst libdrm-nouveau2 (2.4.131-1 Ubuntu:26.04/resolute [amd64])
+Inst zlib1g-dev (1:1.3.dfsg+really1.3.1-1ubuntu3 Ubuntu:26.04/resolute [amd64])
+Inst libpciaccess-dev (0.18.1-1ubuntu4.1 Ubuntu:26.04/resolute-updates [amd64])
+Inst libdrm-dev (2.4.131-1 Ubuntu:26.04/resolute [amd64])
+Inst libamd-smi26 (7.2.0-3 Ubuntu:26.04/resolute [amd64])
+Inst libamd-smi-dev (7.2.0-3 Ubuntu:26.04/resolute [amd64])
+Inst libamd3 (1:7.12.2+dfsg-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libblas3 (3.12.1-7ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libboost-atomic1.90.0 (1.90.0-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libboost-filesystem1.90.0 (1.90.0-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libcamd3 (1:7.12.2+dfsg-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libccolamd3 (1:7.12.2+dfsg-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst liblapack3 (3.12.1-7ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libcholmod5 (1:7.12.2+dfsg-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libfmt10 (10.1.1+ds1-4build1 Ubuntu:26.04/resolute [amd64])
+Inst libhipblas-common-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libroctx64-4 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocblas5 (7.1.0-1ubuntu4 Ubuntu:26.04/resolute [amd64])
+Inst librocsolver0 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst libhipblas3 (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [amd64])
+Inst libhipblas-dev (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [amd64])
+Inst libhipblas3-tests-data (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [all])
+Inst libhipblas3-tests (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [amd64])
+Inst librocprim-dev (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [all])
+Inst libhipcub-dev (7.1.0-0ubuntu3 Ubuntu:26.04/resolute [all])
+Inst libhipcub-tests (7.1.0-0ubuntu3 Ubuntu:26.04/resolute [amd64])
+Inst librocfft0 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhipfft0 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhipfftw0 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhipfft-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocrand1 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhiprand1 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhipfft0-tests (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocrand-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhiprand-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhiprand1-tests (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhipsolver1 (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [amd64])
+Inst libhipsolver-fortran1 (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [amd64])
+Inst libhipsolver-fortran-dev (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [amd64]) []
+Inst libhipsolver-dev (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [amd64])
+Inst libhipsolver1-tests-data (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [all])
+Inst librocsparse1 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst libhipsparse4 (7.1.0-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhipsolver1-tests (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [amd64])
+Inst libhipsparse-dev (7.1.0-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhipsparse4-tests (7.1.0-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libhwloc15 (2.13.0-2 Ubuntu:26.04/resolute [amd64])
+Inst libhsa-runtime64-tests (7.1.0+dfsg-0ubuntu9 Ubuntu:26.04/resolute [amd64])
+Inst libmiopen1 (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libmiopen-dev (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libmiopen1-tests (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst libncurses-dev (6.6+20251231-1 Ubuntu:26.04/resolute [amd64])
+Inst liboam7 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst liboam-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocm-smi64-7 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librccl1 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst librccl-dev (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst librccl1-tests (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst librocalution1 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocalution-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocblas-dev (7.1.0-1ubuntu4 Ubuntu:26.04/resolute [amd64])
+Inst librocblas5-tests-data (7.1.0-1ubuntu4 Ubuntu:26.04/resolute [all])
+Inst librocblas5-tests (7.1.0-1ubuntu4 Ubuntu:26.04/resolute [amd64])
+Inst librocfft-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocfft0-tests (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocm-smi-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocprim-tests (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [amd64])
+Inst librocrand1-tests (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst librocsolver-dev (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst librocsolver0-tests (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst librocsparse-dev (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst librocsparse1-tests-data (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [all])
+Inst librocsparse1-tests (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Inst librocthrust-dev (7.1.0-0ubuntu3 Ubuntu:26.04/resolute [all])
+Inst librocthrust-tests (7.1.0-0ubuntu3 Ubuntu:26.04/resolute [amd64])
+Inst libroctx-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst liblzma-dev (5.8.3-1 Ubuntu:26.04/resolute [amd64])
+Inst libxml2-dev (2.15.2+dfsg-0.1ubuntu0.1 Ubuntu:26.04/resolute-updates, Ubuntu:26.04/resolute-security [amd64])
+Inst libxnvctrl0 (510.47.03-0ubuntu7 Ubuntu:26.04/resolute [amd64])
+Inst libze1 (1.28.2-2 Ubuntu:26.04/resolute [amd64])
+Inst libffi-dev (3.5.2-4 Ubuntu:26.04/resolute [amd64])
+Inst llvm-21-tools (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst llvm-21-dev (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Inst rocm-dev (7.1.0-0ubuntu6 Ubuntu:26.04/resolute [amd64])
+Inst rocm-tests (7.1.0-0ubuntu6 Ubuntu:26.04/resolute [amd64])
+Inst rocm (7.1.0-0ubuntu6 Ubuntu:26.04/resolute [amd64])
+Inst libhwloc-plugins (2.13.0-2 Ubuntu:26.04/resolute [amd64])
+Conf libamd-comgr3 (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocm-dbgapi0 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf amd-dbgapi-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libgc1 (1:8.2.12-1 Ubuntu:26.04/resolute [amd64])
+Conf libobjc4 (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libobjc-15-dev (15.2.0-16ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libclang-common-21-dev (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf llvm-21-linker-tools (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf clang-21 (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf clang-tools-21 (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libgfortran5 (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libgfortran-15-dev (15.2.0-16ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf gfortran-15-x86-64-linux-gnu (15.2.0-16ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf gfortran-15 (15.2.0-16ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf gfortran-x86-64-linux-gnu (4:15.2.0-5ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf gfortran (4:15.2.0-5ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libfile-which-perl (1.27-2 Ubuntu:26.04/resolute [all])
+Conf liburi-encode-perl (1.1.1-3 Ubuntu:26.04/resolute [all])
+Conf llvm-21-runtime (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf llvm-runtime (1:21.1.6-71 Ubuntu:26.04/resolute [amd64])
+Conf libpfm4 (4.13.0+git106-g3e4031b-1 Ubuntu:26.04/resolute [amd64])
+Conf llvm-21 (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf llvm (1:21.1.6-71 Ubuntu:26.04/resolute [amd64])
+Conf lld-21 (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libc6-i386 (2.43-2ubuntu2.3 Ubuntu:26.04/resolute-updates, Ubuntu:26.04/resolute-security [amd64])
+Conf lib32gcc-s1 (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf lib32stdc++6 (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libclang-rt-21-dev (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf rocm-device-libs-21 (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhsakmt1 (7.1.0+dfsg-0ubuntu9 Ubuntu:26.04/resolute [amd64])
+Conf libhsa-runtime64-1 (7.1.0+dfsg-0ubuntu9 Ubuntu:26.04/resolute [amd64])
+Conf rocminfo (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libamdhip64-7 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf libhiprtc-builtins7 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf libhiprtc7 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf libamd-comgr-dev (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhsa-runtime-dev (7.1.0+dfsg-0ubuntu9 Ubuntu:26.04/resolute [amd64])
+Conf libamdhip64-dev (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf libgcc-16-dev (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libstdc++-16-dev (16-20260322-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf hipcc (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf hip-utils (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf hipify-perl (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [all])
+Conf libdrm-radeon1 (2.4.131-1 Ubuntu:26.04/resolute [amd64])
+Conf libdrm-nouveau2 (2.4.131-1 Ubuntu:26.04/resolute [amd64])
+Conf zlib1g-dev (1:1.3.dfsg+really1.3.1-1ubuntu3 Ubuntu:26.04/resolute [amd64])
+Conf libpciaccess-dev (0.18.1-1ubuntu4.1 Ubuntu:26.04/resolute-updates [amd64])
+Conf libdrm-dev (2.4.131-1 Ubuntu:26.04/resolute [amd64])
+Conf libamd-smi26 (7.2.0-3 Ubuntu:26.04/resolute [amd64])
+Conf libamd-smi-dev (7.2.0-3 Ubuntu:26.04/resolute [amd64])
+Conf libamd3 (1:7.12.2+dfsg-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libblas3 (3.12.1-7ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libboost-atomic1.90.0 (1.90.0-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libboost-filesystem1.90.0 (1.90.0-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libcamd3 (1:7.12.2+dfsg-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libccolamd3 (1:7.12.2+dfsg-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf liblapack3 (3.12.1-7ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libcholmod5 (1:7.12.2+dfsg-1ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libfmt10 (10.1.1+ds1-4build1 Ubuntu:26.04/resolute [amd64])
+Conf libhipblas-common-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libroctx64-4 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocblas5 (7.1.0-1ubuntu4 Ubuntu:26.04/resolute [amd64])
+Conf librocsolver0 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf libhipblas3 (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [amd64])
+Conf libhipblas-dev (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [amd64])
+Conf libhipblas3-tests-data (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [all])
+Conf libhipblas3-tests (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [amd64])
+Conf librocprim-dev (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [all])
+Conf libhipcub-dev (7.1.0-0ubuntu3 Ubuntu:26.04/resolute [all])
+Conf libhipcub-tests (7.1.0-0ubuntu3 Ubuntu:26.04/resolute [amd64])
+Conf librocfft0 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhipfft0 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhipfftw0 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhipfft-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocrand1 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhiprand1 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhipfft0-tests (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocrand-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhiprand-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhiprand1-tests (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhipsolver1 (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [amd64])
+Conf libhipsolver-fortran1 (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [amd64])
+Conf libhipsolver-fortran-dev (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [amd64])
+Conf libhipsolver-dev (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [amd64])
+Conf libhipsolver1-tests-data (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [all])
+Conf librocsparse1 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf libhipsparse4 (7.1.0-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhipsolver1-tests (7.1.0-0ubuntu4 Ubuntu:26.04/resolute [amd64])
+Conf libhipsparse-dev (7.1.0-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhipsparse4-tests (7.1.0-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libhwloc15 (2.13.0-2 Ubuntu:26.04/resolute [amd64])
+Conf libhsa-runtime64-tests (7.1.0+dfsg-0ubuntu9 Ubuntu:26.04/resolute [amd64])
+Conf libmiopen1 (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libmiopen-dev (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libmiopen1-tests (7.1.1+dfsg-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf libncurses-dev (6.6+20251231-1 Ubuntu:26.04/resolute [amd64])
+Conf liboam7 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf liboam-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocm-smi64-7 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librccl1 (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf librccl-dev (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf librccl1-tests (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf librocalution1 (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocalution-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocblas-dev (7.1.0-1ubuntu4 Ubuntu:26.04/resolute [amd64])
+Conf librocblas5-tests-data (7.1.0-1ubuntu4 Ubuntu:26.04/resolute [all])
+Conf librocblas5-tests (7.1.0-1ubuntu4 Ubuntu:26.04/resolute [amd64])
+Conf librocfft-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocfft0-tests (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocm-smi-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocprim-tests (7.1.0-0ubuntu5 Ubuntu:26.04/resolute [amd64])
+Conf librocrand1-tests (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf librocsolver-dev (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf librocsolver0-tests (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf librocsparse-dev (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf librocsparse1-tests-data (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [all])
+Conf librocsparse1-tests (7.1.0-0ubuntu2 Ubuntu:26.04/resolute [amd64])
+Conf librocthrust-dev (7.1.0-0ubuntu3 Ubuntu:26.04/resolute [all])
+Conf librocthrust-tests (7.1.0-0ubuntu3 Ubuntu:26.04/resolute [amd64])
+Conf libroctx-dev (7.1.1-0ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf liblzma-dev (5.8.3-1 Ubuntu:26.04/resolute [amd64])
+Conf libxml2-dev (2.15.2+dfsg-0.1ubuntu0.1 Ubuntu:26.04/resolute-updates, Ubuntu:26.04/resolute-security [amd64])
+Conf libxnvctrl0 (510.47.03-0ubuntu7 Ubuntu:26.04/resolute [amd64])
+Conf libze1 (1.28.2-2 Ubuntu:26.04/resolute [amd64])
+Conf libffi-dev (3.5.2-4 Ubuntu:26.04/resolute [amd64])
+Conf llvm-21-tools (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf llvm-21-dev (1:21.1.8-6ubuntu1 Ubuntu:26.04/resolute [amd64])
+Conf rocm-dev (7.1.0-0ubuntu6 Ubuntu:26.04/resolute [amd64])
+Conf rocm-tests (7.1.0-0ubuntu6 Ubuntu:26.04/resolute [amd64])
+Conf rocm (7.1.0-0ubuntu6 Ubuntu:26.04/resolute [amd64])
+Conf libhwloc-plugins (2.13.0-2 Ubuntu:26.04/resolute [amd64])
