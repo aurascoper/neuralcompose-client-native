@@ -103,10 +103,16 @@ shell, no XCFramework, and runs no XCTest — none of which exist on Linux.
   reason given here — that AMD's matrix does not list Ubuntu 26.04 — is no
   longer true. What remains true is that **the APU's iGPU is not an officially
   supported ROCm target**: gfx1150 (Radeon 880M/890M, RDNA 3.5) is absent from
-  AMD's supported-hardware list, and running it needs
-  `HSA_OVERRIDE_GFX_VERSION` to borrow another target's kernels. An override is
-  a workaround, not support, and cannot be evidence for a row. Any ROCm row
-  stays experimental until AMD lists the exact APU. Absent from this table by
+  AMD's supported-hardware list. ~~and running it needs
+  `HSA_OVERRIDE_GFX_VERSION` to borrow another target's kernels~~ — measured
+  2026-08-04, this is wrong for the archive stack: Ubuntu's ROCm 7.1 HSA
+  runtime enumerates gfx1150 natively with the override unset
+  (`docs/hardware/rocm-gfx1150-jacc-amdgpu.md`). What actually fails is the
+  packaged math libraries — rocRAND segfaults, rocBLAS ships only gfx942 GEMM
+  kernels, rocSPARSE crashes its version query — so unofficial-target risk is
+  real but lives a layer higher than enumeration. Lack of an AMD listing is
+  still not support, and cannot be evidence for a row. Any ROCm row stays
+  experimental until AMD lists the exact APU. Absent from this table by
   design.
 - **MIGraphX**: excluded from generative-AI use while Microsoft's own
   documentation excludes that scenario.
