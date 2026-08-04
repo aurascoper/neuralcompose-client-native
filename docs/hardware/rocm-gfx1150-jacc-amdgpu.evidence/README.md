@@ -70,3 +70,20 @@ rocrand and rocsparse segfault (exit 139) before producing any output; the
 rocblas run aborts (exit 134) after printing the TensileLibrary error. The full
 nine-target lazy `.dat` list in `repro-rocblas-output.txt` is what corrected the
 parent document's gfx942-only claim.
+
+## Hash mapping across the 2026-08-04 rebase of main
+
+Commit messages written on the working branch cite hashes that the rebase of
+main rewrote (identical trees, new commit objects). The messages are immutable;
+the mapping is recorded here so their pointers still resolve:
+`e8ad1db`→`20fff55`, `3288d9e`→`41ad5b0`, `d3f18bb`→`0df21ff`,
+`bf8010c`→`10cca0d`, `ba3bfeb`→`23c1317`. In particular `23c1317`'s subject
+cites `bf8010c` — a hash that exists only in the pre-rebase history. No gate
+scans commit messages for git hashes orphaned by a rebase; the class exists in
+any repository that rebases, and the honest treatment is annotation, not
+rewriting.
+
+Manifest re-verified after the six reproducer files were added: `sha256sum -c`
+against the 29-entry manifest returns **29 OK** (2026-08-04, branch
+`docs/rocm-gfx1150-jacc`). The prior 23-OK measurement predated those entries
+and covered the smaller set only.
