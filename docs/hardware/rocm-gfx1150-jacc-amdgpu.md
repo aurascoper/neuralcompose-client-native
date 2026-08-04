@@ -111,7 +111,7 @@ AMDGPU has no `default_float` override (only Metal does), so `@changeprecision` 
 > was written to fix. Corrected by bringing all 23 files under version control;
 > the `~` originals are left in place and are now redundant copies.
 
-Routing (posted 2026-08-04, after review): the harness defect → JuliaGPU/JACC.jl#403; the characterization (insulation framing) → JuliaGPU/JACC.jl#404; the Multi mechanism + single-device question → comment on JuliaGPU/JACC.jl#381. The Ubuntu packaging gaps (rocRAND/rocBLAS/rocSPARSE) are not yet reported to Ubuntu.
+Routing (posted 2026-08-04, after review): the harness defect → JuliaGPU/JACC.jl#403; the characterization (insulation framing) → JuliaGPU/JACC.jl#404; the Multi mechanism + single-device question → comment on JuliaGPU/JACC.jl#381. ~~The Ubuntu packaging gaps (rocRAND/rocBLAS/rocSPARSE) are not yet reported to Ubuntu.~~ Filed same day with the C reproducers: rocrand → LP #2162809, rocblas → LP #2162810, rocsparse → LP #2162811 (linked back from #404).
 
 - Package snapshots: `pkg-state-preROCm-20260804.txt` (1751→ pre; `dpkg -l` shape, same as Gate A+B), `pkg-state-postROCm-20260804.txt`, `graphics-baseline-{pre,post}ROCm-20260804.txt`, `apt-manual-preROCm-20260804.txt`.
 - **No post-GateAB snapshot was ever taken** (2026-07-30 produced only `pre` files). `pkg-state-preROCm-20260804.txt` therefore doubles as the post-GateAB record; the graphics subset was byte-identical between the two dates, so nothing in the gap moved the promoted Vulkan row's provenance. **That gap is in the earlier record and committing these captures does not close it.**
