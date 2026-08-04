@@ -108,11 +108,17 @@ shell, no XCFramework, and runs no XCTest — none of which exist on Linux.
   2026-08-04, this is wrong for the archive stack: Ubuntu's ROCm 7.1 HSA
   runtime enumerates gfx1150 natively with the override unset
   (`docs/hardware/rocm-gfx1150-jacc-amdgpu.md`). What actually fails is the
-  packaged math libraries — rocRAND segfaults, rocBLAS ships only gfx942 GEMM
-  kernels, rocSPARSE crashes its version query. **That is now the reason any
+  packaged math libraries — rocRAND segfaults, rocBLAS ~~ships only gfx942
+  GEMM kernels~~ ships GEMM kernels for nine targets including gfx1151 while
+  omitting exactly gfx1150 (corrected same day), rocSPARSE segfaults in
+  `create_handle`. **That is now the reason any
   ROCm row stays experimental**: not an override requirement that turned out
-  not to exist, but three vendor libraries broken for this target in three
-  distinct ways — on top of AMD still not listing the APU, which is still not
-  support and cannot be evidence for a row. Absent from this table by design.
+  not to exist, and not an architectural gap — a packaging one. Two of the
+  three failures are the same omission (gfx1151 is built, gfx1150 alone is
+  left out of the target list) and the third is the same class; all three are
+  filed with Julia-free C reproducers (LP #2162809, #2162810, #2162811), so
+  the blocker is contingent on those bugs, not permanent. AMD still does not
+  list the APU, which is still not support and cannot be evidence for a row.
+  Absent from this table by design.
 - **MIGraphX**: excluded from generative-AI use while Microsoft's own
   documentation excludes that scenario.
