@@ -157,6 +157,55 @@ Port 8080 is free; 8788 is the EEG stream's.
 
 **5. Take a turn:** `./turn.sh` — speak, press Enter.
 
+## `dialectic.py` — seed a topic, then listen
+
+`turn.sh` is one exchange: you speak, one model answers. That is a chatbot with a
+microphone, not a dialectic. `dialectic.py` is the loop on top of it — you seed a
+topic and then listen while two positions argue.
+
+```sh
+.venv/bin/python dialectic.py "should cities ban private cars from their centres"
+.venv/bin/python dialectic.py --mic                  # speak the topic, Enter to stop
+.venv/bin/python dialectic.py --wav seed.wav --turns 8
+.venv/bin/python dialectic.py --silent "..."         # print only, no audio
+```
+
+Three things make it a dialectic rather than two monologues:
+
+- **Two positions.** Thesis argues the affirmative, antithesis presses the
+  strongest objections. Each is told not to concede merely to be agreeable.
+- **Tension carried across turns.** Each side receives the whole exchange, with
+  the other's utterances as `user` and its own as `assistant`, so it answers what
+  was actually said.
+- **Distinguishable poles.** `af_heart` and `bm_george` by default
+  (`VOICE_THESIS` / `VOICE_ANTITHESIS` to change). The listener tracks *which
+  position is speaking* by voice — which is the whole reason Kokoro's fixed
+  voices are a feature here and its inability to clone is not a gap.
+
+Kokoro is loaded **once** for the whole exchange rather than per utterance, and
+`temperature` is 0.85 because two instances of one model at low temperature
+converge into agreement instead of holding a disagreement.
+
+### It stages a disagreement; it does not hold one
+
+Both positions are the same model with different instructions. There is no
+independent reasoner on either side, and the appearance of two minds is a
+property of the prompting, not of the system. Worth saying plainly, because a
+spoken exchange in two voices is *much* more persuasive as evidence of
+independent reasoning than it has any right to be.
+
+### Two failures worth keeping
+
+The first version leaked `--turns`' value into the topic (`topic: 4 should
+cities ban…`) from hand-rolled `sys.argv` parsing — replaced with `argparse`,
+which is stdlib and was the correct answer to begin with.
+
+The first version also had Thesis *open* by rebutting a point nobody had made:
+the style prompt says "respond to what they just said", and on turn 1 there is
+nothing, so the model obligingly invented something to answer. Turn 1 now gets a
+different instruction. A prompt that is right for every turn but the first will
+look right in review and be wrong in production.
+
 ## Running it offline
 
 **Setup needs network once. Running needs none.** Verified 2026-08-04 by running
