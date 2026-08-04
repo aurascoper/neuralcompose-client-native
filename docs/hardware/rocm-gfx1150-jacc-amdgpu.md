@@ -96,11 +96,22 @@ AMDGPU has no `default_float` override (only Metal does), so `@changeprecision` 
 
 ## 5. Provenance notes
 
+**All captures cited below are committed at
+`docs/hardware/rocm-gfx1150-jacc-amdgpu.evidence/`, with a sha256 manifest.**
+
+> **This document was committed at `e8ad1db` before its evidence was.** The
+> captures then lived at `~/outputs/rocm-gfx1150-probes-20260804/` — matched by
+> `.gitignore:34` — and at loose `~/*.txt` files outside the repository. A
+> committed document citing uncommitted evidence is *citable but not findable*,
+> the same condition `#32` fixed for the XDNA evidence and `composed-error.md`
+> was written to fix. Corrected by bringing all 23 files under version control;
+> the `~` originals are left in place and are now redundant copies.
+
 Routing (posted 2026-08-04, after review): the harness defect → JuliaGPU/JACC.jl#403; the characterization (insulation framing) → JuliaGPU/JACC.jl#404; the Multi mechanism + single-device question → comment on JuliaGPU/JACC.jl#381. The Ubuntu packaging gaps (rocRAND/rocBLAS/rocSPARSE) are not yet reported to Ubuntu.
 
-- Package snapshots: `~/pkg-state-preROCm-20260804.txt` (1751→ pre; `dpkg -l` shape, same as Gate A+B), `~/pkg-state-postROCm-20260804.txt`, `~/graphics-baseline-{pre,post}ROCm-20260804.txt`, `~/apt-manual-preROCm-20260804.txt`. Filed next to the Gate A+B baselines.
-- **No post-GateAB snapshot was ever taken** (2026-07-30 produced only `pre` files). `pkg-state-preROCm-20260804.txt` therefore doubles as the post-GateAB record; the graphics subset was byte-identical between the two dates, so nothing in the gap moved the promoted Vulkan row's provenance.
-- Raw captures: `~/outputs/rocm-gfx1150-probes-20260804/` (rocminfo/rocm-smi at three settings, apt logs, rollback proof, AMDGPU.jl logs, JACC suite log).
+- Package snapshots: `pkg-state-preROCm-20260804.txt` (1751→ pre; `dpkg -l` shape, same as Gate A+B), `pkg-state-postROCm-20260804.txt`, `graphics-baseline-{pre,post}ROCm-20260804.txt`, `apt-manual-preROCm-20260804.txt`.
+- **No post-GateAB snapshot was ever taken** (2026-07-30 produced only `pre` files). `pkg-state-preROCm-20260804.txt` therefore doubles as the post-GateAB record; the graphics subset was byte-identical between the two dates, so nothing in the gap moved the promoted Vulkan row's provenance. **That gap is in the earlier record and committing these captures does not close it.**
+- Raw captures: rocminfo/rocm-smi at three override settings, apt dry-run and both install logs, the empirical rollback proof, AMDGPU.jl logs, and both JACC suite logs.
 - The stage-1 apt log was reconstructed from the session transcript (an interactive line-wrap broke the original `tee`); all other logs are direct captures.
 
 ## 6. Reproducing this
