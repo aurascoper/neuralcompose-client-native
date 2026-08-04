@@ -32,3 +32,19 @@ tools/muse-osc-bridge/node_modules
 # append-only gate to catch them.
 .pi-subagents/
 outputs/
+
+# Model artifacts. Today's exports live at ~/models/onnx, outside this worktree,
+# so nothing here is currently at risk — this is preventive, on the 64f2332
+# reasoning: a path that stays uncommitted because of where it happens to sit
+# protects one machine and no other checkout. tools/onnx/README.md tells a
+# reader to produce two 133 MB .onnx files, and nothing stops them producing
+# them here. Both rebuild from the pinned revision, so they are derived, not
+# evidence, and must never enter the ledger.
+*.onnx
+*.onnx.data
+*.gguf
+*.safetensors
+models/
+
+# Throwaway venvs for the one-shot ONNX inventory (tools/onnx/README.md).
+onnxenv/

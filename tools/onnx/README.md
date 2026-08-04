@@ -1,9 +1,26 @@
 # `tools/onnx/` — graph inventory for the XDNA 2 feasibility audit
 
+> **Archival, not exercised. These are one-shot scripts, run once by hand on
+> 2026-08-04 in a throwaway venv, and they are not wired into CI and never will
+> be.** They cannot be: none of `torch`, `transformers`, `onnx` or
+> `onnxruntime` is installed on `ok-cyberdeck` or available to CI, and the
+> inputs are two 133 MB files that are deliberately not committed.
+>
+> This notice exists because a committed script that nothing runs is one rename
+> away from being mistaken for a check — and a check that never executes reports
+> `ok` while verifying nothing. That failure mode has already appeared twice in
+> this repository: `vulkan_agreement.rs` asserting correctly on inputs that never
+> triggered it, and `composed_error.rs` reporting `ok` in CI because
+> `NC_REQUIRE_QUANT` is never set there.
+>
+> **The evidence is `docs/hardware/xdna2-bert-encoder-feasibility.ops.txt`**, the
+> committed raw output. These scripts are how it was produced, kept so the
+> inventory is reproducible rather than asserted — the same reason
+> `composed-error.stdout.txt` is in the repo. They are not a gate, and nothing
+> should be built on them re-running.
+
 These four scripts produce §14 of
-`docs/hardware/xdna2-bert-encoder-feasibility.md`. They are committed so the
-operator inventory is reproducible rather than asserted — the same reason
-`composed-error.stdout.txt` is in the repo.
+`docs/hardware/xdna2-bert-encoder-feasibility.md`.
 
 | script | what it does |
 |---|---|
