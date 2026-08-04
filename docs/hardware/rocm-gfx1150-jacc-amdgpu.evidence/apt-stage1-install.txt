@@ -1,0 +1,21 @@
+# Reconstructed from session transcript (tee path was line-wrapped in the interactive shell, file not written at install time).
+# Command: sudo apt-get install -y rocminfo rocm-smi libhsa-runtime64-1
+# Date: 2026-08-04 (stage 1 probe install)
+The following additional packages will be installed:
+  libhsa-runtime64-1 libhsakmt1 librocm-smi64-7
+The following NEW packages will be installed:
+  libhsa-runtime64-1 libhsakmt1 librocm-smi64-7
+  rocm-smi rocminfo
+0 upgraded, 5 newly installed, 0 to remove and 2 not upgraded.
+Need to get 1,217 kB of archives.
+After this operation, 6,813 kB of additional disk space will be used.
+Get:1 http://us.archive.ubuntu.com/ubuntu resolute/universe amd64 libhsakmt1 amd64 7.1.0+dfsg-0ubuntu9 [77.5 kB]
+Get:2 http://us.archive.ubuntu.com/ubuntu resolute/universe amd64 libhsa-runtime64-1 amd64 7.1.0+dfsg-0ubuntu9 [600 kB]
+Get:3 http://us.archive.ubuntu.com/ubuntu resolute/universe amd64 librocm-smi64-7 amd64 7.1.1-0ubuntu1 [453 kB]
+Get:4 http://us.archive.ubuntu.com/ubuntu resolute/universe amd64 rocm-smi amd64 7.1.1-0ubuntu1 [57.4 kB]
+Get:5 http://us.archive.ubuntu.com/ubuntu resolute/universe amd64 rocminfo amd64 7.1.1-0ubuntu1 [29.1 kB]
+Setting up librocm-smi64-7 (7.1.1-0ubuntu1)
+Setting up rocm-smi (7.1.1-0ubuntu1)
+Setting up libhsakmt1:amd64 (7.1.0+dfsg-0ubuntu9)
+Setting up libhsa-runtime64-1:amd64 (7.1.0+dfsg-0ubuntu9)
+Setting up rocminfo (7.1.1-0ubuntu1)

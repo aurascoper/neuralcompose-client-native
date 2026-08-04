@@ -1,0 +1,94 @@
++ date -Is
+2026-08-04T04:54:35-05:00
++ apt-get remove -y rocminfo rocm-smi libhsa-runtime64-1
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Solving dependencies...
+The following packages were automatically installed and are no longer required:
+  libhsakmt1 librocm-smi64-7
+Use 'sudo apt autoremove' to remove them.
+The following packages will be REMOVED:
+  libhsa-runtime64-1 rocm-smi rocminfo
+0 upgraded, 0 newly installed, 3 to remove and 2 not upgraded.
+After this operation, 4,311 kB disk space will be freed.
+(Reading database… (Reading database… 5%(Reading database… 10%(Reading database… 15%(Reading database… 20%(Reading database… 25%(Reading database… 30%(Reading database… 35%(Reading database… 40%(Reading database… 45%(Reading database… 50%(Reading database… 55%(Reading database… 60%(Reading database… 65%(Reading database… 70%(Reading database… 75%(Reading database… 80%(Reading database… 85%(Reading database… 90%(Reading database… 95%(Reading database… 100%(Reading database… 180853 files and directories currently installed.)
+Removing rocminfo (7.1.1-0ubuntu1)…
+Removing libhsa-runtime64-1:amd64 (7.1.0+dfsg-0ubuntu9)…
+Removing rocm-smi (7.1.1-0ubuntu1)…
+Processing triggers for man-db (2.13.1-1build1)…
+Processing triggers for libc-bin (2.43-2ubuntu2.3)…
++ apt-get autoremove -y
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Solving dependencies...
+The following packages will be REMOVED:
+  libhsakmt1 librocm-smi64-7
+0 upgraded, 0 newly installed, 2 to remove and 2 not upgraded.
+After this operation, 2,502 kB disk space will be freed.
+(Reading database… (Reading database… 5%(Reading database… 10%(Reading database… 15%(Reading database… 20%(Reading database… 25%(Reading database… 30%(Reading database… 35%(Reading database… 40%(Reading database… 45%(Reading database… 50%(Reading database… 55%(Reading database… 60%(Reading database… 65%(Reading database… 70%(Reading database… 75%(Reading database… 80%(Reading database… 85%(Reading database… 90%(Reading database… 95%(Reading database… 100%(Reading database… 180829 files and directories currently installed.)
+Removing libhsakmt1:amd64 (7.1.0+dfsg-0ubuntu9)…
+Removing librocm-smi64-7 (7.1.1-0ubuntu1)…
+Processing triggers for libc-bin (2.43-2ubuntu2.3)…
++ echo '=== state after remove+autoremove ==='
+=== state after remove+autoremove ===
++ dpkg -l
++ grep -E 'rocm|hsa'
++ echo 'NO rocm/hsa PACKAGES REMAIN'
+NO rocm/hsa PACKAGES REMAIN
++ echo '=== graphics subset after removal ==='
+=== graphics subset after removal ===
++ dpkg -l libdrm2 libegl-mesa0 libgl1-mesa-dri libvulkan1 mesa-vulkan-drivers
++ grep '^ii'
+ii  libdrm2:amd64             2.4.131-1       amd64        Userspace interface to kernel DRM services -- runtime
+ii  libegl-mesa0:amd64        26.0.3-1ubuntu1 amd64        free implementation of the EGL API -- Mesa vendor library
+ii  libgl1-mesa-dri:amd64     26.0.3-1ubuntu1 amd64        free implementation of the OpenGL API -- DRI modules
+ii  libvulkan1:amd64          1.4.341.0-1     amd64        Vulkan loader library
+ii  mesa-vulkan-drivers:amd64 26.0.3-1ubuntu1 amd64        Mesa Vulkan graphics drivers
++ echo '=== reinstall ==='
+=== reinstall ===
++ apt-get install -y rocminfo rocm-smi libhsa-runtime64-1
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Solving dependencies...
+The following additional packages will be installed:
+  libhsakmt1 librocm-smi64-7
+The following NEW packages will be installed:
+  libhsa-runtime64-1 libhsakmt1 librocm-smi64-7 rocm-smi rocminfo
+0 upgraded, 5 newly installed, 0 to remove and 2 not upgraded.
+Need to get 0 B/1,217 kB of archives.
+After this operation, 6,813 kB of additional disk space will be used.
+Selecting previously unselected package libhsakmt1:amd64.
+(Reading database… (Reading database… 5%(Reading database… 10%(Reading database… 15%(Reading database… 20%(Reading database… 25%(Reading database… 30%(Reading database… 35%(Reading database… 40%(Reading database… 45%(Reading database… 50%(Reading database… 55%(Reading database… 60%(Reading database… 65%(Reading database… 70%(Reading database… 75%(Reading database… 80%(Reading database… 85%(Reading database… 90%(Reading database… 95%(Reading database… 100%(Reading database… 180821 files and directories currently installed.)
+Preparing to unpack …/libhsakmt1_7.1.0+dfsg-0ubuntu9_amd64.deb…
+Unpacking libhsakmt1:amd64 (7.1.0+dfsg-0ubuntu9)…
+Selecting previously unselected package libhsa-runtime64-1:amd64.
+Preparing to unpack …/libhsa-runtime64-1_7.1.0+dfsg-0ubuntu9_amd64.deb…
+Unpacking libhsa-runtime64-1:amd64 (7.1.0+dfsg-0ubuntu9)…
+Selecting previously unselected package librocm-smi64-7.
+Preparing to unpack …/librocm-smi64-7_7.1.1-0ubuntu1_amd64.deb…
+Unpacking librocm-smi64-7 (7.1.1-0ubuntu1)…
+Selecting previously unselected package rocm-smi.
+Preparing to unpack …/rocm-smi_7.1.1-0ubuntu1_amd64.deb…
+Unpacking rocm-smi (7.1.1-0ubuntu1)…
+Selecting previously unselected package rocminfo.
+Preparing to unpack …/rocminfo_7.1.1-0ubuntu1_amd64.deb…
+Unpacking rocminfo (7.1.1-0ubuntu1)…
+Setting up librocm-smi64-7 (7.1.1-0ubuntu1)…
+Setting up rocm-smi (7.1.1-0ubuntu1)…
+Setting up libhsakmt1:amd64 (7.1.0+dfsg-0ubuntu9)…
+Setting up libhsa-runtime64-1:amd64 (7.1.0+dfsg-0ubuntu9)…
+Setting up rocminfo (7.1.1-0ubuntu1)…
+Processing triggers for man-db (2.13.1-1build1)…
+Processing triggers for libc-bin (2.43-2ubuntu2.3)…
++ echo '=== final state ==='
+=== final state ===
++ dpkg -l
++ grep -E 'rocm|hsa'
+ii  libhsa-runtime64-1:amd64                   7.1.0+dfsg-0ubuntu9                        amd64        HSA Runtime API and runtime for ROCm
+ii  libhsakmt1:amd64                           7.1.0+dfsg-0ubuntu9                        amd64        Thunk library for AMD KFD (shlib)
+ii  librocm-smi64-7                            7.1.1-0ubuntu1                             amd64        ROCm System Management Interface (ROCm SMI) library
+ii  rocm-smi                                   7.1.1-0ubuntu1                             amd64        ROCm System Management Interface (ROCm SMI) command-line interface
+ii  rocminfo                                   7.1.1-0ubuntu1                             amd64        ROCm Application for Reporting System Info

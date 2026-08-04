@@ -1,0 +1,13 @@
+WARNING: AMD GPU device(s) is/are in a low-power state. Check power control/runtime_status
+
+Exception caught: map::at
+
+
+======================================== ROCm System Management Interface ========================================
+================================================== Concise Info ==================================================
+Device  Node  IDs              Temp    Power     Partitions          SCLK  MCLK  Fan  Perf  PwrCap  VRAM%  GPU%  
+[3m              (DID,     GUID)  (Edge)  (Socket)  (Mem, Compute, ID)                                              [0m
+==================================================================================================================
+0       1     0x150e,   60424  43.0°C  8.078W    N/A, N/A, 0         N/A   N/A   0%   auto  N/A     9%     3%    
+==================================================================================================================
+============================================== End of ROCm SMI Log ===============================================

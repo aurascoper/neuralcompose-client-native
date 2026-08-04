@@ -1,0 +1,7 @@
+# ROCm post-install state  2026-08-04T05:01:38-05:00
+# kernel: 7.0.0-28-generic
+ii  libdrm2:amd64             2.4.131-1       amd64        Userspace interface to kernel DRM services -- runtime
+ii  libegl-mesa0:amd64        26.0.3-1ubuntu1 amd64        free implementation of the EGL API -- Mesa vendor library
+ii  libgl1-mesa-dri:amd64     26.0.3-1ubuntu1 amd64        free implementation of the OpenGL API -- DRI modules
+ii  libvulkan1:amd64          1.4.341.0-1     amd64        Vulkan loader library
+ii  mesa-vulkan-drivers:amd64 26.0.3-1ubuntu1 amd64        Mesa Vulkan graphics drivers

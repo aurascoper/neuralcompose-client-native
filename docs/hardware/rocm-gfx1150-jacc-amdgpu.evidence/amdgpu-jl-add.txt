@@ -1,0 +1,247 @@
+  Installing known registries into `~/.julia`
+       Added `General` registry to ~/.julia/registries
+    Updating registry at `~/.julia/registries/General.toml`
+   Resolving package versions...
+   Installed GPUArraysCore ─────────────── v0.2.0
+   Installed Adapt ─────────────────────── v4.7.0
+   Installed Crayons ───────────────────── v4.2.0
+   Installed PrettyTables ──────────────── v3.4.4
+   Installed LLVM_jll ──────────────────── v18.1.7+4
+   Installed TableTraits ───────────────── v1.0.1
+   Installed JSON ──────────────────────── v1.6.1
+   Installed Preferences ───────────────── v1.5.2
+   Installed ArgCheck ──────────────────── v2.5.0
+   Installed Parsers ───────────────────── v2.8.6
+   Installed Tables ────────────────────── v1.13.0
+   Installed HashArrayMappedTries ──────── v0.2.0
+   Installed ROCmDeviceLibs_jll ────────── v6.2.1+2
+   Installed DataAPI ───────────────────── v1.16.0
+   Installed tree_sitter_llvm_jll ──────── v1.1.0+0
+   Installed AbstractFFTs ──────────────── v1.5.0
+   Installed GPUCompiler ───────────────── v2.1.1
+   Installed tree_sitter_gcn_jll ───────── v0.1.0+0
+   Installed AMDGPU_LLVM_Backend_jll ───── v22.1.8+0
+   Installed JLLWrappers ───────────────── v1.8.0
+   Installed AcceleratedKernels ────────── v0.4.3
+   Installed Highlights ────────────────── v0.6.2
+   Installed StaticArrays ──────────────── v1.9.18
+   Installed Tracy ─────────────────────── v0.1.6
+   Installed AMDGPU ────────────────────── v2.7.1
+   Installed StaticArraysCore ──────────── v1.4.4
+   Installed DataValueInterfaces ───────── v1.0.0
+   Installed IteratorInterfaceExtensions ─ v1.0.0
+   Installed LLVMExtra_jll ─────────────── v0.0.44+0
+   Installed AbstractTrees ─────────────── v0.4.5
+   Installed GPUToolbox ────────────────── v3.0.0
+   Installed PrecompileTools ───────────── v1.3.4
+   Installed LaTeXStrings ──────────────── v1.4.0
+   Installed CEnum ─────────────────────── v0.5.0
+   Installed OrderedCollections ────────── v2.0.1
+   Installed BFloat16s ─────────────────── v0.6.1
+   Installed Reexport ──────────────────── v1.2.2
+   Installed GPUArrays ─────────────────── v11.5.8
+   Installed CompilerCaching ───────────── v0.4.1
+   Installed Statistics ────────────────── v1.11.1
+   Installed ScopedValues ──────────────── v1.6.2
+   Installed LibTracyClient_jll ────────── v0.13.1+0
+   Installed RandomNumbers ─────────────── v1.6.0
+   Installed KernelAbstractions ────────── v0.9.42
+   Installed Random123 ─────────────────── v1.7.1
+   Installed tree_sitter_spirv_jll ─────── v0.1.0+0
+   Installed StringManipulation ────────── v0.4.7
+   Installed Requires ──────────────────── v1.3.1
+   Installed ExprTools ─────────────────── v0.1.11
+   Installed LLVM ──────────────────────── v9.11.0
+   Installed TreeSitter ────────────────── v0.2.3
+   Installed MacroTools ────────────────── v0.5.16
+   Installed tree_sitter_jll ───────────── v0.25.10+0
+   Installed tree_sitter_ptx_jll ───────── v0.1.0+0
+   Installed StructUtils ───────────────── v2.8.2
+   Installed Atomix ────────────────────── v1.1.3
+   Installed UnsafeAtomics ─────────────── v0.3.1
+  Installing 11 artifacts
+   Installed artifact LibTracyClient      502.2 KiB
+   Installed artifact tree_sitter_gcn     13.1 KiB
+   Installed artifact tree_sitter_spirv   6.2 KiB
+   Installed artifact Gogh                58.3 KiB
+   Installed artifact ROCmDeviceLibs      689.3 KiB
+   Installed artifact tree_sitter         104.6 KiB
+   Installed artifact LLVMExtra           3.2 MiB
+   Installed artifact tree_sitter_llvm    139.5 KiB
+   Installed artifact tree_sitter_ptx     23.1 KiB
+   Installed artifact AMDGPU_LLVM_Backend 67.0 MiB
+   Installed artifact LLVM                84.5 MiB
+    Updating `~/jacc-gfx1150/amdgpu-env/Project.toml`
+  [21141c5a] + AMDGPU v2.7.1
+    Updating `~/jacc-gfx1150/amdgpu-env/Manifest.toml`
+  [21141c5a] + AMDGPU v2.7.1
+  [621f4979] + AbstractFFTs v1.5.0
+  [1520ce14] + AbstractTrees v0.4.5
+  [6a4ca0a5] + AcceleratedKernels v0.4.3
+  [79e6a3ab] + Adapt v4.7.0
+  [dce04be8] + ArgCheck v2.5.0
+  [a9b6321e] + Atomix v1.1.3
+  [ab4f0b2a] + BFloat16s v0.6.1
+  [fa961155] + CEnum v0.5.0
+  [9db33cc3] + CompilerCaching v0.4.1
+  [a8cc5b0e] + Crayons v4.2.0
+  [9a962f9c] + DataAPI v1.16.0
+  [e2d170a0] + DataValueInterfaces v1.0.0
+  [e2ba6199] + ExprTools v0.1.11
+  [0c68f7d7] + GPUArrays v11.5.8
+  [46192b85] + GPUArraysCore v0.2.0
+  [61eb1bfa] + GPUCompiler v2.1.1
+  [096a3bc2] + GPUToolbox v3.0.0
+  [076d061b] + HashArrayMappedTries v0.2.0
+  [eafb193a] + Highlights v0.6.2
+  [82899510] + IteratorInterfaceExtensions v1.0.0
+  [692b3bcd] + JLLWrappers v1.8.0
+  [682c06a0] + JSON v1.6.1
+  [63c18a36] + KernelAbstractions v0.9.42
+  [929cbde3] + LLVM v9.11.0
+  [b964fa9f] + LaTeXStrings v1.4.0
+  [1914dd2f] + MacroTools v0.5.16
+  [bac558e1] + OrderedCollections v2.0.1
+  [69de0a69] + Parsers v2.8.6
+  [aea7be01] + PrecompileTools v1.3.4
+  [21216c6a] + Preferences v1.5.2
+  [08abe8d2] + PrettyTables v3.4.4
+  [74087812] + Random123 v1.7.1
+  [e6cf234a] + RandomNumbers v1.6.0
+  [189a3867] + Reexport v1.2.2
+  [ae029012] + Requires v1.3.1
+  [7e506255] + ScopedValues v1.6.2
+  [90137ffa] + StaticArrays v1.9.18
+  [1e83bf80] + StaticArraysCore v1.4.4
+  [10745b16] + Statistics v1.11.1
+  [892a3eda] + StringManipulation v0.4.7
+  [ec057cc2] + StructUtils v2.8.2
+  [3783bdb8] + TableTraits v1.0.1
+  [bd369af6] + Tables v1.13.0
+  [e689c965] + Tracy v0.1.6
+⌅ [f42328cb] + TreeSitter v0.2.3
+  [013be700] + UnsafeAtomics v0.3.1
+  [cc5c0156] + AMDGPU_LLVM_Backend_jll v22.1.8+0
+  [dad2f222] + LLVMExtra_jll v0.0.44+0
+⌅ [86de99a1] + LLVM_jll v18.1.7+4
+  [ad6e5548] + LibTracyClient_jll v0.13.1+0
+⌅ [873c0968] + ROCmDeviceLibs_jll v6.2.1+2
+  [8b5cbfcf] + tree_sitter_gcn_jll v0.1.0+0
+⌅ [695101d5] + tree_sitter_jll v0.25.10+0
+  [44208993] + tree_sitter_llvm_jll v1.1.0+0
+  [71e3f6e6] + tree_sitter_ptx_jll v0.1.0+0
+  [f0e86581] + tree_sitter_spirv_jll v0.1.0+0
+  [0dad84c5] + ArgTools v1.1.2
+  [56f22d72] + Artifacts v1.11.0
+  [2a0f44e3] + Base64 v1.11.0
+  [ade2ca70] + Dates v1.11.0
+  [f43a241f] + Downloads v1.7.0
+  [7b1f6079] + FileWatching v1.11.0
+  [b77e0a4c] + InteractiveUtils v1.11.0
+  [ac6e5ff7] + JuliaSyntaxHighlighting v1.12.0
+  [4af54fe1] + LazyArtifacts v1.11.0
+  [b27032c2] + LibCURL v0.6.4
+  [76f85450] + LibGit2 v1.11.0
+  [8f399da3] + Libdl v1.11.0
+  [37e2e46d] + LinearAlgebra v1.12.0
+  [56ddb016] + Logging v1.11.0
+  [d6f4376e] + Markdown v1.11.0
+  [ca575930] + NetworkOptions v1.3.0
+  [44cfe95a] + Pkg v1.12.1
+  [de0858da] + Printf v1.11.0
+  [3fa0cd96] + REPL v1.11.0
+  [9a3f8284] + Random v1.11.0
+  [ea8e919c] + SHA v0.7.0
+  [9e88b42a] + Serialization v1.11.0
+  [6462fe0b] + Sockets v1.11.0
+  [2f01184e] + SparseArrays v1.12.0
+  [f489334b] + StyledStrings v1.11.0
+  [fa267f1f] + TOML v1.0.3
+  [a4e569a6] + Tar v1.10.0
+  [cf7118a7] + UUIDs v1.11.0
+  [4ec0a83e] + Unicode v1.11.0
+  [e66e0078] + CompilerSupportLibraries_jll v1.3.0+1
+  [deac9b47] + LibCURL_jll v8.15.0+0
+  [e37daf67] + LibGit2_jll v1.9.0+0
+  [29816b5a] + LibSSH2_jll v1.11.3+1
+  [14a3606d] + MozillaCACerts_jll v2025.11.4
+  [4536629a] + OpenBLAS_jll v0.3.29+0
+  [458c3c95] + OpenSSL_jll v3.5.4+0
+  [bea87d4a] + SuiteSparse_jll v7.8.3+2
+  [83775a58] + Zlib_jll v1.3.1+2
+  [8f36deef] + libLLVM_jll v18.1.7+5
+  [8e850b90] + libblastrampoline_jll v5.15.0+0
+  [8e850ede] + nghttp2_jll v1.64.0+1
+  [3f19e933] + p7zip_jll v17.7.0+0
+        Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
+Precompiling packages...
+    427.0 ms  ✓ DataValueInterfaces
+    424.6 ms  ✓ DataAPI
+    468.2 ms  ✓ IteratorInterfaceExtensions
+    581.8 ms  ✓ ExprTools
+    642.2 ms  ✓ LaTeXStrings
+    671.0 ms  ✓ Reexport
+    690.2 ms  ✓ AbstractFFTs
+    678.7 ms  ✓ ArgCheck
+    755.0 ms  ✓ AbstractTrees
+    765.6 ms  ✓ Adapt
+    863.9 ms  ✓ Statistics
+    868.2 ms  ✓ CompilerCaching
+    558.6 ms  ✓ TableTraits
+    740.3 ms  ✓ HashArrayMappedTries
+    779.7 ms  ✓ StaticArraysCore
+    826.0 ms  ✓ Requires
+    623.6 ms  ✓ GPUArraysCore
+    856.8 ms  ✓ Preferences
+   1103.2 ms  ✓ RandomNumbers
+    857.7 ms  ✓ Adapt → AdaptSparseArraysExt
+    805.8 ms  ✓ Statistics → SparseArraysExt
+   1872.2 ms  ✓ OrderedCollections
+    506.7 ms  ✓ ScopedValues
+    410.4 ms  ✓ PrecompileTools
+   2128.7 ms  ✓ Crayons
+    593.8 ms  ✓ JLLWrappers
+   2190.4 ms  ✓ BFloat16s
+    871.9 ms  ✓ Random123
+   2042.6 ms  ✓ CEnum
+    706.4 ms  ✓ ROCmDeviceLibs_jll
+   2970.5 ms  ✓ UnsafeAtomics
+    830.1 ms  ✓ tree_sitter_spirv_jll
+    915.0 ms  ✓ LibTracyClient_jll
+   1005.3 ms  ✓ LLVM_jll
+   2473.8 ms  ✓ StructUtils
+   1009.7 ms  ✓ tree_sitter_jll
+   1126.9 ms  ✓ AMDGPU_LLVM_Backend_jll
+    851.7 ms  ✓ tree_sitter_llvm_jll
+    847.5 ms  ✓ tree_sitter_gcn_jll
+   3115.5 ms  ✓ MacroTools
+    563.8 ms  ✓ Atomix
+    464.3 ms  ✓ StructUtils → StructUtilsStaticArraysCoreExt
+    820.3 ms  ✓ tree_sitter_ptx_jll
+   1678.6 ms  ✓ LLVMExtra_jll
+    870.2 ms  ✓ Tracy
+   2257.7 ms  ✓ Tables
+    333.0 ms  ✓ StructUtils → StructUtilsTablesExt
+   2937.2 ms  ✓ StringManipulation
+   5254.6 ms  ✓ Parsers
+   7048.4 ms  ✓ StaticArrays
+    450.9 ms  ✓ Adapt → AdaptStaticArraysExt
+    466.1 ms  ✓ StaticArrays → StaticArraysStatisticsExt
+   6584.9 ms  ✓ LLVM
+   3384.7 ms  ✓ JSON
+    977.4 ms  ✓ LLVM → BFloat16sExt
+   1178.7 ms  ✓ GPUToolbox
+   1415.1 ms  ✓ UnsafeAtomics → UnsafeAtomicsLLVM
+   1716.4 ms  ✓ TreeSitter
+   3360.6 ms  ✓ KernelAbstractions
+    556.2 ms  ✓ KernelAbstractions → LinearAlgebraExt
+    675.3 ms  ✓ KernelAbstractions → SparseArraysExt
+   2015.8 ms  ✓ Highlights
+   1729.4 ms  ✓ AcceleratedKernels
+   4147.4 ms  ✓ GPUArrays
+  14844.8 ms  ✓ PrettyTables
+  18357.9 ms  ✓ GPUCompiler
+  31261.1 ms  ✓ AMDGPU
+  67 dependencies successfully precompiled in 64 seconds. 34 already precompiled.
+Status `~/jacc-gfx1150/amdgpu-env/Project.toml`
+  [21141c5a] AMDGPU v2.7.1

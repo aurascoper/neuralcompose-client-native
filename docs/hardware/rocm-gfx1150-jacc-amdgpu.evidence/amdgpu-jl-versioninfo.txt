@@ -1,0 +1,27 @@
+AMDGPU versioninfo
+┌───────────┬──────────────────┬───────────┬────────────────────────────────────
+│ Available │ Name             │ Version   │ Path                              ⋯
+├───────────┼──────────────────┼───────────┼────────────────────────────────────
+│     +     │ LLD              │ -         │ /usr/lib/llvm-21/bin/ld.lld       ⋯
+│     +     │ Device Libraries │ -         │ /home/aurascoper/.julia/artifacts ⋯
+│     +     │ HIP              │ 7.1.52801 │ /usr/lib/x86_64-linux-gnu/libamdh ⋯
+│     +     │ rocBLAS          │ 5.1.0     │ /usr/lib/x86_64-linux-gnu/librocb ⋯
+│     +     │ rocSOLVER        │ 3.31.0    │ /usr/lib/x86_64-linux-gnu/librocs ⋯
+│     +     │ rocSPARSE        │ err       │ /usr/lib/x86_64-linux-gnu/librocs ⋯
+│     +     │ rocRAND          │ 4.1.0     │ /usr/lib/x86_64-linux-gnu/librocr ⋯
+│     +     │ rocFFT           │ 1.0.35    │ /usr/lib/x86_64-linux-gnu/librocf ⋯
+│     +     │ MIOpen           │ 3.5.1     │ /usr/lib/x86_64-linux-gnu/libMIOp ⋯
+└───────────┴──────────────────┴───────────┴────────────────────────────────────
+                                                                1 column omitted
+┌ Warning: rocSPARSE is installed but its version query failed (it ran in an isolated subprocess and crashed or timed out). This usually indicates a broken or mismatched ROCm install. See https://github.com/JuliaGPU/AMDGPU.jl/issues/920.
+└ @ AMDGPU ~/.julia/packages/AMDGPU/wBmaz/src/utils.jl:76
+
+AMDGPU devices
+┌────┬──────────────────────────┬──────────┬───────────┬────────────┬───────────
+│ Id │                     Name │ GCN arch │ Wavefront │     Memory │ Shared M ⋯
+├────┼──────────────────────────┼──────────┼───────────┼────────────┼───────────
+│  1 │ AMD Radeon 890M Graphics │  gfx1150 │        32 │ 11.289 GiB │    64.00 ⋯
+└────┴──────────────────────────┴──────────┴───────────┴────────────┴───────────
+                                                                1 column omitted
+
+functional: true
