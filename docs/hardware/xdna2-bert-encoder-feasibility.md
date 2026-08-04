@@ -78,12 +78,22 @@ And even with a compiler in hand, whether a BERT encoder compiles **to the NPU**
 rather than silently partitioning to CPU is **UNVERIFIED in AMD's own 1.8.0
 documentation, which contradicts itself on exactly that point** (§3.2).
 
-**The graph itself has since been exported and inventoried (§14),** which narrows
-that question considerably and reverses part of it: `LayerNormalization` — the
-operator §3 is built around — **is absent from the canonical opset-11 export**,
-appearing only at the opset 17 AMD's own example prescribes. `Softmax` is the one
-op flagged in both forms. The larger exposure turns out to be the **40–53% of
-nodes AMD's operator table never mentions at all**.
+**The graph itself has since been exported and inventoried (§14), and it retires
+that framing rather than refining it.** `LayerNormalization` — the operator §3 is
+built around — **is absent from the canonical opset-11 export**, appearing only at
+the opset 17 AMD's own example prescribes. But the question was never the
+load-bearing one: **40–53% of the graph's nodes have no row in AMD's operator
+table at all**, and *absent* is a weaker epistemic state than *blank* (§14.6). A
+blank cell is a documented unknown; no row means the question was never posed.
+The table does not cover half the model whichever export you choose.
+
+**The blockers are of three different kinds and only two respond to effort (§15).**
+Seat scope and compiler acquisition are bounded work. Operator coverage and silent
+CPU partitioning are unknowable from documents and resolve on first compile.
+Batch-1, autosuspend, recompile-on-driver-change and BF16 comparability are
+structural — and all four point the same way for a memory server's
+occasional-small-bursts access pattern, which is close to the worst case for this
+accelerator's operational model.
 
 ---
 
@@ -1972,7 +1982,73 @@ version, not just the opset**, so B is *an* opset-17 export rather than *the* on
 Tool versions: `onnx` 1.22.0, `torch` 2.13.0+cpu, `transformers` 5.14.1,
 `onnxruntime` 1.28.0.
 
-### §14.6 What this does and does not settle
+### §14.6 Blank and absent are different epistemic states — and this retires §3's framing
+
+The distinction §14.2 and §14.3 turn on is not a matter of degree, and treating it
+as one is what let §3 spend its length on the wrong question.
+
+- A **blank cell** is a *documented unknown*. The question was posed — the
+  operator has a row, the table has a BF16 column — and the answer was withheld
+  or is negative. You know that AMD considered it.
+- **No row at all** means *the question was never posed*. There is nothing to
+  read, and no way to tell whether the operator is supported, unsupported, or
+  simply not yet triaged.
+
+**53% of the canonical graph sits in the second state; 40% of the opset-17 graph
+does.** So "will this compile" is **not answerable from AMD's table for either
+export form**, and the comparison that matters is not which form trips the
+flagged operator.
+
+**The canonical form — the one that avoids `LayerNormalization` entirely — is the
+*worse* of the two on coverage** (53% vs 40% unlisted). Decomposition did not
+dodge the gap. It moved 125 nodes of LayerNorm and GELU arithmetic **out of a
+documented unknown and into an undocumented one**, which is a strictly worse
+epistemic position even though it reads as an improvement against the table.
+
+**This retires §3's framing rather than refining it.** §3 asked "is
+`LayerNormalization` supported in BF16?" The measured answer is that **the table
+does not cover half the model whichever export you choose**, so the question was
+never the load-bearing one. §3's contradiction survives as a finding *about AMD's
+documentation* (§14.7); it does not survive as the question this audit should
+have been organised around. §11's gap list and §0 are updated accordingly.
+
+### §14.7 The contradiction is of a different kind from the others — and the table is not checkable by anyone
+
+Every other documentation contradiction this audit records is **between two
+documents** (§3.2's op table vs `linux.rst`; §4's Quark self-contradiction;
+§9's ORT-page-vs-`linux.rst` provenance conflict; the RyzenAI-SW README's
+internally inconsistent "Current Status"). Those are resolvable in principle by
+deciding which document is authoritative.
+
+**This one is between a document and a script the same vendor ships as the
+recommended path.** `ops_support` leaves `LayerNormalization` blank in BF16;
+`export_bge_onnx.py` pins `opset_version=17`, which is precisely the choice that
+*creates* 25 `LayerNormalization` nodes. There is no authority to appeal to —
+following AMD's instructions is what violates AMD's table.
+
+**And it is worse than a caveat on this audit's export.** §14.5 noted that B was
+produced with `transformers` 5.14.1, whose masking path emits `IsNaN` (12),
+`Where` (25), `And` (2) and `GreaterOrEqual` (1) NaN-guard nodes that AMD's
+example predates. Stated at the right level:
+
+> **AMD's own recipe, run today, does not reproduce the graph AMD validated.**
+> The operator set of a "plain `torch.onnx.export`" is a function of the
+> `transformers` version as much as the opset, and **`export_bge_onnx.py` pins
+> the opset but not `transformers`.**
+
+The consequence is not about this host. **The op-support table is not checkable
+against a model by anyone — including AMD — without also pinning `transformers`,
+and no AMD document does.** That is a defect in the table's *usability*, not a
+limitation of this audit's method: two engineers following the same AMD
+instructions six months apart get different graphs and therefore different
+answers from the same table, with nothing in the documentation to warn them.
+
+**Status: VERIFIED-HERE** (both graphs are files on this machine; the version
+sensitivity is the observed difference between them and the op list AMD's example
+implies). **Recorded as an open defect against AMD's documentation**, not as a
+gap in this audit.
+
+### §14.8 What this does and does not settle
 
 **Settles:** the graph is now enumerated; it contains no fused transformer
 operator and no `com.microsoft` domain node, so it is the *plain export* case that
@@ -1986,3 +2062,70 @@ and §3.4's finding stands that partitioning is silent by default. This section
 narrows the question from "which ops does a BERT encoder need" to a specific,
 checkable one: **`Softmax` in both, `LayerNormalization` in the opset-17 form, and
 the 40–53% of nodes AMD's table never mentions.**
+
+---
+
+## §15 — The blocker ledger, by kind
+
+The findings above are usually read as a list of obstacles. They are not the same
+*kind* of obstacle, and the difference decides what effort buys. Sorted by how
+each responds to work:
+
+### §15.1 Fixable — bounded work, known shape
+
+| Blocker | What closes it | Cost |
+|---|---|---|
+| **Seat-scoped device access** (§8.5) — a non-seat daemon gets `EACCES` today | `SupplementaryGroups=render` on the unit, plus `DeviceAllow=/dev/accel/accel0 rw`; or a udev rule granting a service group | One unit file. No vendor software, no EULA, no driver change. |
+| **Compiler acquisition** (§0 Blocker 1, §6.2) | AMD's EULA-gated tarball — **at the cost of displacing the in-tree driver** — **or** the MLIR-AIE / IRON path someone has already walked to a 384-dim result (§5.1) | Bounded, and the non-EULA route is demonstrated rather than hypothetical, though it wants XRT ≥ 2.23.0 against resolute's 2.21.75 |
+
+Neither is a research question. Both have a known shape and a known price.
+
+### §15.2 Unknowable from documents — only the compiler answers these
+
+| Blocker | Why no amount of reading closes it |
+|---|---|
+| **40–53% of graph nodes have no row in AMD's operator table** (§14.3, §14.6) | Not blank — *absent*. There is no document to consult, for either export form. |
+| **Silent partition to CPU** (§3.4) | Partitioning is not reported by default. You cannot learn from a document whether *your* graph partitioned; you learn it by compiling and inspecting, or from a power meter. |
+
+These are the two the audit most wants to answer and structurally cannot. They
+resolve on first compile and not before — which is what makes §15.1's compiler
+row the gating one for *information*, independent of whether the NPU is ever
+adopted.
+
+### §15.3 Structural — does not improve with effort
+
+| Blocker | Why it is structural |
+|---|---|
+| **Batch size 1** (§14.4) | A consequence of the static-shape export the compiler wants. Dynamic axes are the alternative, and they are what defeats the compiler. |
+| **≥5 s runtime-PM autosuspend** (§8.4) | Driver policy; a loaded model does not pin the device awake, by design. |
+| **Recompile on driver or EP version change** (§7.2) | AMD policy, with no published Linux compatibility matrix, against Ubuntu's monthly in-tree kernel bumps. |
+| **BF16 vs f32 comparability** (§4.4) | An arithmetic property of the datapath. The *band* is unwritten (§13.3), but the effect is not negotiable. |
+
+**All four point the same way for this specific workload, and that is the finding.**
+A long-running memory server's access pattern is **occasional small bursts** —
+which is simultaneously the worst case for fixed per-dispatch cost (nothing to
+amortise against, because batch is pinned at 1) and the worst case for wake-up
+cost (bursts are far enough apart to fall past the 5 s autosuspend, so most
+requests pay a cold start). A nightly batch re-embedding job would suffer from
+neither: it would fill the batch dimension if it could, and it would keep the
+device warm regardless.
+
+**The workload this was commissioned to evaluate is close to the worst case for
+the accelerator's operational model, and that is independent of everything AMD
+could fix in software.**
+
+### §15.4 What this ledger is, and is not
+
+**It is not a recommendation to stop.** §15.1 is genuinely bounded, §15.2 resolves
+on first compile, and the §5.1 prior art shows the hardware executes an encoder of
+this family and size.
+
+**It is a statement of shape.** Effort spent on §15.1 buys access. Effort spent
+there also buys the answers in §15.2, which is the strongest argument for doing it.
+Effort buys nothing in §15.3, and §15.3 has four members that all point one way for
+this workload.
+
+Recorded now, before more effort accrues against it, so that a later decision to
+stop is a reading of evidence gathered in advance rather than a rationalisation of
+sunk cost — the same reason §7's thresholds in `docs/acceptance/composed-error.md`
+were registered before the numbers existed.
