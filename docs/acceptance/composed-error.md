@@ -1,7 +1,7 @@
 # The composed-error read — registration
 
 Date: 2026-08-04
-Status: **registration only; the table it governs has not yet been produced**
+Status: **registered, then measured. §11 holds the table. No row promoted.**
 
 This document is a **pre-registration**, not a result. It exists to fix the reading rule
 before the numbers that rule adjudicates are visible. Sections are labelled `§N` and are
@@ -277,10 +277,110 @@ before** — nothing changes between registration and measurement.
   the suite would notice if a string were edited below the threshold, which would move a
   row into the wrong regime while every guard still passed.
 
+## §11 Results
+
+Run 2026-08-04 under the §8 invocation, after §8.1 verified suppression. Raw stdout is
+committed verbatim as [`composed-error.stdout.txt`](composed-error.stdout.txt). Both
+tests passed; the `NOTE: skipping` branch did **not** fire, so all four inputs were
+measured — four rows per quantisation, not three.
+
+All figures `max_diff` unless marked `l2`. `q` = quantisation alone, `b` = backend alone.
+Row `[3]` is the 36-token input.
+
+| row | `q` | `b` | composed | ratio | §5 | §7 verdict |
+|---|---|---|---|---|---|---|
+| [0] Q8_0 | 2.623e-3 | 2.633e-3 | 2.086e-3 | 1.00 | **confirmed** | CANCELLING |
+| [1] Q8_0 | 2.815e-3 | 2.467e-3 | 2.715e-3 | 1.14 | **refuted** | CANCELLING |
+| [2] Q8_0 | 2.846e-3 | 2.202e-3 | 2.653e-3 | 1.29 | **confirmed** | CANCELLING |
+| **[3] Q8_0** | 3.372e-3 | 2.389e-3 | **1.859e-3** | 1.41 | **confirmed** | **CANCELLING** |
+| [0] Q5_K_M | 8.115e-3 | 2.407e-3 | 7.922e-3 | 3.37 | **refuted** | undecided (gated) |
+| [1] Q5_K_M | 9.353e-3 | 3.489e-3 | 9.481e-3 | 2.68 | n/a | INDEPENDENT |
+| [2] Q5_K_M | 1.002e-2 | 2.467e-3 | 1.018e-2 | 4.06 | n/a | undecided (gated) |
+| [3] Q5_K_M | 1.338e-2 | 2.803e-3 | 1.145e-2 | 4.77 | **confirmed** | undecided (gated) |
+| [0] Q4_K_M | 1.161e-2 | 2.351e-3 | 1.123e-2 | 4.94 | **refuted** | undecided (gated) |
+| [1] Q4_K_M | 1.004e-2 | 2.877e-3 | 9.787e-3 | 3.49 | **refuted** | undecided (gated) |
+| [2] Q4_K_M | 1.311e-2 | 3.003e-3 | 1.308e-2 | 4.37 | **refuted** | undecided (gated) |
+| [3] Q4_K_M | 1.172e-2 | 2.759e-3 | 1.190e-2 | 4.25 | n/a | undecided (gated) |
+
+### §11.1 §5 resolves — and kills most of what max alone suggested
+
+Nine rows show `composed < max(q,b)` on `max_diff`. Under §5's registered rule, **five of
+those nine are refuted by L2**: [1] Q8_0, [0] Q5_K_M, and [0] [1] [2] Q4_K_M all have
+`composed_l2 >= max(quant_l2, backend_l2)` while their max triple says the reverse. They
+are order-statistic artifacts — a different coordinate won — exactly the failure mode
+`composed_error.rs:124-128` describes.
+
+**Four survive:** [0], [2] and [3] Q8_0, and [3] Q5_K_M. Cancellation is real on those.
+
+Reading `max_diff` alone would have claimed cancellation on nine rows and been wrong on
+five. Marking §5 UNVERIFIED rather than asserting it was the correct call, and the L2
+pair was worth capturing.
+
+### §11.2 The 36-token row: registered read and §7 disagree in kind
+
+Row [3] Q8_0 is the row #33 reported. §5 is **confirmed** for it — max and L2 agree.
+
+- **§2 registered read:** `1.859e-3 <= 4.2e-3` → *independent*, applied outside its
+  derivation domain (§4).
+- **§7 chain:** `q/b = 1.41` (in domain), `composed 1.859e-3 < max(q,b) = 3.372e-3` →
+  **CANCELLING**.
+
+These are not the same answer and the difference is not a matter of degree. The
+registered bands map the whole interval `[0, 4.2e-3]` to "independent," so a value well
+*below* quadrature (`4.132e-3` for this row) is reported as independence when it is
+cancellation. **The absolute read returns the wrong kind of answer here, and it was the
+registered rule, so that is what §4 reports.** §7 is what governs the next long-text run.
+
+This is recorded, not resolved silently. The low-side hole was known when §7 was written;
+this is the row that demonstrates it.
+
+### §11.3 The validity gate fired on 7 of 12 rows, and 6 were genuinely inverted
+
+`max(q,b)/min(q,b) > 3` gates seven rows — every Q4_K_M row and three of four Q5_K_M.
+Checking each against the true inversion boundary (`3.4567`), **six are actually
+inverted**: their independent threshold `1.132*quad` sits above their correlated
+threshold `0.914*linear`. One ([0] Q5_K_M, ratio `3.37`) is inside the true boundary and
+was gated only by the conservative `<= 3` bound.
+
+**The inversion is not theoretical. It is present in half this dataset.** Without the
+gate, six rows would have been adjudicated by a rule that can return two verdicts.
+
+Reported against the gate's own cost: on none of the six did `composed` land inside the
+ambiguous interval, so no row would in fact have received two verdicts on this data. The
+gate cost six verdicts to prevent zero concrete ambiguities *here*. That is the right
+trade for a pre-registered rule — soundness is a property of the rule, not of where one
+dataset happened to land — but it is recorded so a future revision can tighten the bound
+with evidence rather than by taste.
+
+There is a physical reading behind the gate. Aggressive quantisation makes `q` dominate
+`b` by 3-5×, and when one source dominates, `composed ≈ q` whatever the correlation, so
+the quadrature-vs-linear question is **degenerate** in that regime rather than merely
+hard. The gate detects a question that cannot be answered, which is what it should do.
+
+### §11.4 §6's mechanism is consistent with the surviving rows, still not established
+
+For [3] Q8_0, `composed` (`1.859e-3`) is below **`quant_only`** (`3.372e-3`) as well as
+below `backend_only`. The quantised *Vulkan* vector is closer to CPU-f32 than the
+quantised *CPU* vector is. That is what §6 predicts if Vulkan's quantised kernel
+dequantises and accumulates closer to CPU-f32 than CPU-Q8_0 does.
+
+Consistent with, not proof of. Discriminating it needs a kernel-level comparison, not
+another end-to-end row, and nothing here rules out a competing explanation.
+
 ## No row is promoted
 
-- This document registers a reading rule and records one superseded adjudication. It
-  produces no measurement and advances no rung.
-- Both `linux/x86_64` GGUF rows remain `RuntimeSmokeValidated`.
-- §5 is open. The composed-below-backend reading is **unadjudicated**, not confirmed.
-- §7 governs no numbers yet. It is registered ahead of the run, which is the point.
+- Both `linux/x86_64` GGUF rows remain `RuntimeSmokeValidated`. This document extends
+  what has been *exercised*, not what is *claimed*, and error-composition evidence does
+  not advance a rung.
+- **The original question is not answered.** "Quadrature or linear" presumed the sources
+  compose additively. Four rows cancel, seven are degenerate, and exactly one row
+  ([1] Q5_K_M) returned INDEPENDENT. One row is not a finding.
+- **Still one model, one architecture (BERT), one machine, one driver, one session.**
+  Four inputs, and only one of them above 32 tokens.
+- §6's mechanism is a hypothesis consistent with four rows, not a result. It was not
+  tested at the kernel level.
+- §11.3's gate bound (`<= 3`) is conservative against the true inversion point
+  (`3.4567`) and cost six verdicts. It is registered, so it stands for this run; revising
+  it is a change to the rule and belongs in a new registration.
+- No latency, no throughput, and no statement about whether any of this is visible to
+  retrieval. Every row here passed the `cos > 0.996` floor.
