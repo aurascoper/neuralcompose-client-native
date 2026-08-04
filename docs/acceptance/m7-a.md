@@ -35,6 +35,12 @@ request made: no · Apple model API linked: no · Ollama/OpenAI/Anthropic SDK
 linked: no · provider credential stored: no · default model selected: no ·
 Qwen2.5 vs Qwen3 decided: no · embedding model selected: no.
 
+> **Superseded 2026-08-04, not retro-edited.** `embedding model selected` became
+> **yes** with [ADR-003](../architecture/decision-log/ADR-003-embedding-candidate-selection.md)
+> (`bge-small-en-v1.5`). The line above stays as written because it is an accurate
+> record of what M7-A claimed on 2026-07-28; later decisions get their own dated
+> records rather than editing earlier ones.
+
 ## Review-response addendum (2026-07-28)
 
 All five primary blockers + additional corrections resolved:

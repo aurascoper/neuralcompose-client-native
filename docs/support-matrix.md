@@ -22,18 +22,27 @@ As of 2026-08-03 the two `linux/x86_64` GGUF rows are `RuntimeSmokeValidated`
 — a deterministic fixture model executed on named hardware. Every other row
 remains `Contracted`: no runtime has executed under those contracts.
 
-**The two promoted rows ran a FIXTURE model, not the candidate**, which is why
+~~**The two promoted rows ran a FIXTURE model, not the candidate**, which is why
 they stop at `RuntimeSmokeValidated` — and, since 2026-08-03, why
-`attained_support_status()` stops them there too. See "The checker distinguishes
+`attained_support_status()` stops them there too.~~ See "The checker distinguishes
 a fixture from the candidate" below.
+
+**Amended 2026-08-04 ([ADR-003](architecture/decision-log/ADR-003-embedding-candidate-selection.md)):**
+bge-small-en-v1.5 is now the named embedding **candidate**, so the sentence above
+no longer describes these rows. They ran the candidate's weights. They remain at
+`RuntimeSmokeValidated` because ADR-003 declines to take `DeviceValidated` as a
+side effect of naming a candidate: the rung would be attained by relabelling,
+with nothing new run and no evidence re-read. These rows are now *eligible* for
+promotion on existing evidence, and promotion is a separate change that must
+argue those runs establish what `DeviceValidated` means.
 
 | OS | Arch | Backend ID | Runtime ABI | Status | Hardware | OS version | Driver/backend version | Pack ID + digest | Evidence commit | Acceptance doc | Known limitations | Last validated |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | android | arm64 | `llama-cpp-cpu` | `nc-gguf-v1` | Contracted | — | — | — | — | (this PR) | `docs/acceptance/m7-a2.md` | No runtime exists yet | 2026-07-29 |
 | ios | arm64 | `coreml` | `nc-coreml-v1` | Contracted | — | — | — | — | (this PR) | `docs/acceptance/m7-a2.md` | No runtime exists yet | 2026-07-29 |
 | ios | arm64 | `apple-system-model` | `nc-system-v1` | Contracted | — | — | — | — | (this PR) | `docs/acceptance/m7-a2.md` | Awaits M7-C | 2026-07-29 |
-| linux | x86_64 | `llama-cpp-cpu` | `nc-gguf-v1` | RuntimeSmokeValidated | GPD, AMD Ryzen AI 9 HX 370 w/ Radeon 890M | Ubuntu 26.04 LTS, kernel 7.0.0-28-generic | llama.cpp `d0bfb1981` | no pack; fixture bge-small-en-v1.5-f32 sha256 `bf40c42a…49b65` | `5b39d2a` | `docs/acceptance/llama-cpp-cpu-linux.md` | Fixture model only, not the candidate; BERT/f32 only; no `model_pack` verification; llama.cpp not vendored | 2026-08-03 |
-| linux | x86_64 | `llama-cpp-vulkan` | `nc-gguf-v1` | RuntimeSmokeValidated | GPD, Radeon 890M (RADV STRIX1), ggml `IGPU`, `uma:1` | Ubuntu 26.04 LTS, kernel 7.0.0-28-generic | llama.cpp `d0bfb1981`, libvulkan 1.4.341, driver `radv` | no pack; fixture bge-small-en-v1.5-f32 sha256 `bf40c42a…49b65` | `8d14547` | `docs/acceptance/llama-cpp-vulkan-linux.md` | Fixture model only; one driver (RADV) on one iGPU; `bf16:0`; `bin/llama` target failed to link in that build | 2026-08-03 |
+| linux | x86_64 | `llama-cpp-cpu` | `nc-gguf-v1` | RuntimeSmokeValidated | GPD, AMD Ryzen AI 9 HX 370 w/ Radeon 890M | Ubuntu 26.04 LTS, kernel 7.0.0-28-generic | llama.cpp `d0bfb1981` | no pack; fixture bge-small-en-v1.5-f32 sha256 `bf40c42a…49b65` | `5b39d2a` | `docs/acceptance/llama-cpp-cpu-linux.md` | ~~Fixture model only, not the candidate~~ → candidate weights per ADR-003; eligible for `DeviceValidated`, not promoted; BERT/f32 only; no `model_pack` verification; llama.cpp not vendored | 2026-08-03 |
+| linux | x86_64 | `llama-cpp-vulkan` | `nc-gguf-v1` | RuntimeSmokeValidated | GPD, Radeon 890M (RADV STRIX1), ggml `IGPU`, `uma:1` | Ubuntu 26.04 LTS, kernel 7.0.0-28-generic | llama.cpp `d0bfb1981`, libvulkan 1.4.341, driver `radv` | no pack; fixture bge-small-en-v1.5-f32 sha256 `bf40c42a…49b65` | `8d14547` | `docs/acceptance/llama-cpp-vulkan-linux.md` | ~~Fixture model only~~ → candidate weights per ADR-003; eligible for `DeviceValidated`, not promoted; one driver (RADV) on one iGPU; `bf16:0`; `bin/llama` target failed to link in that build | 2026-08-03 |
 | windows | x86_64 | `llama-cpp-cpu` | `nc-gguf-v1` | Contracted | — | — | — | — | (this PR) | `docs/acceptance/m7-a2.md` | Awaits M8 | 2026-07-29 |
 | windows | x86_64 | `llama-cpp-vulkan` | `nc-gguf-v1` | Contracted | — | — | — | — | (this PR) | `docs/acceptance/m7-a2.md` | Awaits M8 | 2026-07-29 |
 | windows | x86_64 | `llama-cpp-cuda` | `nc-gguf-v1` | Contracted | — | — | — | — | (this PR) | `docs/acceptance/m7-a2.md` | Optional pack; awaits M8-C + physical NVIDIA | 2026-07-29 |

@@ -117,16 +117,24 @@ at runtime.
 `Contracted → RuntimeSmokeValidated`. The rung's definition is "a deterministic
 fixture model executed successfully," and all three words are separately
 evidenced above: deterministic (byte-identical across runs), fixture (a named
-model with a recorded digest, not the candidate), executed (through Rust, on
-this named machine).
+model with a recorded digest, ~~not the candidate~~ — as of ADR-003 these *are*
+the candidate's weights; what makes this run a fixture run is its purpose, which
+was to establish that the path executes deterministically, not to validate the
+shipping model on this device), executed (through Rust, on this named machine).
 
 **Not promoted, and none of it follows:**
 
 - **`linux/x86_64/llama-cpp-vulkan`.** A different backend. Vulkan works on this
   machine and was explicitly compiled out; nothing here is evidence for it.
 - **The three Windows and Android/iOS rows.** Different OSes, never run.
-- **`DeviceValidated` for this row.** That rung requires the *real candidate
-  model*, and bge-small-en-v1.5 is a fixture chosen for size and determinism.
+- **`DeviceValidated` for this row.** ~~That rung requires the *real candidate
+  model*, and bge-small-en-v1.5 is a fixture chosen for size and determinism.~~
+  **Amended 2026-08-04 ([ADR-003](../architecture/decision-log/ADR-003-embedding-candidate-selection.md)):**
+  bge-small-en-v1.5 *is* the candidate as of that decision, so this row is now
+  eligible for the rung on the evidence below. It is still not promoted — ADR-003
+  declines to take a rung by relabelling, and the model was selected for size and
+  determinism, never for retrieval quality. Promotion needs a deliberate evidence
+  read, not this document plus a rename.
 - **Anything about the EEG path.** `--embed` deliberately opens no socket and
   touches no headband: the model backend and the ingest path are separate
   claims, and running them in one command would blur which one any evidence is

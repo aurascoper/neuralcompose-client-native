@@ -15,6 +15,15 @@ fn tonight() -> SupportEvidence {
         contracts_and_tests_pass: true,
         builds_on_named_target: true,
         // A fixture model — bge-small-en-v1.5, not the real candidate.
+        //
+        // PENDING RE-EVALUATION (2026-08-04, ADR-003): bge-small-en-v1.5 is now
+        // the named candidate, so the comment above describes the designation on
+        // 2026-08-03, not the one in force today. `candidate_model_executed`
+        // stays `false` deliberately: ADR-003 declines to promote a row as a side
+        // effect of naming a candidate, because the rung would then be attained
+        // by relabelling with nothing new run. Flipping this to `true` promotes
+        // both linux rows to DeviceValidated — do it only as a deliberate act
+        // with an evidence read behind it, not to make a stale comment agree.
         fixture_runtime_executed: true,
         candidate_model_executed: false,
         physical_device: Some("GPD, AMD Ryzen AI 9 HX 370 w/ Radeon 890M".into()),
@@ -50,6 +59,12 @@ fn the_function_now_agrees_with_the_prose_about_this_evidence() {
     // `candidate_model_executed` closes it. Tonight's evidence names the
     // device, OS and backend and still stops at RuntimeSmokeValidated, because
     // the model that ran was bge-small-en-v1.5, a fixture.
+    //
+    // 2026-08-04 (ADR-003): bge-small-en-v1.5 is now the candidate, so this
+    // guard no longer separates two different files — it separates a smoke run
+    // from a device validation of the same weights. That is a weaker guard than
+    // it was, and the distinction now has to be carried by the evidence read
+    // rather than by the model filename. The assertion below is unchanged.
     assert_eq!(
         attained_support_status(tonight()),
         Some(SupportStatus::RuntimeSmokeValidated),

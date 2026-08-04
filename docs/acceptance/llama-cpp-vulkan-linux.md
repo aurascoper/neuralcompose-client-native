@@ -113,8 +113,14 @@ run and make an unexercised backend look verified.
 
 **Not promoted:**
 
-- **`DeviceValidated` for this row.** That rung needs the *real candidate model*;
-  bge-small-en-v1.5 is a fixture chosen for size and determinism.
+- **`DeviceValidated` for this row.** ~~That rung needs the *real candidate
+  model*; bge-small-en-v1.5 is a fixture chosen for size and determinism.~~
+  **Amended 2026-08-04 ([ADR-003](../architecture/decision-log/ADR-003-embedding-candidate-selection.md)):**
+  bge-small-en-v1.5 *is* the candidate as of that decision, so this row is now
+  eligible for the rung on the evidence below. It is still not promoted — ADR-003
+  declines to take a rung by relabelling, and the model was selected for size and
+  determinism, never for retrieval quality. Promotion needs a deliberate evidence
+  read, not this document plus a rename.
 - **Any Windows row**, including the two `llama-cpp-vulkan` ones. Vulkan is
   portable and this evidence is not: different driver, different OS, never run.
 - **Anything about the EEG path.** `--embed` opens no socket and touches no

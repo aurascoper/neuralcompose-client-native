@@ -50,6 +50,44 @@ was already in git*, so the withdrawal is a diff and not an assertion. **Version
 difference between a withdrawal and a quiet edit**, and everything added here from now on gets that
 property by default.
 
+## Every GPU measurement records its power state
+
+**A GPU measurement taken here records power source, CPU governor and thermal
+state alongside kernel, driver and Mesa versions.** `scripts/capture-power-state.sh`
+produces the record; redirect it into the run's `.evidence/` directory and hash it
+with everything else.
+
+This is a provenance field, not an experiment. The Radeon 890M power-gates between
+samples, so the machine's power state changes a number by more than the thing being
+measured usually does — and unlike a driver version, it cannot be recovered
+afterwards from the artifact.
+
+Two results were already distorted by it, and the shape is the same both times:
+
+- A prompt-throughput pair where the **battery** figure (159.96 t/s) beat the **AC**
+  figure (147.91 t/s). The AC number was adopted as citable and the battery one
+  superseded. That picked a side; it did not explain the inversion, and it is
+  exactly what would happen if AC-plugged runs sat idle longer between repetitions
+  and gated down further.
+- A reducer benchmark whose ~11× headline was mostly clock-ramp artifact. Arms
+  tuned to one evaluation per sample paid a ~500–800 µs ramp that arms tuned to
+  many evaluations amortised. Measured back-to-back the real figures are 1.58× and
+  1.76×. Those were held and never published.
+
+**Retrospective note.** Measurements predating this convention — including the
+corrected 1.58×/1.76× reducer numbers — have back-to-back control over *inter-call*
+gating but no established power profile for the session. The 2026-08-04 reducer
+session provably straddles an AC-to-battery transition at 14:05 local
+(`/var/lib/upower/history-charge-*.dat`), and the two inline probes that produced
+the corrected figures left no timestamps, so they cannot be placed on either side
+of it. Those numbers are steady-state with respect to call spacing and unestablished
+with respect to power. Do not cite them as steady-state without qualification.
+
+The general lesson is recorded because it inverts an existing one: the 1-in-3
+segfault needed repetition for a defect to **appear**; power-gating needed
+repetition for a defect to **disappear**. Same remedy, opposite directions — a
+single run can manufacture a finding as easily as it can hide one.
+
 ## Provenance and scope
 
 - One machine — a GPD G1617-02 (Win Mini 2025), Ryzen AI 9 HX 370 / Radeon 890M, Ubuntu 26.04,
