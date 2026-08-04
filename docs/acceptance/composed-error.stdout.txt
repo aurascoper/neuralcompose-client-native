@@ -1,0 +1,49 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running tests/composed_error.rs (target/debug/deps/composed_error-37f2bf1936d186b4)
+
+running 2 tests
+test a_zero_gpu_layer_run_silently_uses_the_gpu_past_the_offload_threshold ... ok
+test quantisation_and_backend_error_compose_in_quadrature_not_linearly ... 
+  [0] "the headband is on"
+      backend alone at f32: max 7.308e-5  l2 4.615e-4
+      quant         quant    backend   composed   quadrat.     linear
+
+  [1] "neural compose"
+      backend alone at f32: max 7.396e-5  l2 4.958e-4
+      quant         quant    backend   composed   quadrat.     linear
+
+  [2] "quarterly tax filing deadline"
+      backend alone at f32: max 9.061e-5  l2 4.820e-4
+      quant         quant    backend   composed   quadrat.     linear
+
+  [3] "a considerably longer sentence that runs past the thirty-two token boundary where the cpu backend stops parallelising, so that the comparison also covers the regime the performance claim describes"
+      backend alone at f32: max 1.535e-4  l2 8.839e-4
+      quant         quant    backend   composed   quadrat.     linear
+  [0] Q8_0     max  2.623e-3   2.633e-3   2.086e-3   3.716e-3   5.256e-3
+               l2   1.765e-2   1.432e-2   1.516e-2   2.273e-2   3.198e-2
+  [1] Q8_0     max  2.815e-3   2.467e-3   2.715e-3   3.743e-3   5.282e-3
+               l2   1.825e-2   1.520e-2   1.912e-2   2.375e-2   3.345e-2
+  [2] Q8_0     max  2.846e-3   2.202e-3   2.653e-3   3.599e-3   5.048e-3
+               l2   1.805e-2   1.472e-2   1.770e-2   2.329e-2   3.276e-2
+  [3] Q8_0     max  3.372e-3   2.389e-3   1.859e-3   4.132e-3   5.761e-3
+               l2   1.863e-2   1.532e-2   1.427e-2   2.412e-2   3.395e-2
+  [0] Q5_K_M   max  8.115e-3   2.407e-3   7.922e-3   8.465e-3   1.052e-2
+               l2   5.596e-2   1.521e-2   5.678e-2   5.799e-2   7.117e-2
+  [1] Q5_K_M   max  9.353e-3   3.489e-3   9.481e-3   9.983e-3   1.284e-2
+               l2   5.839e-2   1.900e-2   5.785e-2   6.140e-2   7.739e-2
+  [2] Q5_K_M   max  1.002e-2   2.467e-3   1.018e-2   1.032e-2   1.248e-2
+               l2   6.324e-2   1.518e-2   6.303e-2   6.503e-2   7.841e-2
+  [3] Q5_K_M   max  1.338e-2   2.803e-3   1.145e-2   1.367e-2   1.619e-2
+               l2   6.752e-2   1.761e-2   6.377e-2   6.978e-2   8.513e-2
+  [0] Q4_K_M   max  1.161e-2   2.351e-3   1.123e-2   1.184e-2   1.396e-2
+               l2   6.514e-2   1.544e-2   6.584e-2   6.694e-2   8.058e-2
+  [1] Q4_K_M   max  1.004e-2   2.877e-3   9.787e-3   1.044e-2   1.292e-2
+               l2   7.043e-2   1.770e-2   7.324e-2   7.262e-2   8.813e-2
+  [2] Q4_K_M   max  1.311e-2   3.003e-3   1.308e-2   1.345e-2   1.611e-2
+               l2   7.884e-2   1.721e-2   7.941e-2   8.070e-2   9.605e-2
+  [3] Q4_K_M   max  1.172e-2   2.759e-3   1.190e-2   1.204e-2   1.447e-2
+               l2   7.480e-2   1.530e-2   7.277e-2   7.635e-2   9.010e-2
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+
