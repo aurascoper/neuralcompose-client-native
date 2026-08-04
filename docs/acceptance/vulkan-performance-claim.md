@@ -1,8 +1,65 @@
-# Vulkan performance — adopted claim
+# Vulkan performance — WITHDRAWN
+
+Date: 2026-08-03 (adopted, then withdrawn the same day)
+Status: **WITHDRAWN — the CPU baseline was not the CPU.** Retained in full
+below, struck through by this notice rather than deleted, because the reasoning
+that produced a wrong number is worth more than its absence.
+
+## Why it was withdrawn
+
+ggml-vulkan's `offload_op` returns true once a matmul's batch dimension reaches
+`op_offload_min_batch_size`, which **defaults to 32**, and `op_offload` defaults
+to `true` in `llama_context_default_params`. With the Vulkan backend merely
+*registered*, matmuls move to the GPU **even at `--gpu-layers 0`, with the
+weights still in host memory**.
+
+So every "CPU" cell at and above 32 tokens in the table below was measured on
+the GPU. The comparison was GPU-with-copied-weights against
+GPU-with-resident-weights — not CPU against GPU.
+
+**The 32-token discontinuity this document called unexplained is that threshold.**
+It was never a blocked or repacked CPU GEMM path. The CPU was "thread-insensitive"
+above 32 tokens because the work was not on CPU threads.
+
+Detected as **bit-identical output** between `--gpu-layers 0` and
+`--gpu-layers 99` at exactly 32 tokens and above. `vulkan_agreement.rs` already
+asserts that suspicious identity is a failure — but every string it tests is
+under 32 tokens, so a correct assertion never ran on an input that would have
+fired it. **Length was the untested dimension, not the assertion.**
+
+Confirmed by manipulation, with a clean control: setting
+`GGML_OP_OFFLOAD_MIN_BATCH=999999` restores divergence and moves the CPU arm
+(37.85 → 87.46 ms at 512 tokens) while leaving the **GPU arm unchanged**
+(19.92 → 20.25 ms), so the variable altered only the baseline.
+
+## What replaces it — provisionally, and not adopted
+
+| tokens | CPU arm ms | GPU arm ms | speedup |
+|---|---|---|---|
+| 32 | 10.20 | 3.86 | 2.64 |
+| 128 | 30.23 | 7.98 | 3.79 |
+| 512 | 87.46 | 20.25 | 4.32 |
+
+Speedup **rises with input length** rather than peaking at 32 tokens and
+decaying. Both the magnitude and the shape of the withdrawn claim are wrong.
+
+These numbers are **one session, 30 iterations, with visibly noisy cells** (the
+CPU arm is non-monotonic in places). They are recorded as an observation and
+**no claim is adopted from them.** Correcting an over-confident claim with a
+second over-confident claim would repeat the error.
+
+**What survives:** the product's 4–16 token input is still the regime where
+offload is least likely to pay, and the pack-format decision is untouched —
+this is a backend finding, not a GGUF-versus-ONNX one.
+
+---
+
+<details>
+<summary>The withdrawn claim, retained verbatim</summary>
 
 Date: 2026-08-03 (revised same day after a token-resolution sweep)
-Status: **ADOPTED** as a documented claim in `docs/`. Deliberately **not**
-attached to any support-matrix row.
+Status: ~~**ADOPTED** as a documented claim in `docs/`~~ — see withdrawal above.
+Deliberately **not** attached to any support-matrix row.
 
 ADR-002's ladder has no performance rung. A row reading `RuntimeSmokeValidated`
 must not imply a speed guarantee, so this lives here and nowhere else.
@@ -157,3 +214,5 @@ count. Pinned by `cpu_output_is_identical_across_thread_counts`.
 
 Re-measure before repeating any of this for another model, quantisation, or
 device.
+
+</details>
