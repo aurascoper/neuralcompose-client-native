@@ -157,6 +157,39 @@ Port 8080 is free; 8788 is the EEG stream's.
 
 **5. Take a turn:** `./turn.sh` — speak, press Enter.
 
+## Running it offline
+
+**Setup needs network once. Running needs none.** Verified 2026-08-04 by running
+the full loop with `HTTP_PROXY`/`HTTPS_PROXY` pointed at a dead port and
+`HF_HUB_OFFLINE=1`, allowing only loopback:
+
+```sh
+env HTTP_PROXY=http://127.0.0.1:9 HTTPS_PROXY=http://127.0.0.1:9 \
+    NO_PROXY=127.0.0.1,localhost HF_HUB_OFFLINE=1 \
+    ./turn.sh samples/jfk.wav          # completed in 13.8 s
+```
+
+`NO_PROXY` must include loopback or `curl` will try to proxy its own request to
+llama-server, which fails for a reason that has nothing to do with being offline.
+
+What each stage needs at run time:
+
+| stage | needs network? | why |
+| --- | --- | --- |
+| llama-server | **no**, if started with `-m <path>` | `-hf` is the flag that downloads. Use a local path and it never reaches out |
+| whisper.cpp | no | reads `ggml-base.en.bin` from disk |
+| Kokoro | no | `kokoro-onnx` pulls **no** `huggingface_hub`; the ONNX file and voice pack are local |
+| phonemisation | no | `espeakng-loader` bundles **both** `libespeak-ng.so` and `espeak-ng-data` inside the venv — the system `espeak-ng` package is not even required for Kokoro |
+| onnxruntime | no | CPU provider, local wheel |
+
+So the one-time network cost is: `pip install`, the two Kokoro artifacts, the
+whisper model, and whatever GGUF you point llama-server at. Copy the venv, the
+`models/` directory and the GGUF to an air-gapped machine and nothing else is
+needed.
+
+Both `.venv` and `models/` are gitignored, so they never travel with the repo —
+you create them per checkout.
+
 ## Verified on 2026-08-04
 
 | Stage | Result |
