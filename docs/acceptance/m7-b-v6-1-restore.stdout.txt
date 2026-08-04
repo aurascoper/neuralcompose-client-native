@@ -1,0 +1,93 @@
+# M7-B v6-1 restore — evidence capture, 2026-08-04
+
+Host: ok-cyberdeck, Ubuntu 26.04, kernel 7.0.0-28-generic.
+Restore source: 54f2a31. Branch base: bb7cb12.
+
+## cargo test -p neuralcompose-mobile-core
+```
+     Running unittests src/lib.rs (target/debug/deps/neuralcompose_mobile_core-3cfd959c676de7a2)
+running 37 tests
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+     Running tests/buffer.rs (target/debug/deps/buffer-b652308d9f681568)
+running 5 tests
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+     Running tests/config.rs (target/debug/deps/config-5d0dff5eb18d1e23)
+running 10 tests
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/fixtures_golden.rs (target/debug/deps/fixtures_golden-8459f8a783d96acf)
+running 8 tests
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+     Running tests/gate4_state_machine.rs (target/debug/deps/gate4_state_machine-5dec1070db91b3e0)
+running 5 tests
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/m5a_generation.rs (target/debug/deps/m5a_generation-3b6be50f4b57ac04)
+running 7 tests
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/m6_audio_lifecycle.rs (target/debug/deps/m6_audio_lifecycle-693fa71b94504694)
+running 16 tests
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/m7a2_conformance.rs (target/debug/deps/m7a2_conformance-95b5419bff79c191)
+running 9 tests
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/m7a2_contracts_golden.rs (target/debug/deps/m7a2_contracts_golden-b764b84af6855d95)
+running 6 tests
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+     Running tests/m7a2_property_law.rs (target/debug/deps/m7a2_property_law-6f67b8c64df1e2f4)
+running 9 tests
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/m7a2_runtime_targets.rs (target/debug/deps/m7a2_runtime_targets-3b389bf02679bb7e)
+running 12 tests
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/m7a_contracts_golden.rs (target/debug/deps/m7a_contracts_golden-f752b86ab506d88d)
+running 4 tests
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+     Running tests/m7a_model_pack.rs (target/debug/deps/m7a_model_pack-41e5750e202d61a7)
+running 13 tests
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/m7a_provider_selection.rs (target/debug/deps/m7a_provider_selection-6bbd2d668cbffe25)
+running 12 tests
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/m7b_eval_protocol.rs (target/debug/deps/m7b_eval_protocol-0b801258d6a8662a)
+running 33 tests
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+     Running tests/muse_capture_envelope.rs (target/debug/deps/muse_capture_envelope-9dee4f514e33d0ef)
+running 9 tests
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/presentation.rs (target/debug/deps/presentation-7a1a87b2587d61e2)
+running 7 tests
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/tonight_evidence.rs (target/debug/deps/tonight_evidence-69daffa7b9efbd2f)
+running 3 tests
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/wire_format.rs (target/debug/deps/wire_format-f0d0a12f804063eb)
+running 4 tests
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests neuralcompose_mobile_core
+running 6 tests
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+```
+
+## The five sealing tests unique to 54f2a31
+
+Present and passing. Their presence is what proves the restore used 54f2a31
+and not a3a8382, which predates them.
+```
+test editing_a_single_prompt_message_is_rejected_even_though_the_quotas_still_hold ... ok
+test a_mutually_consistent_corpus_and_quota_pair_is_still_rejected_if_it_is_not_ours ... ok
+test the_shape_checks_still_guard_the_committed_artifact_itself ... ok
+test a_shape_valid_replacement_corpus_is_rejected_as_not_build_owned ... ok
+test a_correctly_domained_but_unknown_policy_id_is_rejected ... ok
+```
+
+## ./scripts/check-fixtures.sh — corpus byte-identity restored
+```
+wrote /tmp/tmp.t7aNTLIVMo/eeg-frame-batch-8.json
+wrote /tmp/tmp.t7aNTLIVMo/m7b-corpus-v1.json
+fixtures: no drift
+```
+
+## ./scripts/check-binding-drift.sh
+```
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.46s
+bindings: no drift
+```
