@@ -25,6 +25,12 @@ ROCm record that property, matching `xdna2-bert-encoder-feasibility.ops.txt` and
   files). That is a real gap in the earlier record, not something this capture
   closes.
 
+- `rocm-stage2.sh` is the script that produced `apt-stage2-install.txt`. It is
+  provenance for a capture, not a capture itself, and it is the only record of
+  how stage 2 was actually invoked (including its logging). Committed 2026-08-04
+  after the `~` copies were cleared, because it was the one file in that cleanup
+  that was **not** a duplicate — deleting it would have destroyed the original.
+
 **These are captures, not a check.** Nothing re-runs them; §6 of the parent
 document has the reproduction commands. Same standing as `tools/onnx/`.
 
@@ -47,19 +53,20 @@ bc4b6b56661120a84e373e7947dcf720c52b913fea7d4e49f4dd08b452bc937f  graphics-basel
 86e34e2c1e7c75d058d8185c0affcb34198f17330add5f2979ffe760029d8c15  jacc-suite-amdgpu.txt
 ca7e9c7fd815f00b674ecec18259fb277866ff07b699bb8dde3707bd77500455  pkg-state-postROCm-20260804.txt
 d79095e1b528657182cd7ea4c15e68ae99f5ad4842067e18bc1c94522c62a7e7  pkg-state-preROCm-20260804.txt
+892788db0fb50bc3e3206d51d380a7198a89957a3995a94a3cf0790cf068d05c  repro-rocblas.cpp
+5a674b3139cc0b0e2be6c86a852f589187dabae7e7da33dfd8a182300977486b  repro-rocblas-output.txt
+8cb191a7ace9313ed6fc29a87fa721df8fbc4ba981a0fff13e08381c27fd4074  repro-rocrand.cpp
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  repro-rocrand-output.txt
+b54b8efcfa8ec3ea7deb0ca7777e709f5134e8f693aac60007163f610a17de90  repro-rocsparse.c
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  repro-rocsparse-output.txt
 60e81696e6ea5c87790623e89760c7ebde0db09b5a7232828e0e44c8fc502b13  rocminfo-11.0.0.txt
 6d324df87b075307bac49febfee8a45b523d11ca9dcc5e677a6d4c530fa019b1  rocminfo-11.5.0.txt
 6d324df87b075307bac49febfee8a45b523d11ca9dcc5e677a6d4c530fa019b1  rocminfo-unset.txt
 3a37230968bda2d395a184174dcd0e07e425e2566eb287bede67d22411a9cf85  rocm-smi-11.0.0.txt
 49e5975665037cef468249e4f7e349c25fc0a4b05467fe0fadb31bf2af1b8ef1  rocm-smi-11.5.0.txt
 35d1b5ec2450a7dbff52272e7e541e964999ed1fea1bf3459888defe02acbfb3  rocm-smi-unset.txt
+d9cd6c964fd4b45312ab7196ad0474962cc141d13d3fcd68455eb040fec15581  rocm-stage2.sh
 a031f088f422980fb66debafd494f8e6f8a4fd7dbbe175eef97bb1680cfcbb53  rollback-proof.txt
-8cb191a7ace9313ed6fc29a87fa721df8fbc4ba981a0fff13e08381c27fd4074  repro-rocrand.cpp
-892788db0fb50bc3e3206d51d380a7198a89957a3995a94a3cf0790cf068d05c  repro-rocblas.cpp
-b54b8efcfa8ec3ea7deb0ca7777e709f5134e8f693aac60007163f610a17de90  repro-rocsparse.c
-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  repro-rocrand-output.txt
-5a674b3139cc0b0e2be6c86a852f589187dabae7e7da33dfd8a182300977486b  repro-rocblas-output.txt
-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  repro-rocsparse-output.txt
 ```
 
 Added 2026-08-04, same day, after the Launchpad decision: three Julia-free C
