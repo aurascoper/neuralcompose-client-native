@@ -32,6 +32,22 @@ withdrawal notices and corrections. **Corrections are struck through in place ra
 because a claim that was withdrawn and the reasoning that withdrew it are more useful than a
 document that reads as if it had always been right.
 
+## These files entered version control already corrected
+
+**Both documents were written and revised as loose files outside any repository, and entered git on
+2026-08-03 in their corrected state. Revisions made before that date are not recoverable.**
+
+`git log` is therefore *not* the full history of the claims in them. Some corrections survive only
+as strike-throughs in the text, and only because someone chose to strike rather than delete — the
+`libboost-filesystem1.74.0` figure is the clearest example, and it is visible today purely as an
+authoring choice, not because version control preserved it.
+
+That gap is the reason this directory exists. Compare `docs/acceptance/vulkan-performance-claim.md`,
+which was withdrawn the same day: it could retain its superseded claim verbatim *because the file
+was already in git*, so the withdrawal is a diff and not an assertion. **Version control was the
+difference between a withdrawal and a quiet edit**, and everything added here from now on gets that
+property by default.
+
 ## Provenance and scope
 
 - One machine — a GPD G1617-02 (Win Mini 2025), Ryzen AI 9 HX 370 / Radeon 890M, Ubuntu 26.04,
