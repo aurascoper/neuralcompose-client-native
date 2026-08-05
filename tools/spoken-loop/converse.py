@@ -1,0 +1,317 @@
+#!/usr/bin/env python3
+"""Continuous spoken conversation with memory: talk, it listens, answers, remembers.
+
+Unlike turn.sh (one stateless exchange) and dialectic.py (two models arguing while
+you listen), this is you and the model, back and forth, with history in-session and
+durable memory across sessions via neural-memory.
+
+The mic stays open. It detects when you start and stop speaking rather than making
+you press Enter — the noise floor is calibrated at startup because this machine's
+ALC245 runs about 40 dB hot and a fixed threshold would either never trigger or
+never stop.
+
+NOT CLAIMED: promotes no support-matrix row, links nothing into the product, and is
+not evidence any backend works. Links onnxruntime for Kokoro; the product runtime
+decision is deferred and unmade. See README.md.
+
+MEMORY IS agentInference, ALWAYS. neural-memory clamps evidenceClass in two
+independent layers — nothing spoken here can become `observed` or a decision. It
+writes to a SEPARATE store (voice.db) so conversational material never mixes with
+the curated evidence corpus.
+
+Usage:  converse.py [--turns N] [--silent] [--no-memory] [--db PATH]
+"""
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import urllib.request
+from array import array
+from datetime import datetime, timezone
+from pathlib import Path
+
+from speak import MODEL, VOICES
+
+HERE = Path(__file__).resolve().parent
+SERVER = os.environ.get("SERVER", "http://127.0.0.1:8080")
+WHISPER = Path(os.environ.get("WHISPER", Path.home() / "src/whisper.cpp/build/bin/whisper-cli"))
+WMODEL = Path(os.environ.get("WMODEL", Path.home() / "src/whisper.cpp/models/ggml-base.en.bin"))
+NM_BIN = Path(os.environ.get(
+    "NEURAL_MEMORY_BIN", Path.home() / "src/neural-memory-server/target/release/neural-memory-mcp"))
+EMBED_URL = os.environ.get("EMBED_URL", "http://127.0.0.1:8082")
+EMBED_PROFILE = os.environ.get(
+    "EMBED_PROFILE", "fc7d829d6242fccfa0f024bd5175ee611bdcd920f08ff7fcc60db8b59d4eb359")
+
+RATE = 16000
+FRAME = 1600                 # 100 ms of s16 mono
+SILENCE_END_S = 1.2          # silence this long after speech ends the utterance
+MAX_UTTERANCE_S = 30.0       # hard cap
+LISTEN_TIMEOUT_S = 15.0      # no speech for this long -> keep waiting, say so once
+SPEECH_FACTOR = 3.0          # speech is this many x the calibrated noise floor
+FLOOR_MIN = 120              # never trust a floor below this (silent room -> hair trigger)
+
+SYSTEM = (
+    "You are in a spoken conversation. Your reply is READ ALOUD, so use plain "
+    "conversational prose: no markdown, no asterisks, no headings, no lists, no "
+    "emoji. Three to five sentences — enough to say something substantive, short "
+    "enough to listen to. Speak naturally, as a person would. If the transcript "
+    "looks garbled, say what you think was meant rather than complaining about it."
+)
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def rms(buf: bytes) -> float:
+    a = array("h")
+    a.frombytes(buf)
+    if not a:
+        return 0.0
+    return (sum(x * x for x in a) / len(a)) ** 0.5
+
+
+class Mic:
+    """Streams raw s16 from arecord and cuts utterances on silence.
+
+    arecord -t raw is used rather than pw-record because pw-record writes a WAV
+    header to stdout and we want a bare sample stream. It still goes through
+    PipeWire via the ALSA compat layer.
+    """
+
+    def __init__(self) -> None:
+        self.proc = subprocess.Popen(
+            ["arecord", "-q", "-f", "S16_LE", "-r", str(RATE), "-c", "1", "-t", "raw", "-"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+    def _frame(self) -> bytes:
+        return self.proc.stdout.read(FRAME * 2)
+
+    def calibrate(self, seconds: float = 1.0) -> float:
+        levels = [rms(self._frame()) for _ in range(int(seconds * RATE / FRAME))]
+        floor = max(sorted(levels)[len(levels) // 2], FLOOR_MIN)
+        return floor
+
+    def utterance(self, floor: float) -> bytes | None:
+        """Block until speech starts, then return it once the speaker stops."""
+        threshold = floor * SPEECH_FACTOR
+        frames: list[bytes] = []
+        silent_for = 0.0
+        waited = 0.0
+        announced = False
+        while True:
+            f = self._frame()
+            if not f:
+                return None
+            level = rms(f)
+            if not frames:
+                if level > threshold:
+                    frames.append(f)
+                else:
+                    waited += FRAME / RATE
+                    if waited > LISTEN_TIMEOUT_S and not announced:
+                        print("(listening…)", file=sys.stderr, flush=True)
+                        announced = True
+                continue
+            frames.append(f)
+            silent_for = silent_for + FRAME / RATE if level <= threshold else 0.0
+            if silent_for >= SILENCE_END_S or len(frames) * FRAME / RATE >= MAX_UTTERANCE_S:
+                return b"".join(frames)
+
+    def close(self) -> None:
+        self.proc.terminate()
+        self.proc.wait()
+
+
+def transcribe(pcm: bytes) -> str:
+    import wave
+    with tempfile.TemporaryDirectory() as d:
+        wav = Path(d) / "u.wav"
+        with wave.open(str(wav), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(RATE)
+            w.writeframes(pcm)
+        out = subprocess.run([str(WHISPER), "-m", str(WMODEL), "-f", str(wav), "-nt", "-np"],
+                             capture_output=True, text=True).stdout
+    return " ".join(out.split())
+
+
+def chat(messages: list[dict], max_tokens: int = 220, temperature: float = 0.7) -> str:
+    body = json.dumps({"messages": messages, "chat_template_kwargs": {"enable_thinking": False},
+                       "max_tokens": max_tokens, "temperature": temperature,
+                       "stream": False}).encode()
+    req = urllib.request.Request(f"{SERVER}/v1/chat/completions", data=body,
+                                 headers={"content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=180) as r:
+        text = json.load(r)["choices"][0]["message"]["content"]
+    for bad in ("**", "*", "#", ">"):
+        text = text.replace(bad, "")
+    return " ".join(text.split())
+
+
+class Memory:
+    """neural-memory over stdio JSON-RPC. No HTTP: the server has no listener.
+
+    Two traps the wire format sets, both handled here:
+      - results are DOUBLE ENCODED — content[0].text is a JSON *string*
+      - tool failures arrive as isError:true, not as a JSON-RPC error
+    """
+
+    def __init__(self, db: Path, embed: bool = True) -> None:
+        args = [str(NM_BIN), "--db", str(db), "--as-of", now_iso()]
+        if embed:
+            args += ["--embed-url", EMBED_URL, "--embed-profile", EMBED_PROFILE]
+        self.proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.DEVNULL, text=True, bufsize=1)
+        self._id = 0
+        self._rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
+                                 "clientInfo": {"name": "spoken-loop", "version": "0"}})
+
+    def _rpc(self, method: str, params: dict) -> dict:
+        self._id += 1
+        self.proc.stdin.write(json.dumps(
+            {"jsonrpc": "2.0", "id": self._id, "method": method, "params": params}) + "\n")
+        self.proc.stdin.flush()
+        return json.loads(self.proc.stdout.readline())
+
+    def _tool(self, name: str, args: dict):
+        resp = self._rpc("tools/call", {"name": name, "arguments": args})
+        result = resp.get("result", {})
+        text = result.get("content", [{}])[0].get("text", "")
+        if result.get("isError"):
+            print(f"(memory: {name} failed: {text})", file=sys.stderr)
+            return None
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return text
+
+    def recall(self, query: str, limit: int = 5):
+        # asOf is passed per call: --as-of is frozen at launch, so a long
+        # conversation would otherwise score recency against its start time.
+        return self._tool("recall", {"query": query, "limit": limit, "asOf": now_iso()})
+
+    def remember(self, claim: str) -> None:
+        self._tool("remember", {"claim": claim, "occurredAt": now_iso(),
+                                "sourceLocator": f"spoken-loop/converse/{now_iso()}"})
+
+    def close(self) -> None:
+        try:
+            self.proc.stdin.close()
+        finally:
+            self.proc.terminate()
+            self.proc.wait()
+
+    @staticmethod
+    def backfill(db: Path) -> None:
+        """`remember` does NOT write vectors — verified: 2 memories, 0 embeddings.
+
+        The semantic branch reports ran:true and then searches nothing, so a
+        session's own memories are lexical-only until this runs. FTS is a pure OR
+        of tokens, so "beverage preferences" does not match "drinks his coffee
+        black" — exactly the miss embeddings exist to catch. Backfilling at exit
+        makes this session's memories semantically findable by the next one.
+        """
+        embed_bin = NM_BIN.parent / "neural-memory-embed"
+        if not embed_bin.exists():
+            return
+        r = subprocess.run(
+            [str(embed_bin), "--db", str(db), "--url", EMBED_URL,
+             "--model-sha256", "3e24342164b3d94991ba9692fdc0dd08e3fd7362e0aacc396a9a5c54a544c3b7",
+             "--revision", "v1.5", "--dims", "768"],
+            capture_output=True, text=True)
+        tail = (r.stdout or r.stderr).strip().splitlines()
+        if tail:
+            print(f"  (embedded: {tail[-1]})", file=sys.stderr)
+
+
+DISTIL = (
+    "From the exchange below, extract ONE durable fact about the user or their "
+    "work that would be worth recalling in a future conversation — a preference, "
+    "a decision, a constraint, a project fact. Write it as a single standalone "
+    "sentence that makes sense with no other context. If there is nothing durable "
+    "— small talk, a passing question, a pleasantry — reply with exactly NONE."
+)
+
+
+def main() -> int:
+    import argparse
+    ap = argparse.ArgumentParser(description="Spoken conversation with memory.")
+    ap.add_argument("--turns", type=int, default=0, help="stop after N exchanges (0 = until Ctrl-C)")
+    ap.add_argument("--silent", action="store_true", help="print only, do not speak")
+    ap.add_argument("--no-memory", action="store_true", help="skip neural-memory entirely")
+    ap.add_argument("--db", type=Path,
+                    default=Path.home() / ".local/share/neural-memory/voice.db")
+    ap.add_argument("--voice", default=os.environ.get("KOKORO_VOICE", "af_heart"))
+    opt = ap.parse_args()
+
+    for p in (WHISPER, WMODEL):
+        if not p.exists():
+            sys.exit(f"converse: missing {p}")
+
+    kokoro = None
+    if not opt.silent:
+        from kokoro_onnx import Kokoro
+        kokoro = Kokoro(str(MODEL), str(VOICES))   # once, not per turn
+
+    mem = None if opt.no_memory else Memory(opt.db)
+    mic = Mic()
+    floor = mic.calibrate()
+    print(f"noise floor {floor:.0f}, speech above {floor * SPEECH_FACTOR:.0f}. "
+          f"Talk when ready; Ctrl-C to stop.\n", flush=True)
+
+    history: list[dict] = []
+    turn = 0
+    try:
+        while not opt.turns or turn < opt.turns:
+            pcm = mic.utterance(floor)
+            if pcm is None:
+                break
+            heard = transcribe(pcm)
+            if not heard or heard.strip("[](). ") == "":
+                continue          # whisper's bracketed non-speech, e.g. [BLANK_AUDIO]
+            print(f"you: {heard}", flush=True)
+
+            system = SYSTEM
+            if mem:
+                r = mem.recall(heard, limit=3) or {}
+                hits = [h["claim"] for h in r.get("hits", [])][:3]
+                if hits:
+                    system += "\n\nThings you remember from earlier conversations:\n" + \
+                              "\n".join(f"- {h}" for h in hits)
+                    print(f"  (recalled {len(hits)})", file=sys.stderr, flush=True)
+
+            history.append({"role": "user", "content": heard})
+            reply = chat([{"role": "system", "content": system}] + history[-12:])
+            history.append({"role": "assistant", "content": reply})
+            print(f"model: {reply}\n", flush=True)
+
+            if kokoro:
+                import soundfile as sf
+                samples, rate = kokoro.create(reply, voice=opt.voice, speed=1.0, lang="en-us")
+                with tempfile.NamedTemporaryFile(suffix=".wav") as f:
+                    sf.write(f.name, samples, rate)
+                    subprocess.run(["pw-play", f.name], check=False)
+
+            if mem:
+                fact = chat([{"role": "system", "content": DISTIL},
+                             {"role": "user", "content": f"User: {heard}\nAssistant: {reply}"}],
+                            max_tokens=80, temperature=0.3)
+                if fact and fact.strip().upper() != "NONE" and len(fact) > 15:
+                    mem.remember(fact)
+                    print(f"  (remembered: {fact})", file=sys.stderr, flush=True)
+            turn += 1
+    except KeyboardInterrupt:
+        print("\nbye", flush=True)
+    finally:
+        mic.close()
+        if mem:
+            mem.close()
+            Memory.backfill(opt.db)   # vectors are written here, not by remember()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

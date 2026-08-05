@@ -157,6 +157,84 @@ Port 8080 is free; 8788 is the EEG stream's.
 
 **5. Take a turn:** `./turn.sh` — speak, press Enter.
 
+## `converse.py` — open mic, back and forth, with memory
+
+The one you probably want. No Enter key: the mic stays open, it detects when you
+start and stop talking, answers in 3–5 sentences, speaks, and listens again.
+History is kept in-session and durable facts persist across sessions.
+
+```sh
+.venv/bin/python converse.py                    # Ctrl-C to stop
+.venv/bin/python converse.py --turns 3 --silent # print only, bounded
+.venv/bin/python converse.py --no-memory        # skip neural-memory entirely
+```
+
+### Silence detection, calibrated not hardcoded
+
+The noise floor is measured at startup and speech is 3× it. A fixed threshold
+would be wrong on this machine in both directions — the ALC245 runs ~40 dB hot,
+and the measured floor here was **6262** with the speech gate at 18785. An
+utterance ends after 1.2 s below the gate, caps at 30 s, and after 15 s of nothing
+it prints `(listening…)` once rather than sitting mute.
+
+Set the mic to 30% first (`wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 30%`). At 100%
+the input rails and whisper hears `[MUSIC PLAYING]` instead of words — that is
+what made speaker-to-mic testing look impossible earlier. At 30% the same test
+transcribes **perfectly**.
+
+It reads raw samples from `arecord -t raw` rather than `pw-record`, because
+`pw-record` writes a WAV header to stdout and this needs a bare sample stream. It
+still goes through PipeWire via the ALSA compat layer.
+
+### Memory: neural-memory over stdio, into a separate store
+
+There is **no JEPA** in neural-memory-server — `grep -ri 'jepa|predictive'`
+returns zero hits across the repo. What exists is lexical + entity + provenance
+retrieval with an optional embedding branch, and that branch is what this uses.
+
+Voice memories go to `~/.local/share/neural-memory/voice.db`, **not** the curated
+evidence store, so conversational material never mixes with the 255-row corpus.
+After each exchange the model is asked to extract one durable fact, or reply
+`NONE`; only durable facts are written. Everything is `agentInference` — the
+server clamps evidence class in two independent layers, so nothing spoken can
+forge higher trust.
+
+The server has **no HTTP listener**; it is stdio JSON-RPC (bare NDJSON, no
+Content-Length framing), so this spawns it as a subprocess. Two wire-format traps,
+both handled in `Memory`:
+
+- results are **double-encoded** — `content[0].text` is a JSON *string*, not an object
+- tool failures come back as `isError: true`, **not** as a JSON-RPC error
+- `--as-of` is frozen at launch, so `asOf` is passed on every `recall`
+
+### `remember` does not write vectors — verified
+
+Measured: after two `remember` calls, `memories: 2, embeddings: 0`, while
+`semanticBranch` reported `ran: true`. The branch was searching nothing.
+
+So a query only matches lexically, and FTS is a pure **OR of tokens** — "what
+beverage preferences does the user have" does **not** match "drinks his coffee
+black". After backfilling, that same query returns it via `['semantic']` at 0.716,
+which lexical missed completely.
+
+`converse.py` therefore runs `neural-memory-embed` on exit, so a session's
+memories are semantically findable by the next one. Requires a second llama-server
+on port 8082 with nomic-embed-text v1.5, CPU-only:
+
+```sh
+~/src/llama.cpp/build-cpu/bin/llama-server \
+  -m ~/.cache/llama.cpp/nomic-embed-text-v1.5.Q8_0.gguf \
+  --embedding --host 127.0.0.1 --port 8082 -c 2048 -ngl 0
+```
+
+`-ngl 0` matters: it must not take a Vulkan context. Verified only llama-server
+(the 14B) holds the render node with both servers up.
+
+The project's own README says the semantic branch **did not replicate** in its
+evaluation (+0.038 MRR against a +0.050 threshold) while the entity branch did
+(+0.190 on alias queries). It is enabled here by choice; the honest expectation is
+modest.
+
 ## `dialectic.py` — seed a topic, then listen
 
 `turn.sh` is one exchange: you speak, one model answers. That is a chatbot with a
