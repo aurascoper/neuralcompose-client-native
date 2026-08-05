@@ -48,8 +48,12 @@ FRAME = 1600                 # 100 ms of s16 mono
 SILENCE_END_S = 1.2          # silence this long after speech ends the utterance
 MAX_UTTERANCE_S = 30.0       # hard cap
 LISTEN_TIMEOUT_S = 15.0      # no speech for this long -> keep waiting, say so once
-SPEECH_FACTOR = 3.0          # speech is this many x the calibrated noise floor
+SPEECH_FACTOR = 2.0          # speech is this many x the calibrated noise floor
 FLOOR_MIN = 120              # never trust a floor below this (silent room -> hair trigger)
+GATE_MAX = 6000              # a gate above this is unreachable by normal speech
+ONSET_FRAMES = 3             # consecutive frames over the gate before we call it speech
+CALIBRATE_S = 3.0
+CALIBRATE_PCTL = 0.20        # low percentile, NOT median — see calibrate()
 
 SYSTEM = (
     "You are in a spoken conversation. Your reply is READ ALOUD, so use plain "
@@ -88,15 +92,45 @@ class Mic:
     def _frame(self) -> bytes:
         return self.proc.stdout.read(FRAME * 2)
 
-    def calibrate(self, seconds: float = 1.0) -> float:
-        levels = [rms(self._frame()) for _ in range(int(seconds * RATE / FRAME))]
-        floor = max(sorted(levels)[len(levels) // 2], FLOOR_MIN)
-        return floor
+    def calibrate(self, seconds: float = CALIBRATE_S) -> float:
+        """Low percentile, not median, and capped.
 
-    def utterance(self, floor: float) -> bytes | None:
-        """Block until speech starts, then return it once the speaker stops."""
-        threshold = floor * SPEECH_FACTOR
+        This mic emits frequent transient spikes to full scale — measured over
+        3 s: median 1801, max 32768. A 1 s MEDIAN caught enough spikes to report
+        a floor of 6262, which put the gate at 18785 (57% of full scale) and made
+        it unreachable by ordinary speech: the loop listened and never answered.
+        A low percentile ignores the spikes, and GATE_MAX is the backstop for when
+        even that is fooled.
+        """
+        levels = sorted(rms(self._frame()) for _ in range(int(seconds * RATE / FRAME)))
+        floor = max(levels[int(len(levels) * CALIBRATE_PCTL)], FLOOR_MIN)
+        return min(floor * SPEECH_FACTOR, GATE_MAX)
+
+    def meter(self, gate: float) -> None:
+        """Live level display. Speak and watch: if the bar never passes the gate
+        marker, the gate is wrong — pass --threshold with a number that works."""
+        print(f"gate = {gate:.0f}. Speak; Ctrl-C to stop.\n", file=sys.stderr)
+        while True:
+            f = self._frame()
+            if not f:
+                return
+            level = rms(f)
+            width = min(int(level / 400), 70)
+            mark = int(gate / 400)
+            bar = "".join("|" if i == mark else ("#" if i < width else " ")
+                          for i in range(max(width, mark) + 1))
+            print(f"{level:7.0f} {'OVER' if level > gate else '    '} {bar}",
+                  file=sys.stderr, flush=True)
+
+    def utterance(self, gate: float) -> bytes | None:
+        """Block until speech starts, then return it once the speaker stops.
+
+        Onset needs ONSET_FRAMES consecutive frames over the gate. A single frame
+        is not enough on this mic: its full-scale transients would trigger an
+        utterance made entirely of a click.
+        """
         frames: list[bytes] = []
+        pending: list[bytes] = []
         silent_for = 0.0
         waited = 0.0
         announced = False
@@ -106,16 +140,19 @@ class Mic:
                 return None
             level = rms(f)
             if not frames:
-                if level > threshold:
-                    frames.append(f)
+                if level > gate:
+                    pending.append(f)
+                    if len(pending) >= ONSET_FRAMES:
+                        frames, pending = pending, []
                 else:
+                    pending.clear()
                     waited += FRAME / RATE
                     if waited > LISTEN_TIMEOUT_S and not announced:
                         print("(listening…)", file=sys.stderr, flush=True)
                         announced = True
                 continue
             frames.append(f)
-            silent_for = silent_for + FRAME / RATE if level <= threshold else 0.0
+            silent_for = silent_for + FRAME / RATE if level <= gate else 0.0
             if silent_for >= SILENCE_END_S or len(frames) * FRAME / RATE >= MAX_UTTERANCE_S:
                 return b"".join(frames)
 
@@ -245,7 +282,22 @@ def main() -> int:
     ap.add_argument("--db", type=Path,
                     default=Path.home() / ".local/share/neural-memory/voice.db")
     ap.add_argument("--voice", default=os.environ.get("KOKORO_VOICE", "af_heart"))
+    ap.add_argument("--threshold", type=float,
+                    help="override the speech gate (skip calibration)")
+    ap.add_argument("--meter", action="store_true",
+                    help="show live mic levels against the gate and exit")
     opt = ap.parse_args()
+
+    if opt.meter:
+        mic = Mic()
+        gate = opt.threshold if opt.threshold else mic.calibrate()
+        try:
+            mic.meter(gate)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            mic.close()
+        return 0
 
     for p in (WHISPER, WMODEL):
         if not p.exists():
@@ -258,15 +310,15 @@ def main() -> int:
 
     mem = None if opt.no_memory else Memory(opt.db)
     mic = Mic()
-    floor = mic.calibrate()
-    print(f"noise floor {floor:.0f}, speech above {floor * SPEECH_FACTOR:.0f}. "
-          f"Talk when ready; Ctrl-C to stop.\n", flush=True)
+    gate = opt.threshold if opt.threshold else mic.calibrate()
+    print(f"speech gate {gate:.0f} of 32767. Talk when ready; Ctrl-C to stop.\n"
+          f"(if it only ever listens, run --meter and pass --threshold)\n", flush=True)
 
     history: list[dict] = []
     turn = 0
     try:
         while not opt.turns or turn < opt.turns:
-            pcm = mic.utterance(floor)
+            pcm = mic.utterance(gate)
             if pcm is None:
                 break
             heard = transcribe(pcm)

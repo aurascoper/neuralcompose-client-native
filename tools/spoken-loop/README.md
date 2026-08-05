@@ -171,11 +171,37 @@ History is kept in-session and durable facts persist across sessions.
 
 ### Silence detection, calibrated not hardcoded
 
-The noise floor is measured at startup and speech is 3× it. A fixed threshold
-would be wrong on this machine in both directions — the ALC245 runs ~40 dB hot,
-and the measured floor here was **6262** with the speech gate at 18785. An
-utterance ends after 1.2 s below the gate, caps at 30 s, and after 15 s of nothing
-it prints `(listening…)` once rather than sitting mute.
+The gate is measured at startup: a low percentile of the noise floor, ×2, capped.
+An utterance ends after 1.2 s below the gate, caps at 30 s, and after 15 s of
+nothing it prints `(listening…)` once rather than sitting mute.
+
+**If it only ever listens and never answers, the gate is too high.** See the
+levels and pick one yourself:
+
+```sh
+.venv/bin/python converse.py --meter          # speak, watch the bar cross the gate
+.venv/bin/python converse.py --threshold 3000 # then use what worked
+```
+
+#### Why the first version never answered
+
+The original calibration took the **median** of 1 s of ambient and multiplied by
+3. It reported a floor of 6262 and a gate of **18785 — 57% of full scale**, which
+ordinary speech never reaches. The loop listened forever and looked broken.
+
+The mic is the reason. Measured over 3 s: **median 1801, max 32768.** It emits
+frequent transient spikes to full scale, and over only ten frames enough of them
+land that the *median* is dragged up. Three fixes, all in `Mic.calibrate` and
+`Mic.utterance`:
+
+- a **low percentile (20th)** rather than the median, which spikes cannot drag
+- `GATE_MAX` caps the gate at 6000 whatever calibration claims
+- onset requires **3 consecutive frames** over the gate, so a full-scale click
+  cannot open an utterance made entirely of a click
+
+Same room, same mic, after the fix: gate **2861–3004**, and the acoustic test
+transcribes and answers. A calibration that samples too briefly and averages the
+wrong way is worse than a hardcoded constant, because it looks principled.
 
 Set the mic to 30% first (`wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 30%`). At 100%
 the input rails and whisper hears `[MUSIC PLAYING]` instead of words — that is
