@@ -276,6 +276,33 @@ class Memory:
             print(f"  (embedded: {tail[-1]})", file=sys.stderr)
 
 
+RECALL_MIN_SCORE = 0.40   # below this the hit is noise; see relevant_memories()
+
+
+def relevant_memories(mem: "Memory", heard: str, k: int = 2) -> list[str]:
+    """Recall, then throw most of it away.
+
+    Two filters, both learned the hard way. A score floor, because the lexical
+    branch is a pure OR of tokens and returns something for almost any query:
+    "how do I bake bread" scored 0.156 against a claim about silence detection.
+    And meta records are skipped — the CORRECTION written by the memory audit is
+    a live claim, so it was being injected into conversations as though it were a
+    fact about the user.
+
+    Even with both, treat this as a hint. The prompt tells the model these may be
+    irrelevant and must not be raised unprompted; that instruction is doing more
+    work than the threshold.
+    """
+    r = mem.recall(heard, limit=5) or {}
+    out = []
+    for h in r.get("hits", []):
+        claim = h.get("claim", "")
+        if h.get("score", 0) < RECALL_MIN_SCORE or claim.startswith("CORRECTION"):
+            continue
+        out.append(claim)
+    return out[:k]
+
+
 DISTIL = (
     "Below is ONE thing the user said, transcribed from speech. Extract a single "
     "durable fact about the user or their work that would be worth recalling in a "
@@ -379,11 +406,17 @@ def main() -> int:
 
             system = SYSTEM
             if mem:
-                r = mem.recall(heard, limit=3) or {}
-                hits = [h["claim"] for h in r.get("hits", [])][:3]
+                hits = relevant_memories(mem, heard)
                 if hits:
-                    system += "\n\nThings you remember from earlier conversations:\n" + \
-                              "\n".join(f"- {h}" for h in hits)
+                    # Framed as MAYBE relevant, and explicitly not a topic to
+                    # raise. Without this the model treats every recalled line as
+                    # something the user wants discussed, and steers each turn
+                    # back to it — the store had one claim about silence
+                    # detection and the model raised silence detection forever.
+                    system += ("\n\nBackground notes from earlier conversations. They may be "
+                               "irrelevant or wrong. Do NOT mention them unless the user "
+                               "raises the subject first:\n" +
+                               "\n".join(f"- {h}" for h in hits))
                     print(f"  (recalled {len(hits)})", file=sys.stderr, flush=True)
 
             history.append({"role": "user", "content": heard})

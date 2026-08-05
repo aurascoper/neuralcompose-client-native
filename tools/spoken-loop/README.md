@@ -249,6 +249,30 @@ They are retired in place (superseded, not deleted) against a correction record;
 | "…needs assistance with data from 2026, **which is beyond my training cutoff**" | the assistant's meta-commentary, stored as a user fact |
 | "Hunter drinks his coffee black and dislikes oat milk" | **fabricated by the agent as a test string** and never said by anyone |
 
+**Three of the eight were test strings I wrote by hand** while checking the write
+path — including "The user prefers push-to-talk replaced by silence detection",
+which then got recalled into *every* conversation and made the model raise silence
+detection unprompted, turn after turn. Test data in a persistent store does not
+stay inert; it becomes the model's idea of who you are.
+
+`voice.db` now holds **one** live claim — the correction — and nine retired. That
+is the honest state: the loop has not yet produced a memory worth keeping.
+
+### Recall was injecting noise into every turn
+
+Recall has no relevance floor of its own, and the lexical branch is a pure OR of
+tokens, so it returns something for almost any query. Measured: "how do I bake
+bread" pulled up the silence-detection claim at 0.156, and "what is the weather
+like" pulled all three live claims including the multi-paragraph CORRECTION
+record — injected into the prompt as though it were a fact about the user.
+
+`relevant_memories()` now applies a score floor and skips meta records. But the
+threshold is the weaker half of the fix: an irrelevant claim still scored **0.450**
+on a bread question. What actually stops the behaviour is the framing — recalled
+lines are labelled as possibly irrelevant, with an explicit instruction not to
+raise them unless the user does. Injected memory reads as *agenda* to a chat model
+unless you tell it otherwise.
+
 Fixes applied: the distiller now sees **only the user's utterance** (never the
 assistant's reply, which is where the hedging came from), rejects hedged or
 first-person-model output, and skips utterances under four words.
