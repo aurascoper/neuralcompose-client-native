@@ -230,9 +230,21 @@ class Memory:
         # conversation would otherwise score recency against its start time.
         return self._tool("recall", {"query": query, "limit": limit, "asOf": now_iso()})
 
-    def remember(self, claim: str) -> None:
+    def remember(self, claim: str, heard: str = "") -> None:
+        """sourceLocator carries the VERBATIM transcript, not just a timestamp.
+
+        Measured failure rate on the first real session: 7 of 8 stored claims were
+        wrong, and the commonest cause was a confident mis-transcription laundered
+        into an assertion ("neural-memory server" -> "narrow memory server").
+        A reject list cannot catch that — the claim is not hedged, it is just
+        false. What it CAN do is stay traceable: with the utterance in the
+        locator, a later reader sees the words that produced the claim and can
+        spot the error instead of inheriting it.
+        """
+        loc = f"spoken-loop/converse/{now_iso()} heard={heard!r}" if heard else \
+              f"spoken-loop/converse/{now_iso()}"
         self._tool("remember", {"claim": claim, "occurredAt": now_iso(),
-                                "sourceLocator": f"spoken-loop/converse/{now_iso()}"})
+                                "sourceLocator": loc})
 
     def close(self) -> None:
         try:
@@ -265,12 +277,47 @@ class Memory:
 
 
 DISTIL = (
-    "From the exchange below, extract ONE durable fact about the user or their "
-    "work that would be worth recalling in a future conversation — a preference, "
-    "a decision, a constraint, a project fact. Write it as a single standalone "
-    "sentence that makes sense with no other context. If there is nothing durable "
-    "— small talk, a passing question, a pleasantry — reply with exactly NONE."
+    "Below is ONE thing the user said, transcribed from speech. Extract a single "
+    "durable fact about the user or their work that would be worth recalling in a "
+    "future conversation — a preference, a decision, a constraint, a project fact. "
+    "Write it as one standalone sentence.\n\n"
+    "Reply with exactly NONE if: there is nothing durable (small talk, a question, "
+    "a pleasantry); OR the transcript looks garbled or you are unsure what was "
+    "said. Do not guess at a garbled word, and do not hedge — a fact you are not "
+    "sure of must be NONE, because this is written to permanent memory."
 )
+
+# Anything matching these is discarded rather than stored. Every one of these was
+# observed in a claim that actually reached the store.
+REJECT = (
+    "my training", "training cutoff", "i am not", "i'm not", "i don't", "as an ai",
+    "may be", "might be", "possibly", "perhaps", "unclear", "not sure", "appears to",
+    "or a custom", "beyond my", "i may", "assistant",
+)
+
+
+def durable_fact(heard: str) -> str | None:
+    """Distil one storable fact from what the USER said, or None.
+
+    Deliberately NOT given the assistant's reply. Records like "…which is beyond
+    my training cutoff" and "…which may be a future version or a custom build"
+    reached the store because the model's own hedging was fed in and came back
+    attributed to the user. A fact about the user can only come from the user.
+
+    The distiller is also nondeterministic — the same shape of input returns NONE
+    on one run and a hedged invention on the next — so the reject list is a second
+    gate rather than a belt-and-braces nicety.
+    """
+    if len(heard.split()) < 4:
+        return None
+    fact = chat([{"role": "system", "content": DISTIL},
+                 {"role": "user", "content": heard}], max_tokens=80, temperature=0.2)
+    if not fact or fact.strip().upper().startswith("NONE") or len(fact) < 16:
+        return None
+    low = fact.lower()
+    if any(bad in low for bad in REJECT):
+        return None
+    return fact
 
 
 def main() -> int:
@@ -284,6 +331,8 @@ def main() -> int:
     ap.add_argument("--voice", default=os.environ.get("KOKORO_VOICE", "af_heart"))
     ap.add_argument("--threshold", type=float,
                     help="override the speech gate (skip calibration)")
+    ap.add_argument("--no-log", action="store_true",
+                    help="do not append the transcript to converse-transcript.jsonl")
     ap.add_argument("--meter", action="store_true",
                     help="show live mic levels against the gate and exit")
     opt = ap.parse_args()
@@ -309,6 +358,8 @@ def main() -> int:
         kokoro = Kokoro(str(MODEL), str(VOICES))   # once, not per turn
 
     mem = None if opt.no_memory else Memory(opt.db)
+    log = None if opt.no_log else open(
+        opt.db.parent / "converse-transcript.jsonl", "a", encoding="utf-8")
     mic = Mic()
     gate = opt.threshold if opt.threshold else mic.calibrate()
     print(f"speech gate {gate:.0f} of 32767. Talk when ready; Ctrl-C to stop.\n"
@@ -347,18 +398,21 @@ def main() -> int:
                     sf.write(f.name, samples, rate)
                     subprocess.run(["pw-play", f.name], check=False)
 
-            if mem:
-                fact = chat([{"role": "system", "content": DISTIL},
-                             {"role": "user", "content": f"User: {heard}\nAssistant: {reply}"}],
-                            max_tokens=80, temperature=0.3)
-                if fact and fact.strip().upper() != "NONE" and len(fact) > 15:
-                    mem.remember(fact)
-                    print(f"  (remembered: {fact})", file=sys.stderr, flush=True)
+            fact = durable_fact(heard) if mem else None
+            if fact:
+                mem.remember(fact, heard)
+                print(f"  (remembered: {fact})", file=sys.stderr, flush=True)
+            if log:
+                log.write(json.dumps({"at": now_iso(), "heard": heard, "reply": reply,
+                                      "remembered": fact}) + "\n")
+                log.flush()
             turn += 1
     except KeyboardInterrupt:
         print("\nbye", flush=True)
     finally:
         mic.close()
+        if log:
+            log.close()
         if mem:
             mem.close()
             Memory.backfill(opt.db)   # vectors are written here, not by remember()

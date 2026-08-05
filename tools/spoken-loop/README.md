@@ -233,6 +233,57 @@ both handled in `Memory`:
 - tool failures come back as `isError: true`, **not** as a JSON-RPC error
 - `--as-of` is frozen at launch, so `asOf` is passed on every `recall`
 
+### Measured: 7 of the first 8 stored claims were wrong
+
+The first real session wrote eight claims to `voice.db`. **Seven were false.**
+They are retired in place (superseded, not deleted) against a correction record;
+`recall` now reports `withheldRetired: 7`. Three distinct failure modes:
+
+| stored claim | what happened |
+| --- | --- |
+| "…a **narrow memory** server inside the storage file" | "neural-memory server" mis-heard, stored as fact |
+| "…the **10.26 operating system**" | "Ubuntu 26.04" mis-heard |
+| "…interested in the sound of a **revving engine**" | ambient noise transcribed and confabulated |
+| "…a machine producing noticeable **whirring sounds**" | the fan |
+| "…Ubuntu Linux 26, **which may be a future version or a custom build**" | the assistant's hedging, attributed to the user |
+| "…needs assistance with data from 2026, **which is beyond my training cutoff**" | the assistant's meta-commentary, stored as a user fact |
+| "Hunter drinks his coffee black and dislikes oat milk" | **fabricated by the agent as a test string** and never said by anyone |
+
+Fixes applied: the distiller now sees **only the user's utterance** (never the
+assistant's reply, which is where the hedging came from), rejects hedged or
+first-person-model output, and skips utterances under four words.
+
+**Those fixes do not solve the main failure mode, and it is important not to
+pretend otherwise.** A confident mis-transcription is not hedged — it is simply
+false — so no reject list catches it. Verified after the fix: the input "I have a
+narrow memory server…" still yields a stored claim, because nothing in the text
+signals the error.
+
+Two things follow.
+
+`base.en` is **not** the bottleneck. Given clean audio it transcribes "I have a
+neural memory server in my home directory running Ubuntu 26.04" correctly, and so
+does `small.en`. The errors came from real mic audio — clipping, room noise,
+clipped utterance starts — so the mic calibration above matters more than model
+size.
+
+And since bad audio cannot be prevented, the error is made **traceable instead of
+laundered**: `sourceLocator` now carries the verbatim transcript, so every claim
+records the words that produced it.
+
+```
+claim:   The user is building a spoken loop on Linux.
+locator: spoken-loop/converse/2026-08-05T01:31:16Z heard='I am building a spoken loop on Linux'
+```
+
+A reader who sees `heard='narrow memory server'` can spot the error rather than
+inherit it. Treat `voice.db` as a lead, never as evidence — everything in it is
+`agentInference` derived from a lossy channel.
+
+`converse-transcript.jsonl` beside the database now records every turn
+(`heard`, `reply`, `remembered`), because none of this was diagnosable before:
+the loop printed to stdout and persisted nothing.
+
 ### `remember` does not write vectors — verified
 
 Measured: after two `remember` calls, `memories: 2, embeddings: 0`, while
