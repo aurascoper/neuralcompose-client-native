@@ -25,27 +25,26 @@ designation did.
 
 ## Pinned inputs
 
-| Repository | Revision | Status |
-| --- | --- | --- |
-| `BAAI/bge-small-en-v1.5` | `5c38ec7c405ec4b44b94cc5a9bb96e735b38267a` | **pinned for the ONNX path only** — see the gap below |
-| `ggml-org/llama.cpp` (quantisation) | `d0bfb1981266c271cd0536a8aa7c5e863e7cdf61` | verified — the runtime commit in both Linux rows |
+| Repository | Revision | File | Status |
+| --- | --- | --- | --- |
+| `BAAI/bge-small-en-v1.5` | `5c38ec7c405ec4b44b94cc5a9bb96e735b38267a` | source model | pinned for the ONNX path |
+| `CompendiumLabs/bge-small-en-v1.5-gguf` | `d32f8c040ea3b516330eeb75b72bcc2d3a780ab7` | `bge-small-en-v1.5-f32.gguf` | pinned prebuilt GGUF; its published LFS digest and size match the local artifact below |
+| `ggml-org/llama.cpp` (quantisation) | `d0bfb1981266c271cd0536a8aa7c5e863e7cdf61` | `llama-quantize` | verified runtime commit in both Linux rows |
 
-### GAP — the f32 GGUF's conversion provenance is ABSENT
+### f32 GGUF provenance
 
-The revision above is pinned in `tools/onnx/README.md:45` and
-`docs/hardware/xdna2-bert-encoder-feasibility.md:1883` for the **ONNX export**
-path. Nothing in this repository records where `bge-small-en-v1.5-f32.gguf`
-came from — whether it was converted locally from that same revision, converted
-from another, or downloaded pre-built from a community repository.
+The exact f32 artifact is published in
+`CompendiumLabs/bge-small-en-v1.5-gguf` at the immutable revision and path
+above. That revision records LFS SHA-256
+`bf40c42ad7d89382e9ba7376d5c4b73f6b556cb541fab37aaa1da9c320149b65`
+and size `133609568`; both equal the values measured locally. This closes the
+artifact-origin gap: results identify both the downloaded file and its pinned
+source, rather than only a local digest.
 
-The digest below is stable and every result in this repository is reproducible
-against it, so no measurement is in question. What is unestablished is the chain
-from upstream weights to this file. **Closing this gap is a prerequisite for
-`ReleaseSupported`**, which requires signed packaging, and it should be closed
-before any promotion argument leans on upstream identity rather than on the
-digest.
-
-Until then the f32 GGUF is pinned **by digest, not by provenance.**
+This pin does not independently reproduce the community repository's conversion
+from the BAAI source weights. Any claim about conversion reproducibility still
+requires the converter command, converter revision, and source-weight digest.
+That narrower gap does not make the measured GGUF artifact ambiguous.
 
 ## Artifact digests
 
@@ -113,7 +112,9 @@ fixture-to-candidate relabelling unchanged.
   determinism as a fixture, and no retrieval benchmark has been run against it
   or against any alternative in this repository. ADR-003 defers the question; it
   does not answer it.
-- **Any upstream-identity claim.** See the provenance gap above.
+- **Any claim that the community GGUF conversion is independently
+  reproducible.** The exact prebuilt artifact is pinned, but its conversion
+  recipe is not established here.
 - **Any 768-dimension result.** The divergence characterisation is 384-dim.
 - **Anything about the NPU path.** `xdna2-bert-encoder-feasibility.md` remains
   an audit; nothing has executed on the NPU under Linux.
