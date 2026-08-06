@@ -436,6 +436,12 @@ def main() -> int:
             if fact:
                 mem.remember(fact, heard)
                 print(f"  (remembered: {fact})", file=sys.stderr, flush=True)
+                # Embed now, not just at exit: the store is WAL with busy_timeout,
+                # so writing beside the open server is safe, and one record on the
+                # CPU embedder is sub-second. Without this the fact is lexical-only
+                # for the rest of the session — findable by its own tokens, not by
+                # meaning — which is the gap between "stored" and "learned".
+                Memory.backfill(opt.db)
             if log:
                 log.write(json.dumps({"at": now_iso(), "heard": heard, "reply": reply,
                                       "remembered": fact}) + "\n")
