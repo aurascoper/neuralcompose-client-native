@@ -68,8 +68,9 @@ ggml/src/ggml-cpu/ops.cpp:4886: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed
   → clip_encode → mtmd_gen_audio_process → qwen3tts_gen_audio_pipeline::step_gen
 ```
 
-An out-of-range row index in the audio decode path — a generated code token
-outside the codebook. Reproducible.
+An out-of-range row index in the audio decode path. Reproducible. (Called "a
+generated code token outside the codebook" here originally — see the RESOLVED
+section below; it is not a code token at all.)
 
 Two things learned narrowing it:
 
@@ -116,7 +117,7 @@ One symptom, reached from what look like two different triggers.
 
 | prompt chars | frames reached | quant |
 | --- | --- | --- |
-| 3 (`Hi.`) | < 32 | Q4_K_M |
+| 3 (`Hi.`) | **0** — dies at the first GEN_WAV call, before the 32-frame print | Q4_K_M |
 | 12 | < 32 | Q4_K_M |
 | 28 | < 32 | Q4_K_M |
 | 44 | 65 | Q4_K_M |
@@ -134,28 +135,90 @@ them. Length correlates with crash frame only noisily below the ceiling — 62
 chars reached 33 while 44 chars reached 65 — so this is not a clean function of
 length either.
 
-### The reading that fits all of it
+### RESOLVED: `inp_code0` is never uploaded on a GEN_WAV call
 
-**Generation never terminates cleanly, and dies at whichever comes first: the end
-of its own content, or a ~64-frame ceiling.**
+The earlier reading below was **wrong**, and one measurement refuted it. The
+assert is a bounds check on dimension 1, so print `ne01` and `i01` at the failure:
 
-That unifies both triggers under one root cause and is consistent with the
-`special_eos_id is not in special_eog_ids` warning — with no registered
-end-of-generation token, a short utterance runs off the end of its content and
-immediately emits an invalid code, while a long utterance hits the ceiling before
-it ever gets the chance.
+```c
+// ggml/src/ggml-cpu/ops.cpp, immediately before the assert at :4886
+if (i01 < 0 || i01 >= ne01) {
+    fprintf(stderr, "GETROWS-DIAG src0='%s'(%s) ne01=%lld i01=%lld"
+            "  src1='%s'(%s) n_idx=%lld  as_f32=%f\n",
+            src0->name, ggml_type_name(src0->type), (long long) ne01, (long long) i01,
+            src1->name, ggml_type_name(src1->type),
+            (long long) (ne10*ne11*ne12), (double) *(float *)(char *) src1->data);
+}
+```
 
-Recorded as the best current reading, not as established: the ceiling near 64 may
-be an independent buffer bug rather than a consequence of the same defect, and
-nothing here distinguishes those.
+`cmake --build build-cpu --target ggml-cpu -j 6` — one translation unit.
 
-What is solid: **not** quantization (identical at Q8_0 and Q4_K_M), **not**
-content-dependent above 64, reproducible across seven runs, one assert throughout.
+```
+Hi.        GETROWS-DIAG src0='a.gen.code.out_embd.weight'(q8_0) ne01=3072 i01=1098738097  src1='inp_code0'(i32) n_idx=1  as_f32=15.838304
+Hi.        GETROWS-DIAG src0='a.gen.code.out_embd.weight'(q8_0) ne01=3072 i01=1100981860  src1='inp_code0'(i32) n_idx=1  as_f32=19.956245
+124 chars  GETROWS-DIAG src0='a.gen.code.out_embd.weight'(q8_0) ne01=3072 i01=1099895540  src1='inp_code0'(i32) n_idx=1  as_f32=17.884254
+```
 
-**No fix upstream yet.** `origin/master` is still `6ea215d17` as of this writing —
-zero new commits since the build, and none touching `tools/tts` or `tools/mtmd`.
-This is day-old support; a crash is expected rather than surprising. Worth
-reporting with the two-quant reproduction and the EOG warning.
+**`ne01` is 3072, not 64.** It is the code0 codebook height, and has nothing to do
+with the ~64-frame ceiling. The overrun-past-a-fixed-dimension explanation is dead.
+
+**`i01` is not an out-of-range code token.** It is ~1.1 × 10⁹, and reinterpreting
+those bits as float32 gives 15.84, 19.96, 17.88 — plausible logit magnitudes,
+different every run. `inp_code0` is holding **float data that was never written to
+it as an index**.
+
+The wiring is otherwise correct, which is why this was hard to see from outside:
+`inp_code0` is declared `GGML_TYPE_I32` and flagged `ggml_set_input()`
+(`tools/mtmd/models/qwen3tts-gen.cpp:669-671`), `set_input_i32` asserts the type
+(`tools/mtmd/clip.cpp:4122`), and `params->code0` is bounds-checked against the
+codebook before upload (`clip.cpp:4779-4784`).
+
+The defect is that **none of that runs on the failing path.**
+`clip_graph_qwen3tts_gen::build()` always builds both sub-graphs — the comment at
+`qwen3tts-gen.cpp:650` says so outright: *"both sub-graphs are always built, so
+the topology stays constant; ggml_build_forward_select() then picks the one that
+actually runs."* But `set_inputs` branches
+(`clip.cpp:4733`): on `CLIP_GEN_PROCESS_GEN_WAV` it uploads `inp_codes` and the
+c2w state and returns — **`inp_code0` is never uploaded, and its bounds check is
+in the `else` branch that never executes.** The GEN_CODE `ggml_get_rows` node is
+still in the graph with an unwritten input buffer, and gets computed against
+whatever floats the allocator left there.
+
+That is why every backtrace passes through `mtmd_gen_audio_process` — the wav
+path — and never the code path.
+
+**Prompt length changes only when the first GEN_WAV call happens, not what
+happens.** `Hi.` never reaches the 32-frame progress print and dies at the first
+GEN_WAV call; the 124-char prompt prints `frames generated: 32` then `64`, then
+dies at the identical diagnostic. Same tensor, same `ne01`, same garbage class.
+One mechanism, two arrival times.
+
+This also disposes of the `special_eos_id is not in special_eog_ids` warning as
+the cause. It may still be a real tokenizer-config problem, but it cannot produce
+a float bit pattern in an i32 index tensor, and the crash happens on the first
+GEN_WAV call regardless of whether generation had anything left to say.
+
+**Fix belongs upstream, one of:** upload `inp_code0` unconditionally in
+`set_inputs`, or keep `ggml_build_forward_select` from admitting the unselected
+sub-graph's input nodes into the computed graph. The second is the general fix;
+the first is the one-liner that unblocks it.
+
+**No fix upstream yet.** `origin/master` is still `6ea215d17` — zero new commits
+since the build, none touching `tools/tts` or `tools/mtmd`. Reportable as-is: the
+diagnostic patch above, the three log lines, and the `set_inputs` branch.
+
+### Superseded reading (kept for the record)
+
+> *Generation never terminates cleanly, and dies at whichever comes first: the end
+> of its own content, or a ~64-frame ceiling* — consistent with the EOG warning,
+> and wrong. It was assembled entirely from black-box observations (crash frame vs
+> prompt length, across seven runs and two quantizations). Every one of those
+> observations was accurate; the inference from them was not. The `ne01`/`i01`
+> print cost one recompile of one file and refuted it outright.
+>
+> What survives from that work: **not** quantization (identical at Q8_0 and
+> Q4_K_M), and the ~64-frame ceiling is real but is a *separate* phenomenon — it
+> bounds how far generation gets before the wav call, nothing more.
 
 ## Fallback if Qwen3-TTS stays broken: Kokoro-82M
 
