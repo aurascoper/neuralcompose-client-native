@@ -23,6 +23,7 @@ Usage:  converse.py [--turns N] [--silent] [--no-memory] [--db PATH]
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -400,8 +401,8 @@ def main() -> int:
             if pcm is None:
                 break
             heard = transcribe(pcm)
-            if not heard or heard.strip("[](). ") == "":
-                continue          # whisper's bracketed non-speech, e.g. [BLANK_AUDIO]
+            if not heard or not re.sub(r"[\[(][^\])]*[\])]", "", heard).strip():
+                continue  # whisper non-speech tags: [BLANK_AUDIO], (barking), (music)…
             print(f"you: {heard}", flush=True)
 
             system = SYSTEM
