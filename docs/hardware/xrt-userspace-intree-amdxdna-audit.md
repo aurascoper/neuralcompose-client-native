@@ -149,6 +149,27 @@ and entirely fictitious tail-call delegating unsupported params to the older `GE
 `objdump -r` resolves offset `0x738c` to `.text+0x11c59` → `aie2_get_array.cold`. **Disassembly of a
 relocatable object is not self-interpreting; the relocation table is part of the instrument.**
 
+**Reproducibility record, independently re-derived on 2026-08-07** (a later session re-decompressed
+the module from the same live path and repeated the disassembly from scratch, rather than trusting
+the text above — this closes the gap the original write-up left, which named the technique but not
+the exact commands or module identity):
+
+```
+source:   /lib/modules/7.0.0-28-generic/kernel/drivers/accel/amdxdna/amdxdna.ko.zst
+extract:  unzstd -qf amdxdna.ko.zst -o amdxdna.ko
+module sha256: c9f4e62458afed1bf1a5de22ed7ab20491c8112b4ab1d0709f543eaf4fdb2462
+vermagic:      7.0.0-28-generic SMP preempt mod_unload modversions
+srcversion:    E4FC5AFFF53D21BC6AFDAE3
+commands:      objdump -d amdxdna.ko     # plain disassembly — misleadingly prints
+                                          # `738b: jmp 7390 <__pfx_aie2_get_info>`
+                                          # for the zero-displacement relocation placeholder
+               objdump -dr amdxdna.ko    # adds relocation records — correctly shows
+                                          # `738c: R_X86_64_PC32 .text+0x11c59`
+```
+
+All offsets (`71a7`, `71aa`, `71ad`, `727f`, `7283`, `738b`/`738c`, `11c77`) and the exact
+instruction bytes reproduced byte-for-byte against the original write-up above.
+
 ---
 
 ## 2. Claim 1 — Does AMD's XRT userspace speak the same ABI to the in-tree driver?
@@ -362,7 +383,7 @@ satisfiable(doc's boost-1.74 apt line)  = { jammy, lunar, mantic, noble }
 - **`/en/latest/` is a moving target.** 1.8.0 has no archived versioned path. Everything in §3–§4 is pinned to the **2026-08-03** doc build read on **2026-08-04**. Expect drift.
 - **`ryzen_ai-1.8.0.tgz` is EULA-gated**, so the *purpose* of the boost-1.74 line is unverified — it may be a real dependency of the Ryzen AI userspace even though it is not one of XRT's.
 - **Nothing was executed against the NPU.** XRT is absent (§1.1) and installing it was out of scope. Every claim about how the shim *behaves* against driver 0.7.0 on this host is untested. §1.4 establishes that the required *handlers exist*; it does not establish that a full XRT workload succeeds.
-- **`GET_ARRAY` sub-param coverage is unproven.** The handler exists; only params 0 and 2 appear in the header. I did not disassemble the dispatch switch.
+- ~~`GET_ARRAY` sub-param coverage is unproven.~~ **Superseded, see §1.4.** Closed by disassembly (2026-08-03, independently re-derived 2026-08-07): the accepted set is exactly `{0, 2}`, rejected via `-EOPNOTSUPP`, distinct from the `-EINVAL` malformed-argument path. This line originally said the opposite and was left stale after §1.4 was updated — see §6 for the correction record.
 - **Firmware protocol is a separate axis** (§2.5) that this audit did not systematically investigate.
 
 ### 5.3 Single-source claims — flagged
@@ -396,7 +417,26 @@ I re-read this artifact before delivery. Points that could read as contradiction
 - **Single-author concentration across #1447/#1448/#1449.** §2.4 originally flagged only the README's provenance, which understated the issue. **Fixed:** §2.4 and §5.3 now disclose that all three trace to one author.
 - **§3.2's nesting claim was load-bearing but unlisted in §7.** **Fixed:** now verified against raw HTML and entered in §7.
 
-No unresolved contradictions remain.
+**Found on a third pass (external review, 2026-08-07), which the prior “no unresolved
+contradictions remain” line above did not catch:**
+
+- **§1.4 said `GET_ARRAY` sub-param coverage was “CLOSED…by disassembly” while §5.2 and §7 still
+  said “unproven”/“Not verified.”** This was real: §1.4 had been updated with genuine disassembly
+  evidence (dated 2026-08-03) after the rest of the document was written, and §5.2/§7 were never
+  propagated to match — a stale cross-reference, not a fabricated claim in either direction (the
+  disassembly itself was independently re-derived from scratch on 2026-08-07 and reproduced
+  byte-for-byte, including the exact offsets and the relocation-placeholder gotcha). **Fixed:** §5.2
+  and §7 now match §1.4, with the module sha256 and exact `objdump` commands attached so the claim
+  is reproducible rather than asserted.
+- **Process note, stated plainly:** my own §6 pass previously declared “no unresolved
+  contradictions remain” twice (baseline delivery, then after the verifier's corrections) and
+  missed this one both times. A self-consistency check performed by the same author who wrote the
+  content is a weaker guarantee than an independent read — exactly the caveat §2.4/§5.3 already
+  apply to this audit's own single-author evidentiary pillars. This paragraph is that caveat
+  applied to the audit itself.
+
+No unresolved contradictions remain **as of this pass** — stated with the process caveat above,
+not as an assumption a fourth pass would be unnecessary.
 
 ---
 
@@ -417,7 +457,7 @@ No unresolved contradictions remain.
 | `.deb` declared dependencies, `readelf` output | Read from subagent notes — **not re-verified** (zip live + byte-exact `Content-Length`, but not re-extracted) |
 | LKML threads, GitHub issues/PRs, distro packaging, archived doc pages | Read from subagent notes with URLs; **not independently re-fetched** except `linux.html` |
 | XRT runtime behavior against driver 0.7.0 | **Not run — blocked** (XRT absent; installing was out of scope) |
-| `GET_ARRAY` sub-param dispatch | **Not verified** |
+| `GET_ARRAY` sub-param dispatch | **Verified by disassembly plus relocation-table resolution** (§1.4; module sha256 `c9f4e62458afed1bf1a5de22ed7ab20491c8112b4ab1d0709f543eaf4fdb2462`, commands `objdump -d`/`objdump -dr amdxdna.ko`, offsets `71a7–738b`/`11c77`; independently re-derived twice, 2026-08-03 and 2026-08-07) |
 | Recurring doc-drift watch | **Blocked** — `schedule_prompt` not available in this tool set |
 
 ---
