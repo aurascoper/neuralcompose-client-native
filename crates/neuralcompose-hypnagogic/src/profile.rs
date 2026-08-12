@@ -282,6 +282,21 @@ mod tests {
             assert_eq!(t.field_inertia, 0.12);
             assert_eq!(t.gloss_ema_alpha, 0.6);
         }
+
+        // `stalemate_margin` cannot go in that loop — contemplative moves it on
+        // purpose — so it is pinned per profile instead. Added because a
+        // mutation of the default from 0.05 to 0.02 survived the ENTIRE suite,
+        // conformance fixture included: no fixture case has a top-two margin
+        // landing between those two values, so nothing observed the change.
+        // Pinning the constant is the proportionate fix; a behavioural case at
+        // the boundary would need injected potentials in the harness.
+        assert_eq!(Tuning::default().stalemate_margin, 0.05);
+        assert_eq!(ContextProfile::Focused.tuning().stalemate_margin, 0.05);
+        assert_eq!(ContextProfile::Reflective.tuning().stalemate_margin, 0.05);
+        assert_eq!(
+            ContextProfile::Contemplative.tuning().stalemate_margin,
+            0.12
+        );
     }
 
     /// The behavioural ordering the modes exist to express. Asserted as an

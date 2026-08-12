@@ -52,6 +52,12 @@ struct Case {
     reply_centroid: Option<Vec<f32>>,
     candidates: Vec<CaseCandidate>,
     tension: f32,
+    /// True when the harness passed tension to `compete` directly instead of
+    /// deriving it from the candidate embeddings. Boundary cases do this so a
+    /// comparison operator can be exercised at exact equality, which a cosine
+    /// -derived tension cannot reach reliably in `f32`.
+    #[serde(default)]
+    tension_injected: bool,
     selection_temperature: f32,
     probabilities: Vec<f32>,
     draw: f64,
@@ -156,6 +162,23 @@ fn the_fixture_covers_the_paths_that_matter() {
 
     // Different draws must actually select different basins somewhere, or the
     // recorded draws are decorative and the whole injected-draw design is unproven.
+    for marker in [
+        "boundary-tension-exactly-at-bar",
+        "boundary-tension-just-under-bar",
+        "boundary-draw-exactly-on-cumulative",
+    ] {
+        assert!(
+            f.cases.iter().any(|c| c.name.contains(marker)),
+            "fixture is missing the {marker} case; a mutation run showed the \
+             derived-tension cases alone cannot discriminate the comparison \
+             operators these sit exactly on"
+        );
+    }
+    assert!(
+        f.cases.iter().any(|c| c.tension_injected),
+        "no case injects tension; the silence-gate boundary is unreachable"
+    );
+
     let bifurcations: Vec<_> = f
         .cases
         .iter()
@@ -244,13 +267,15 @@ fn rust_dynamics_reproduce_the_swift() {
             .iter()
             .map(|c| Embedding::new(c.embedding.clone(), &f.model_id))
             .collect();
-        match dynamics::tension(&embeddings) {
-            Some(t) if close(t, case.tension) => {}
-            Some(t) => failures.push(format!(
-                "{}: tension: rust {t} vs swift {}",
-                case.name, case.tension
-            )),
-            None => failures.push(format!("{}: tension came back incomparable", case.name)),
+        if !case.tension_injected {
+            match dynamics::tension(&embeddings) {
+                Some(t) if close(t, case.tension) => {}
+                Some(t) => failures.push(format!(
+                    "{}: tension: rust {t} vs swift {}",
+                    case.name, case.tension
+                )),
+                None => failures.push(format!("{}: tension came back incomparable", case.name)),
+            }
         }
 
         let tau = dynamics::selection_temperature(case.tension, &tuning);
