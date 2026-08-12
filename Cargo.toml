@@ -3,5 +3,6 @@ resolver = "2"
 members = [
     "crates/neuralcompose-mobile-core",
     "crates/neuralcompose-headless",
+    "crates/neuralcompose-hypnagogic",
     "crates/neuralcompose-llama",
 ]

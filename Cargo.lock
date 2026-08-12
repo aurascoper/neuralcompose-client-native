@@ -927,6 +927,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "neuralcompose-hypnagogic"
+version = "0.1.0"
+dependencies = [
+ "neuralcompose-mobile-core",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "neuralcompose-llama"
 version = "0.1.0"
 

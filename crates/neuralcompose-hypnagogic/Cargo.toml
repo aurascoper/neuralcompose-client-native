@@ -1,0 +1,21 @@
+[package]
+name = "neuralcompose-hypnagogic"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+description = "Hypnagogic loop modes, dialectical competition, turn logging and the world-model demo, ported from the macOS NeuralCompose Swift app."
+
+# Same split as the rest of the workspace: the LIB is pure (no clock, no
+# sockets, no filesystem, no subprocesses) and the BINARY owns every effect.
+# `mobile-core` holds that rule for its own reasons; here it is what lets the
+# whole dialectic be tested against a fixture with no llama.cpp, no whisper and
+# no llama-server present, which is exactly what CI has.
+[lib]
+name = "neuralcompose_hypnagogic"
+
+[dependencies]
+neuralcompose-mobile-core = { path = "../neuralcompose-mobile-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.11.0"
