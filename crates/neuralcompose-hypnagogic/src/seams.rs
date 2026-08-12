@@ -82,39 +82,99 @@ pub trait Speaking {
     fn speak(&mut self, text: &str, prosody: Prosody) -> SeamResult<()>;
 }
 
-/// How a spoken turn sounds. Port of the Swift `SpeechProsody`; the dialectic
-/// blends role voices in proportion to the competition's probabilities, so
-/// tension is audible even when only one basin is voiced.
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// How a spoken turn sounds. Port of `SpeechProsody`
+/// (`Sources/BCICore/Protocols/SpeechSynthesizing.swift:59`).
+///
+/// Every field is optional, and `None` means "let the engine decide" rather
+/// than zero — which is why [`Prosody::blend`] lets a `None` field *abstain*
+/// instead of dragging the mean toward 0.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Prosody {
-    pub rate: f32,
-    pub pitch: f32,
-    pub volume: f32,
+    pub rate: Option<f32>,
+    pub pitch_multiplier: Option<f32>,
+    pub volume: Option<f32>,
+    /// Seconds of silence before the utterance. `TimeInterval` in the Swift.
+    pub pre_utterance_delay: Option<f64>,
 }
 
 impl Prosody {
-    /// Slow, low and quiet — the hypnagogic default.
+    /// Slow, low-pitched, soft — hypnagogic cue playback that must not spike
+    /// arousal. Deliberately conservative; the safety rationale (no harsh
+    /// treble, no sudden onset) is in `SLEEP_CYCLE_DESIGN.md`.
     pub const HYPNAGOGIC: Self = Self {
-        rate: 0.38,
-        pitch: 0.85,
-        volume: 0.7,
+        rate: Some(0.35),
+        pitch_multiplier: Some(0.8),
+        volume: Some(0.6),
+        pre_utterance_delay: Some(0.4),
     };
 
-    /// Weighted blend of two voices. `w` is the weight on `self`.
-    pub fn blend(self, other: Prosody, w: f32) -> Prosody {
-        let w = w.clamp(0.0, 1.0);
-        let mix = |a: f32, b: f32| a * w + b * (1.0 - w);
-        Prosody {
-            rate: mix(self.rate, other.rate),
-            pitch: mix(self.pitch, other.pitch),
-            volume: mix(self.volume, other.volume),
-        }
-    }
-}
+    /// The coherence pole's sleep voice — identical to [`Self::HYPNAGOGIC`].
+    pub const HYPNAGOGIC_STABILIZER: Self = Self::HYPNAGOGIC;
 
-impl Default for Prosody {
-    fn default() -> Self {
-        Self::HYPNAGOGIC
+    /// The displacement pole's sleep voice: quicker and brighter so the
+    /// dreaming undercurrent is *audibly* different, while staying inside the
+    /// same arousal-safe envelope.
+    pub const HYPNAGOGIC_DREAMER: Self = Self {
+        rate: Some(0.42),
+        pitch_multiplier: Some(0.98),
+        volume: Some(0.6),
+        pre_utterance_delay: Some(0.3),
+    };
+
+    /// The coherence pole's **waking** voice — present and natural-paced, NOT
+    /// the slow arousal-safe envelope. Used by the waking role set, which is
+    /// what the Focused / Reflective / Contemplative profiles run.
+    pub const WAKING_COHERENT: Self = Self {
+        rate: Some(0.5),
+        pitch_multiplier: Some(1.0),
+        volume: Some(0.9),
+        pre_utterance_delay: Some(0.1),
+    };
+
+    /// The displacement pole's **waking** voice — quicker and brighter so the
+    /// opposing voice is audibly distinct, without the sleepy slowness.
+    pub const WAKING_DIVERGENT: Self = Self {
+        rate: Some(0.54),
+        pitch_multiplier: Some(1.06),
+        volume: Some(0.9),
+        pre_utterance_delay: Some(0.05),
+    };
+
+    /// Weighted mean of several prosodies — the mechanism that makes tension
+    /// *audible*. A spoken turn is voiced by blending the role voices in
+    /// proportion to the competition's probabilities, so a close call carries
+    /// the losing pole's colour even though only the winner's words are said.
+    ///
+    /// Each field is averaged only over the contributors that specify it (a
+    /// `None` field abstains); non-positive weights are ignored; an all-`None`
+    /// prosody comes back when nothing contributes.
+    pub fn blend(weighted: &[(Prosody, f32)]) -> Prosody {
+        fn mean_f32(w: &[(Prosody, f32)], get: impl Fn(&Prosody) -> Option<f32>) -> Option<f32> {
+            let (mut acc, mut wsum) = (0.0f32, 0.0f32);
+            for (p, weight) in w.iter().filter(|(_, weight)| *weight > 0.0) {
+                if let Some(v) = get(p) {
+                    acc += v * weight;
+                    wsum += weight;
+                }
+            }
+            (wsum > 0.0).then(|| acc / wsum)
+        }
+        fn mean_f64(w: &[(Prosody, f32)], get: impl Fn(&Prosody) -> Option<f64>) -> Option<f64> {
+            let (mut acc, mut wsum) = (0.0f64, 0.0f64);
+            for (p, weight) in w.iter().filter(|(_, weight)| *weight > 0.0) {
+                if let Some(v) = get(p) {
+                    acc += v * *weight as f64;
+                    wsum += *weight as f64;
+                }
+            }
+            (wsum > 0.0).then(|| acc / wsum)
+        }
+        Prosody {
+            rate: mean_f32(weighted, |p| p.rate),
+            pitch_multiplier: mean_f32(weighted, |p| p.pitch_multiplier),
+            volume: mean_f32(weighted, |p| p.volume),
+            pre_utterance_delay: mean_f64(weighted, |p| p.pre_utterance_delay),
+        }
     }
 }
 
@@ -213,23 +273,56 @@ mod tests {
         assert_eq!(d.next_draw(), 0.0);
     }
 
+    fn p(rate: Option<f32>, volume: Option<f32>) -> Prosody {
+        Prosody {
+            rate,
+            pitch_multiplier: None,
+            volume,
+            pre_utterance_delay: None,
+        }
+    }
+
     #[test]
-    fn prosody_blend_is_weighted_and_clamped() {
-        let a = Prosody {
-            rate: 1.0,
-            pitch: 1.0,
-            volume: 1.0,
-        };
-        let b = Prosody {
-            rate: 0.0,
-            pitch: 0.0,
-            volume: 0.0,
-        };
-        assert_eq!(a.blend(b, 1.0), a);
-        assert_eq!(a.blend(b, 0.0), b);
-        assert!((a.blend(b, 0.5).rate - 0.5).abs() < 1e-6);
-        // Out-of-range weights clamp rather than extrapolating past either voice.
-        assert_eq!(a.blend(b, 2.0), a);
-        assert_eq!(a.blend(b, -1.0), b);
+    fn prosody_blend_is_a_weighted_mean() {
+        let b = Prosody::blend(&[(p(Some(1.0), None), 1.0), (p(Some(0.0), None), 1.0)]);
+        assert_eq!(b.rate, Some(0.5));
+        let skewed = Prosody::blend(&[(p(Some(1.0), None), 3.0), (p(Some(0.0), None), 1.0)]);
+        assert_eq!(skewed.rate, Some(0.75));
+    }
+
+    /// A `None` field must ABSTAIN, not count as zero — otherwise a voice that
+    /// simply declines to set `rate` would silently drag the blend toward
+    /// silence.
+    #[test]
+    fn a_none_field_abstains_rather_than_counting_as_zero() {
+        let b = Prosody::blend(&[(p(Some(1.0), None), 1.0), (p(None, Some(0.2)), 1.0)]);
+        assert_eq!(b.rate, Some(1.0));
+        assert_eq!(b.volume, Some(0.2));
+        assert_eq!(b.pitch_multiplier, None);
+    }
+
+    #[test]
+    fn non_positive_weights_are_ignored_and_an_empty_blend_is_all_none() {
+        let b = Prosody::blend(&[(p(Some(1.0), None), 1.0), (p(Some(0.0), None), 0.0)]);
+        assert_eq!(b.rate, Some(1.0));
+        let neg = Prosody::blend(&[(p(Some(1.0), None), 1.0), (p(Some(0.0), None), -5.0)]);
+        assert_eq!(neg.rate, Some(1.0));
+        assert_eq!(Prosody::blend(&[]), Prosody::default());
+        assert_eq!(
+            Prosody::blend(&[(p(Some(1.0), None), 0.0)]),
+            Prosody::default()
+        );
+    }
+
+    /// The waking voices are what the three dialectical profiles actually use,
+    /// and they must stay audibly distinct from each other and from the sleep
+    /// envelope — that distinctness is the whole point of blending them.
+    #[test]
+    fn waking_voices_are_distinct_and_faster_than_the_sleep_envelope() {
+        assert_ne!(Prosody::WAKING_COHERENT, Prosody::WAKING_DIVERGENT);
+        assert!(Prosody::WAKING_DIVERGENT.rate > Prosody::WAKING_COHERENT.rate);
+        assert!(Prosody::WAKING_COHERENT.rate > Prosody::HYPNAGOGIC.rate);
+        assert_eq!(Prosody::HYPNAGOGIC_STABILIZER, Prosody::HYPNAGOGIC);
+        assert!(Prosody::HYPNAGOGIC_DREAMER.rate > Prosody::HYPNAGOGIC.rate);
     }
 }

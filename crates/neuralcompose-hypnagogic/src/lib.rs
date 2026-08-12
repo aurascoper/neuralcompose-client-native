@@ -41,14 +41,29 @@
 //!
 //! ## Conformance status
 //!
-//! [`dynamics`] and [`profile`] are hand ports whose constants are pinned by
-//! unit tests, but whose *arithmetic* is not yet asserted against the Swift.
-//! The fixture that makes "port" a checkable claim is generated on the Mac
-//! (`swift` is not installed on the Linux box). Until it lands, agreement is
-//! intended, not established.
+//! [`dynamics`] is **verified against the Swift**, not merely self-consistent:
+//! `tests/dialectic_conformance.rs` replays 48 cases emitted by
+//! `Sources/DialecticFixture` in the NeuralCompose repo and checks every
+//! intermediate — per-axis energies, potentials, tension, selection
+//! temperature, the full probability vector, margin, decisive flag and selected
+//! basin. Selection draws are recorded and injected, never seeded, because the
+//! two languages' PRNGs diverge from the same seed.
+//!
+//! That test has itself been mutation-tested; two comparison operators were
+//! only reachable by fixture cases placed exactly on the boundary, and those
+//! cases are now asserted present. If you change [`dynamics`], re-check that
+//! mutating it still turns the suite red — and confirm the mutation actually
+//! applied first, since a patch that matched nothing is indistinguishable from
+//! a surviving mutant.
+//!
+//! [`profile`] and [`role`] are pinned by constant-for-constant unit tests
+//! rather than by the fixture. Regenerating the fixture after any change to the
+//! Swift dialectic is the mechanism that keeps this honest; the harness is
+//! committed for exactly that reason.
 
 pub mod dynamics;
 pub mod embedding;
 pub mod profile;
+pub mod role;
 pub mod seams;
 pub mod turn_log;
