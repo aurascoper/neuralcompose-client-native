@@ -17,6 +17,15 @@
 //! has no such need, and a `stop()` that must interrupt an in-flight `listen`
 //! is a property of the shell's listener, not of this logic.
 //!
+//! **Known coverage gap, and a consequence of that choice.**
+//! `ContextProfile::inter_turn_delay` is now a value the lib merely *states* and
+//! the shell consumes, so no test here can observe that Contemplative actually
+//! breathes slower than Focused. `profile.rs` pins the constants and their
+//! ordering, but a shell that read the wrong profile's delay — or ignored it —
+//! would pass the whole suite. Its only real coverage is the end-to-end mode
+//! comparison (verification step 3: ~2 s vs ~6 s between turns). Written down
+//! here so a timing regression is a known gap rather than a surprise.
+//!
 //! ## What is preserved exactly
 //!
 //! - **Strict listen→speak alternation.** The mic is closed before anything is
@@ -428,12 +437,19 @@ mod tests {
     /// are dropped — `"."` is not empty.
     ///
     /// This is faithful to `HypnagogicDialogueLoop.chunk` and is pinned rather
-    /// than fixed. It is a real artifact: each stray `"."` becomes its own
-    /// `speak()` call, which on the sleep voices adds a 0.4 s
-    /// `pre_utterance_delay` apiece and, in the shell, a subprocess spawn. It is
-    /// cosmetic rather than incorrect, so "improving" it here would put the port
-    /// out of step with the Swift for no correctness gain — the kind of drift
-    /// that makes a port unverifiable. Fix it in the Swift first if it matters.
+    /// than fixed, because diverging for no *correctness* gain is what makes a
+    /// port unverifiable.
+    ///
+    /// **But it is a latency bug, not a cosmetic one — see
+    /// `docs/reviews/absent-as-legitimate-value-2026-08-12.md` in the
+    /// NeuralCompose repo.** A single "…" yields three lone-punctuation chunks:
+    /// three `speak()` calls, three subprocess spawns, and three
+    /// `pre_utterance_delay`s. On the contemplative voices that is over a second
+    /// of dead air *inside one spoken turn* — and ellipses are most common in
+    /// exactly that register. In a conversational loop, turn latency is the
+    /// product. It will be audible the first time mirror mode speaks.
+    ///
+    /// Fix it in the Swift first, then regenerate; do not fix it here alone.
     #[test]
     fn punctuation_runs_emit_lone_punctuation_chunks_as_the_swift_does() {
         assert_eq!(

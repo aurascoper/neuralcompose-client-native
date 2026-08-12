@@ -261,11 +261,22 @@ mod tests {
         }
     }
 
-    /// The two registers must not be interchangeable: same ids and objectives,
-    /// different words and different voices. A copy-paste that left the sleep
-    /// prompts in the waking set would be invisible except here.
+    /// **The three dialectical modes must run [`waking_roles`]. Using
+    /// [`sleep_roles`] for them would be a bug**, not a variation — this is the
+    /// correct behaviour confirmed against
+    /// `Sources/BCICore/Dialectic/DialecticalRole.swift`, whose `wakingRoles`
+    /// doc says they are "selected by the app for the dialectical modes
+    /// (focused / reflective / contemplative)" while the sleep pair "stay
+    /// reserved for the future wind-down / hypnagogic / dream rungs."
+    ///
+    /// The failure mode this guards is silent: the two pairs share ids,
+    /// temperatures and objectives, so a set swapped by copy-paste passes every
+    /// structural check while inverting the entire register — the loop would
+    /// murmur sleep-onset language into a waking conversation at the sleep
+    /// voices' pace. Hence the assertions on register-specific *wording*, not
+    /// merely on inequality.
     #[test]
-    fn the_registers_differ_in_wording_and_voice_but_not_identity() {
+    fn waking_is_the_dialectical_register_and_sleep_is_not_interchangeable_with_it() {
         for (waking, sleep) in waking_roles().iter().zip(sleep_roles().iter()) {
             assert_eq!(waking.id, sleep.id);
             assert_eq!(waking.temperature, sleep.temperature);
