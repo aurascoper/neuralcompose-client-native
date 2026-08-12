@@ -63,6 +63,7 @@
 
 pub mod dynamics;
 pub mod embedding;
+pub mod loops;
 pub mod profile;
 pub mod role;
 pub mod seams;
