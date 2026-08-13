@@ -32,8 +32,22 @@ struct Fixture {
     schema_id: String,
     config: EnvConfig,
     initial_state: Vec<f64>,
+    source: Source,
     coverage: Coverage,
     steps: Vec<Step>,
+}
+
+/// Where this fixture came from. Present so the reference itself is pinned:
+/// the fixture is generated FROM `env.py`, so without this Python is the
+/// reference by construction and a change to it would leave every
+/// implementation green against a stale trace.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Source {
+    repo: String,
+    path: String,
+    file_sha256: String,
+    read_on: String,
 }
 
 #[derive(Deserialize)]
@@ -174,6 +188,29 @@ fn the_fixture_reaches_the_states_that_discriminate() {
     assert_eq!(
         clamped, c.clamped_steps,
         "clamped count is not what the steps say"
+    );
+}
+
+/// The fixture must name the source it was generated from, by digest.
+///
+/// `scripts/check-env-fixture-drift.sh` re-reads `env.py` and compares; this
+/// asserts the fixture carries what that script needs. Without it, three
+/// conformant implementations would agree with each other forever while the
+/// reference moved underneath them — the agreement being reassuring exactly
+/// when it had stopped meaning anything.
+#[test]
+fn the_fixture_pins_the_source_it_was_generated_from() {
+    let s = fixture().source;
+    assert_eq!(s.repo, "NeuralCompose");
+    assert_eq!(s.path, "WorldModel/env.py");
+    assert!(!s.read_on.trim().is_empty(), "readOn is missing");
+    assert!(
+        s.file_sha256.len() == 64
+            && s.file_sha256
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()),
+        "fileSha256 is not 64 lowercase hex: {:?}",
+        s.file_sha256
     );
 }
 
