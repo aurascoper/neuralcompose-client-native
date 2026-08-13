@@ -1,0 +1,14 @@
+{
+  "schemaId": "neuralcompose.provenance-envelope.v1",
+  "assertionKind": "heuristicAnnotation",
+  "method": {
+    "methodId": "neuralcompose.channel-health.thresholds.v1",
+    "softwareId": "neuralcompose-mobile-core",
+    "softwareVersion": "0.1.0",
+    "gitCommit": null,
+    "parametersDigest": "5555555555555555555555555555555555555555555555555555555555555555"
+  },
+  "inputs": [],
+  "confidence": 1.0,
+  "comparisonEmbeddingSpace": null
+}

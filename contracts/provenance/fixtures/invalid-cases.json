@@ -1,0 +1,109 @@
+{
+  "comment": "Each case sets one JSON pointer on the named valid fixture and must fail for EXACTLY ONE reason. `defect` names the single expected ProvenanceDefect variant, and the test asserts the returned list has length one and equals it — a validator that returns a pile of errors is not precision. `schemaInvalid` records whether the JSON Schema alone rejects the case, asserted in BOTH directions so the marker table cannot drift. A pointer whose parent exists but whose key does not is an insertion, which is how the misspelled-field case is expressed.",
+  "cases": [
+    {
+      "name": "derivation without a method",
+      "base": "derived",
+      "pointer": "/method",
+      "value": null,
+      "defect": "MethodRequired",
+      "schemaInvalid": true
+    },
+    {
+      "name": "derivation naming no inputs cannot be recomputed",
+      "base": "derived",
+      "pointer": "/inputs",
+      "value": [],
+      "defect": "DerivationInputsRequired",
+      "schemaInvalid": true
+    },
+    {
+      "name": "heuristic without a method",
+      "base": "heuristic",
+      "pointer": "/method",
+      "value": null,
+      "defect": "MethodRequired",
+      "schemaInvalid": true
+    },
+    {
+      "name": "confidence on a recomputable claim",
+      "base": "derived",
+      "pointer": "/confidence",
+      "value": 0.92,
+      "defect": "ConfidenceNotApplicable",
+      "schemaInvalid": true
+    },
+    {
+      "name": "confidence above one",
+      "base": "heuristic",
+      "pointer": "/confidence",
+      "value": 1.5,
+      "defect": "ConfidenceOutOfRange",
+      "schemaInvalid": true
+    },
+    {
+      "name": "confidence below zero",
+      "base": "heuristic",
+      "pointer": "/confidence",
+      "value": -0.1,
+      "defect": "ConfidenceOutOfRange",
+      "schemaInvalid": true
+    },
+    {
+      "name": "uppercase input digest",
+      "base": "derived",
+      "pointer": "/inputs/0/sha256Hex",
+      "value": "2222222222222222222222222222222222222222222222222222222222222AAA",
+      "defect": "MalformedDigest:sha256Hex",
+      "schemaInvalid": true
+    },
+    {
+      "name": "truncated parameters digest",
+      "base": "derived",
+      "pointer": "/method/parametersDigest",
+      "value": "abc",
+      "defect": "MalformedDigest:parametersDigest",
+      "schemaInvalid": true
+    },
+    {
+      "name": "abbreviated git commit",
+      "base": "derived",
+      "pointer": "/method/gitCommit",
+      "value": "0123456",
+      "defect": "MalformedDigest:gitCommit",
+      "schemaInvalid": true
+    },
+    {
+      "name": "empty method id",
+      "base": "derived",
+      "pointer": "/method/methodId",
+      "value": "",
+      "defect": "EmptyField:methodId",
+      "schemaInvalid": true
+    },
+    {
+      "name": "empty resource kind",
+      "base": "derived",
+      "pointer": "/inputs/0/resourceKind",
+      "value": "",
+      "defect": "EmptyField:resourceKind",
+      "schemaInvalid": true
+    },
+    {
+      "name": "envelope declaring a foreign schema",
+      "base": "heuristic",
+      "pointer": "/schemaId",
+      "value": "neuralcompose.provenance-envelope.v2",
+      "defect": "SchemaIdMismatch",
+      "schemaInvalid": true
+    },
+    {
+      "name": "misspelled optional field becomes a silent absence",
+      "base": "heuristic",
+      "pointer": "/confidenceScore",
+      "value": 0.5,
+      "defect": "SerdeRejects",
+      "schemaInvalid": true
+    }
+  ]
+}

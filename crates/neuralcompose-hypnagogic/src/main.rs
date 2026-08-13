@@ -591,20 +591,30 @@ fn run(args: Args) -> Result<(), String> {
                 profile,
                 DialecticConfig {
                     chunk_replies,
+                    // `None` whenever the tree was dirty at build time — see
+                    // build.rs. An unpinned build says so rather than naming a
+                    // commit that does not describe it.
+                    git_commit: option_env!("NC_HYPNAGOGIC_COMMIT").map(str::to_string),
                     ..DialecticConfig::default()
                 },
             );
+            let method = l.method_identity();
             for turn_number in 0..args.turns {
                 match l.turn() {
                     Ok(Some(t)) => {
                         if args.json {
                             println!(
                                 "{}",
-                                serde_json::to_string(&t.to_turn_line(args.mode.id())).unwrap()
+                                serde_json::to_string(
+                                    &t.to_turn_line(args.mode.id(), method.clone())
+                                )
+                                .unwrap()
                             );
                         }
                         if let Some(r) = recorder.as_mut() {
-                            payload.push_str(&r.on_turn(&t.to_turn_line(args.mode.id())));
+                            payload.push_str(
+                                &r.on_turn(&t.to_turn_line(args.mode.id(), method.clone())),
+                            );
                             payload.push('\n');
                         }
                         if let Some(err) = &t.witness_error {

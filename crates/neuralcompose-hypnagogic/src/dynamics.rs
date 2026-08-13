@@ -124,7 +124,11 @@ pub enum DialecticalOutcome {
 
 /// Small, well-commented knobs. Field-driven weights are milestone 5 and are
 /// deliberately absent.
-#[derive(Clone, Copy, Debug, PartialEq)]
+///
+/// `Serialize` is load-bearing, not decoration: `turn_log::dialectic_method_identity`
+/// digests this struct to record the frozen parameters a turn ran under, so a
+/// changed knob changes the digest without anyone maintaining a field list.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct Tuning {
     /// Base selection temperature at zero tension (softer competition).
     pub tau_base: f32,

@@ -50,6 +50,7 @@ use crate::seams::{
     Speaking, TextGenerating,
 };
 use crate::turn_log::{TurnLine, NEUTRAL_GLOSS};
+use neuralcompose_mobile_core::provenance::MethodIdentity;
 
 /// The Witness's stance. The *observing* posture lives in a system prompt so the
 /// user prompt can stay a bare question, exactly as the Swift splits it between
@@ -152,6 +153,14 @@ pub struct DialecticConfig {
     /// See [`crate::loops::MirrorConfig::chunk_replies`]. Set false for a
     /// neural voice, which owns its own sentence-level prosody.
     pub chunk_replies: bool,
+    /// Stamped into every turn record's provenance envelope (ADR-004).
+    ///
+    /// Supplied by the shell rather than read here, because a pure library
+    /// cannot know its own deployment — the same division `CaptureBuildIdentity`
+    /// already uses. `git_commit` is `None` for a build that did not come from a
+    /// checkout, and that is never treated as a pinned build.
+    pub software_version: String,
+    pub git_commit: Option<String>,
 }
 
 impl Default for DialecticConfig {
@@ -165,6 +174,8 @@ impl Default for DialecticConfig {
                 .collect(),
             history_window: 16,
             chunk_replies: true,
+            software_version: env!("CARGO_PKG_VERSION").to_string(),
+            git_commit: None,
         }
     }
 }
@@ -194,13 +205,18 @@ pub struct DialecticTurn {
 
 impl DialecticTurn {
     /// The persisted record for this turn.
-    pub fn to_turn_line(&self, mode: &str) -> TurnLine {
+    ///
+    /// `method` is passed in rather than derived here because a turn does not
+    /// know which build ran it — [`DialecticLoop::method_identity`] is where the
+    /// profile's tuning and the shell's version meet.
+    pub fn to_turn_line(&self, mode: &str, method: MethodIdentity) -> TurnLine {
         let mut line = TurnLine::new(
             self.index,
             mode,
             &self.heard,
             &self.scored,
             &self.resolution,
+            method,
         )
         .with_witness(
             self.witness_attempted,
@@ -226,6 +242,7 @@ pub struct DialecticLoop<L, G, S, E, R> {
     tuning: Tuning,
     config: DialecticConfig,
     memory: DialecticalMemory,
+    method: MethodIdentity,
     standing_tension: f32,
     consecutive_silence: u32,
     silence_index: usize,
@@ -258,6 +275,13 @@ where
         let tuning = profile.tuning();
         let memory =
             DialecticalMemory::new(config.history_window, tuning.synthesis_tension_ceiling);
+        // Computed once: the profile and the shell's build identity are both
+        // fixed for the life of the loop, so the digest cannot drift mid-session.
+        let method = crate::turn_log::dialectic_method_identity(
+            profile,
+            config.software_version.clone(),
+            config.git_commit.clone(),
+        );
         Self {
             listener,
             generator,
@@ -269,6 +293,7 @@ where
             tuning,
             config,
             memory,
+            method,
             standing_tension: 0.0,
             consecutive_silence: 0,
             silence_index: 0,
@@ -278,6 +303,12 @@ where
 
     pub fn turns_taken(&self) -> u64 {
         self.turn_index
+    }
+
+    /// Which build, under which frozen tuning, is producing these turns.
+    /// Hand this to [`DialecticTurn::to_turn_line`].
+    pub fn method_identity(&self) -> MethodIdentity {
+        self.method.clone()
     }
 
     pub fn standing_tension(&self) -> f32 {

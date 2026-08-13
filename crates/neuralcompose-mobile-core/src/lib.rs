@@ -20,6 +20,7 @@ pub mod electrode_check;
 pub mod model_pack;
 pub mod presentation;
 pub mod property_law;
+pub mod provenance;
 pub mod provider;
 pub mod reconnect;
 pub mod runtime_target;

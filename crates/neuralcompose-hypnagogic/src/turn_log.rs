@@ -12,30 +12,122 @@
 //! basin — or silence, or synthesis — resolved it. A trajectory of these is a
 //! path through the dialogue's semantic space.
 //!
-//! Privacy contract, carried from ADR-005: this is **local, opt-in and never
-//! transmitted**, off unless the caller passes `--log`. It carries text and
-//! scalar scores only — never a raw embedding. That is the same line the Swift
-//! drew, and for the same reason: logging a continuous vector reads as more
-//! authoritative than the spectral estimator's own honesty caveat allows.
+//! Privacy contract, carried from **the macOS repository's ADR-005** (that
+//! registry is separate from this one — the local decision log runs ADR-001,
+//! ADR-002, ADR-004): this is **local, opt-in and never transmitted**, off
+//! unless the caller passes `--log`. It carries text and scalar scores only —
+//! never a raw embedding. That is the same line the Swift drew, and for the
+//! same reason: logging a continuous vector reads as more authoritative than
+//! the spectral estimator's own honesty caveat allows.
+//!
+//! Every line carries a [`ProvenanceEnvelope`] naming the software, commit and
+//! frozen tuning that produced it (ADR-004). Before that, "which build wrote
+//! this record?" had no answer at all — `capture.rs`'s manifest beside it has
+//! carried a build identity since M4.
 
 use crate::dynamics::{DialecticalOutcome, Resolution, ScoredCandidate};
+use crate::profile::ContextProfile;
 use neuralcompose_mobile_core::audio::sha256_hex;
 use neuralcompose_mobile_core::channel_health::ChannelHealthStatus;
+use neuralcompose_mobile_core::provenance::{
+    validate as validate_provenance, AssertionKind, MethodIdentity, ProvenanceEnvelope,
+    PROVENANCE_ENVELOPE_SCHEMA,
+};
 use neuralcompose_mobile_core::types::CHANNEL_ORDER;
 use serde::{Deserialize, Serialize};
 
-pub const TURN_LINE_SCHEMA: &str = "neuralcompose.hypnagogic.turn.v1";
+/// v2 adds the required `provenance` envelope. Bumped rather than edited in
+/// place: `contracts/README.md`'s rule is that contract changes are new
+/// versions, and [`verify_turn_log`] already refuses a line whose schema it does
+/// not recognize — which is the correct treatment of a v1 log by a v2 reader.
+pub const TURN_LINE_SCHEMA: &str = "neuralcompose.hypnagogic.turn.v2";
 pub const TURN_MANIFEST_SCHEMA: &str = "neuralcompose.hypnagogic.turnlog.v1";
 
-/// The neutral gloss. `SpectralState` comes from a Core ML classifier with no
-/// Linux runtime, so on this platform the scalar is always neutral and
+/// Identifies this crate as the producing software in every turn's envelope.
+pub const DIALECTIC_METHOD_ID: &str = "neuralcompose.hypnagogic.dialectic.v1";
+pub const SOFTWARE_ID: &str = "neuralcompose-hypnagogic";
+
+/// The neutral gloss. `SpectralState` comes from an **MLX**-backed estimator
+/// (`Sources/BCILLM/SpectralStateEstimator.swift:23` in the macOS repository,
+/// not a Core ML classifier as this comment claimed until 2026-08-13) which has
+/// no Linux runtime, so on this platform the scalar is always neutral and
 /// [`TurnLine::spectral_state`] is always `None`.
 ///
 /// It is recorded as a real value rather than omitted **on purpose**: 0.5 means
 /// both "the estimator said neutral" and "there was no estimator", so an absent
 /// field could not later be told apart from a genuine neutral reading. Present
 /// and neutral is a fact; absent is a hole.
+///
+/// Note what this ceiling rests on. In the Swift the gloss is *not* inert: four
+/// of `SpectralGloss.scalar`'s five states are non-neutral, and the scalar
+/// reaches selection through `DialecticalField.advance` → weights → potential →
+/// softmax. It stays neutral here because **no estimator exists on Linux**, not
+/// because the gloss cannot bias anything. Ship an estimator and this ceiling is
+/// gone.
 pub const NEUTRAL_GLOSS: f32 = 0.5;
+
+/// The envelope for a turn record: which build, under which frozen tuning.
+///
+/// `parameters_digest` is a sha256 over the profile's own [`crate::dynamics::Tuning`],
+/// so changing any knob changes the digest — no hand-maintained field list to
+/// fall out of date.
+///
+/// `software_version` and `git_commit` come from the caller because only the
+/// shell knows them, the same division of labour as `CaptureBuildIdentity`.
+/// `None` for the commit means the build did not come from a checkout; it is
+/// never treated as a pinned build.
+pub fn dialectic_method_identity(
+    profile: ContextProfile,
+    software_version: impl Into<String>,
+    git_commit: Option<String>,
+) -> MethodIdentity {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Params {
+        domain: &'static str,
+        profile: &'static str,
+        tuning: crate::dynamics::Tuning,
+    }
+    let digest = sha256_hex(
+        serde_json::to_vec(&Params {
+            domain: DIALECTIC_METHOD_ID,
+            profile: profile.id(),
+            tuning: profile.tuning(),
+        })
+        .expect("Tuning is always serializable"),
+    );
+    MethodIdentity {
+        method_id: DIALECTIC_METHOD_ID.to_string(),
+        software_id: SOFTWARE_ID.to_string(),
+        software_version: software_version.into(),
+        git_commit,
+        parameters_digest: digest,
+    }
+}
+
+/// A turn record is a [`AssertionKind::HeuristicAnnotation`], and therefore
+/// [`neuralcompose_mobile_core::provenance::EvidenceMapping::NeverIngestible`].
+///
+/// That is the honest class and it is worth being blunt about why. The scores in
+/// a turn line come from a tension-sharpened *sample* over weights that a
+/// documented-heuristic gloss biases; `channel_health.rs:24` says its own
+/// thresholds are unvalidated; and the Swift attaches `honestyCaveat` verbatim
+/// wherever a `SpectralState` reaches a human. None of that is an observation,
+/// and a confidence number would not make it one.
+fn turn_envelope(method: MethodIdentity) -> ProvenanceEnvelope {
+    ProvenanceEnvelope {
+        schema_id: PROVENANCE_ENVELOPE_SCHEMA.to_string(),
+        assertion_kind: AssertionKind::HeuristicAnnotation,
+        method: Some(method),
+        // The candidate embeddings are deliberately not logged (see the privacy
+        // note above), so there is nothing to name as an input digest.
+        inputs: Vec::new(),
+        confidence: None,
+        // A turn's outcome is not an embedding comparison; the per-candidate
+        // scores inside it are, but those are not what this envelope covers.
+        comparison_embedding_space: None,
+    }
+}
 
 /// One scored candidate as persisted — text and scalars, never the embedding.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -94,6 +186,8 @@ pub struct TurnLine {
     /// nothing, so a broken witness is distinguishable from a disabled one.
     pub witness_attempted: Option<bool>,
     pub channel_health: Option<Vec<ChannelHealthLine>>,
+    /// Which build, under which frozen tuning, produced this line (ADR-004).
+    pub provenance: ProvenanceEnvelope,
 }
 
 impl TurnLine {
@@ -104,6 +198,7 @@ impl TurnLine {
         heard: &str,
         scored: &[ScoredCandidate],
         resolution: &Resolution,
+        method: MethodIdentity,
     ) -> Self {
         let (outcome, spoken_text) = match &resolution.outcome {
             DialecticalOutcome::Spoke(c) => (format!("spoke:{}", c.role_id), Some(c.text.clone())),
@@ -140,6 +235,7 @@ impl TurnLine {
             self_similarity: None,
             witness_attempted: None,
             channel_health: None,
+            provenance: turn_envelope(method),
         }
     }
 
@@ -214,6 +310,13 @@ pub enum TurnLogFailure {
     /// Channel health present but not all four channels in the frozen order.
     ChannelOrderMismatch {
         line_number: u64,
+    },
+    /// The line's provenance envelope is malformed — an unusable answer to
+    /// "which build produced this?" is not better than no answer, it is worse,
+    /// because it looks like one.
+    ProvenanceDefective {
+        line_number: u64,
+        defect: String,
     },
     TurnCountMismatch,
     SilentCountMismatch,
@@ -331,6 +434,12 @@ pub fn verify_turn_log(jsonl: &str, manifest: &TurnLogManifest) -> TurnLogVerdic
         if !(0.0..=1.0).contains(&line.gloss_scalar) || !line.gloss_scalar.is_finite() {
             return fail(TurnLogFailure::GlossOutOfRange { line_number });
         }
+        if let Some(defect) = validate_provenance(&line.provenance).first() {
+            return fail(TurnLogFailure::ProvenanceDefective {
+                line_number,
+                defect: format!("{defect:?}"),
+            });
+        }
         if let Some(health) = &line.channel_health {
             let order: Vec<&str> = health.iter().map(|h| h.channel.as_str()).collect();
             if order != CHANNEL_ORDER {
@@ -366,6 +475,12 @@ pub fn turn_log_manifest_filename(session_id: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A fixed build identity for the record tests. Real runs get theirs from
+    /// the shell; these tests only need it to be well formed.
+    fn test_method() -> MethodIdentity {
+        dialectic_method_identity(ContextProfile::Reflective, "0.0.0-test", None)
+    }
     use crate::dynamics::{
         DialecticalCandidate, DialecticalEnergy, DialecticalOutcome, Resolution, ScoredCandidate,
     };
@@ -409,6 +524,7 @@ mod tests {
             "what did you mean",
             &[scored("coherence", 1.2), scored("displacement", 1.0)],
             &resolution(DialecticalOutcome::Spoke(candidate("coherence"))),
+            test_method(),
         )
     }
 
@@ -436,6 +552,7 @@ mod tests {
             "…",
             &[],
             &resolution(DialecticalOutcome::Silent),
+            test_method(),
         );
         assert_eq!(silent.outcome, "silent");
         assert_eq!(silent.spoken_text, None);
@@ -447,6 +564,7 @@ mod tests {
             "…",
             &[],
             &resolution(DialecticalOutcome::Synthesized(candidate("third"))),
+            test_method(),
         );
         assert_eq!(synth.outcome, "synthesized:third");
     }
@@ -490,6 +608,7 @@ mod tests {
             "…",
             &[],
             &resolution(DialecticalOutcome::Silent),
+            test_method(),
         );
         let (payload, manifest) = record(&[spoke_line(0), silent]);
         assert_eq!(manifest.silent_turn_count, 1);
@@ -643,5 +762,108 @@ mod tests {
             turn_log_manifest_filename("night-01"),
             "night-01.manifest.json"
         );
+    }
+
+    // ---- ADR-004 competency questions, made executable ----
+
+    /// CQ1 and CQ7: *which software, at which commit, under which frozen
+    /// parameters, produced this line?* Before v2 this had no answer at all.
+    #[test]
+    fn a_turn_line_names_its_producing_software() {
+        let line = spoke_line(0);
+        assert_eq!(line.schema_id, TURN_LINE_SCHEMA);
+        let m = line
+            .provenance
+            .method
+            .as_ref()
+            .expect("a turn line must name its method");
+        assert_eq!(m.method_id, DIALECTIC_METHOD_ID);
+        assert_eq!(m.software_id, SOFTWARE_ID);
+        assert!(!m.software_version.trim().is_empty());
+        assert_eq!(m.parameters_digest.len(), 64);
+        assert_eq!(validate_provenance(&line.provenance), []);
+    }
+
+    /// CQ8: a *pinned* build names a full 40-character commit, or names none at
+    /// all. An abbreviated or dirty-tree commit is refused rather than recorded
+    /// as if it identified the build.
+    #[test]
+    fn an_unpinned_build_says_so_rather_than_guessing() {
+        let unpinned = dialectic_method_identity(ContextProfile::Reflective, "0.0.0-test", None);
+        assert!(unpinned.git_commit.is_none());
+
+        let pinned = dialectic_method_identity(
+            ContextProfile::Reflective,
+            "0.0.0-test",
+            Some("0".repeat(40)),
+        );
+        let mut env = turn_envelope(pinned);
+        assert_eq!(validate_provenance(&env), []);
+
+        env.method.as_mut().unwrap().git_commit = Some("0123456".into());
+        assert!(
+            !validate_provenance(&env).is_empty(),
+            "an abbreviated commit was accepted as a pinned build"
+        );
+    }
+
+    /// The digest must actually depend on the tuning. A stubbed or constant
+    /// digest satisfies "is 64 hex characters" perfectly well — this is what
+    /// separates a real parameter seal from a decorative one.
+    #[test]
+    fn the_parameters_digest_distinguishes_the_profiles() {
+        let digests: std::collections::BTreeSet<String> = ContextProfile::ALL
+            .iter()
+            .map(|p| dialectic_method_identity(*p, "0.0.0-test", None).parameters_digest)
+            .collect();
+        assert_eq!(
+            digests.len(),
+            ContextProfile::ALL.len(),
+            "two profiles share a parameters digest — the tuning is not sealed"
+        );
+    }
+
+    /// CQ2 and CQ5: a neutral gloss is an *annotation*, not a measurement, and
+    /// therefore has no evidence-store representation at all. This is the test
+    /// that would fail if some later path tried to ingest a defaulted gloss as
+    /// an observation.
+    #[test]
+    fn a_neutral_gloss_is_a_heuristic_annotation_not_a_measurement() {
+        use neuralcompose_mobile_core::provenance::{evidence_mapping, EvidenceMapping};
+
+        let line = spoke_line(0);
+        assert_eq!(line.gloss_scalar, NEUTRAL_GLOSS);
+        assert_eq!(
+            line.spectral_state, None,
+            "no estimator ran on this platform"
+        );
+        assert_eq!(
+            line.provenance.assertion_kind,
+            AssertionKind::HeuristicAnnotation
+        );
+        assert_eq!(
+            evidence_mapping(line.provenance.assertion_kind),
+            EvidenceMapping::NeverIngestible,
+            "a turn record must never be ingestible as evidence"
+        );
+        assert_eq!(
+            line.provenance.confidence, None,
+            "a heuristic annotation is not rescued by a confidence score"
+        );
+    }
+
+    /// A malformed envelope is worse than an absent one, because it looks like
+    /// an answer. Verification must refuse the file.
+    #[test]
+    fn verification_rejects_a_line_whose_provenance_is_defective() {
+        let mut line = spoke_line(0);
+        line.provenance.method.as_mut().unwrap().parameters_digest = "not-a-digest".into();
+        let (payload, manifest) = record(&[line]);
+        match verify_turn_log(&payload, &manifest) {
+            TurnLogVerdict::Failed {
+                failure: TurnLogFailure::ProvenanceDefective { line_number, .. },
+            } => assert_eq!(line_number, 1),
+            other => panic!("a defective envelope was accepted: {other:?}"),
+        }
     }
 }

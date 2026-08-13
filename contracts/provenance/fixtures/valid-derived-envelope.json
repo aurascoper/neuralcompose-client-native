@@ -1,0 +1,25 @@
+{
+  "schemaId": "neuralcompose.provenance-envelope.v1",
+  "assertionKind": "derivedDeterministically",
+  "method": {
+    "methodId": "neuralcompose.hypnagogic.synthesis-score.v1",
+    "softwareId": "neuralcompose-hypnagogic",
+    "softwareVersion": "0.1.0",
+    "gitCommit": "0123456789abcdef0123456789abcdef01234567",
+    "parametersDigest": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "inputs": [
+    {
+      "resourceKind": "sentence-embedding",
+      "sha256Hex": "2222222222222222222222222222222222222222222222222222222222222222",
+      "locator": null
+    },
+    {
+      "resourceKind": "sentence-embedding",
+      "sha256Hex": "3333333333333333333333333333333333333333333333333333333333333333",
+      "locator": "candidate/1"
+    }
+  ],
+  "confidence": null,
+  "comparisonEmbeddingSpace": "4444444444444444444444444444444444444444444444444444444444444444"
+}

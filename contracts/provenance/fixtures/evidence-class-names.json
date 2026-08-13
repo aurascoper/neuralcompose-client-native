@@ -1,0 +1,15 @@
+{
+  "comment": "DATED EVIDENCE, NOT A LIVE CHECK. These are the EvidenceClass variants neural-memory-server actually defines, read from its source at the commit named below. `cargo test` here cannot see that repository, and there is no runtime oracle either: its MCP surface exposes no tool that returns the enum, because crates/neural-memory-store/src/write.rs:266-269 clamps every agent write to agentInference before the digest is computed. So this file plus scripts/check-evidence-class-drift.sh is the whole mechanism — the test binds the mapping to this list in CI, and the script re-reads the sibling checkout on demand. Re-run the script and update checkedAgainstCommit before changing the mapping in provenance.rs.",
+  "sourceRepo": "neural-memory-server",
+  "sourcePath": "crates/neural-memory-domain/src/terms.rs",
+  "sourceLines": "49-63",
+  "checkedAgainstCommit": "5da4a5c5ab509e22bc9eb72dbeb6d3fac835606b",
+  "checkedOn": "2026-08-13",
+  "evidenceClasses": [
+    "observed",
+    "derivedDeterministically",
+    "humanDecision",
+    "agentInference",
+    "externalClaim"
+  ]
+}
