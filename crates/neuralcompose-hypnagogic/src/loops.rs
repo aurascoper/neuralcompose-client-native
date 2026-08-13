@@ -247,7 +247,7 @@ pub fn strip_for_speech(text: &str) -> String {
             if let Some(stripped) = l.strip_prefix("- ").or_else(|| l.strip_prefix("* ")) {
                 l = stripped;
             }
-            l.replace(['*', '_'], "")
+            l.replace('*', "")
         })
         .collect();
     cleaned
@@ -466,7 +466,12 @@ mod tests {
         );
         // An unterminated think block would otherwise be read aloud in full.
         assert_eq!(strip_for_speech("ok <think>never closed"), "ok");
-        assert_eq!(strip_for_speech("**bold** and _soft_"), "bold and soft");
+        // Underscores are LEFT ALONE, matching turn.sh. Stripping them was a
+        // speculative addition with no evidence behind it: turn.sh has been run
+        // against this model family for real and only removes asterisks. If
+        // espeak-ng turns out to voice an underscore, that is a finding for
+        // both implementations, not a reason for the port to diverge quietly.
+        assert_eq!(strip_for_speech("**bold** and _soft_"), "bold and _soft_");
         assert_eq!(
             strip_for_speech("# Heading\n> quoted\n- bullet"),
             "Heading quoted bullet"

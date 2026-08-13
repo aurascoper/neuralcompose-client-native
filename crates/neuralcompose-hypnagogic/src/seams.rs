@@ -47,6 +47,38 @@ pub trait Listening {
     fn listen(&mut self) -> SeamResult<Option<String>>;
 }
 
+/// Boxed seams delegate, so a shell can choose its implementation at runtime
+/// (microphone or stdin, espeak or stdout) without the loops becoming
+/// dynamically typed themselves.
+impl<T: Listening + ?Sized> Listening for Box<T> {
+    fn listen(&mut self) -> SeamResult<Option<String>> {
+        (**self).listen()
+    }
+}
+
+impl<T: Speaking + ?Sized> Speaking for Box<T> {
+    fn speak(&mut self, text: &str, prosody: Prosody) -> SeamResult<()> {
+        (**self).speak(text, prosody)
+    }
+}
+
+impl<T: TextGenerating + ?Sized> TextGenerating for Box<T> {
+    fn generate(
+        &mut self,
+        system: &str,
+        prompt: &str,
+        params: GenerationParams,
+    ) -> SeamResult<String> {
+        (**self).generate(system, prompt, params)
+    }
+}
+
+impl<T: SentenceEmbedding + ?Sized> SentenceEmbedding for Box<T> {
+    fn embed(&mut self, text: &str) -> SeamResult<Embedding> {
+        (**self).embed(text)
+    }
+}
+
 /// Sampling parameters for one generate call. Per-role temperature is what
 /// makes the coherence pole faithful and the displacement pole divergent.
 #[derive(Clone, Copy, Debug, PartialEq)]

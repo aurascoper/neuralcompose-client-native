@@ -1,0 +1,57 @@
+{
+ "note": "Reference outputs captured from the exact perl+sed pipeline in tools/spoken-loop/turn.sh, the working Linux loop this port is derived from. Regenerate by piping each input through: perl -0777 -pe 's{<think>.*?</think>}{}gs' | sed -E 's/\\*+//g; s/^#+[[:space:]]*//gm; s/^>[[:space:]]*//gm; s/^[[:space:]]*[-*][[:space:]]+//gm' | tr '\\n' ' ' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'",
+ "cases": [
+  {
+   "input": "Rest now. Let go, softly.",
+   "turnSh": "Rest now. Let go, softly."
+  },
+  {
+   "input": "<think>The user seems tired. I should be gentle.</think>You sound tired. Let it settle.",
+   "turnSh": "You sound tired. Let it settle."
+  },
+  {
+   "input": "**Bold** and *emphatic* text.",
+   "turnSh": "Bold and emphatic text."
+  },
+  {
+   "input": "# Heading",
+   "turnSh": "Heading"
+  },
+  {
+   "input": "> quoted line",
+   "turnSh": "quoted line"
+  },
+  {
+   "input": "- bullet one",
+   "turnSh": "bullet one"
+  },
+  {
+   "input": "* bullet two",
+   "turnSh": "bullet two"
+  },
+  {
+   "input": "Line one",
+   "turnSh": "Line one"
+  },
+  {
+   "input": "Line two",
+   "turnSh": "Line two"
+  },
+  {
+   "input": "<think>unterminated thinking",
+   "turnSh": "<think>unterminated thinking"
+  },
+  {
+   "input": "Mixed <think>a</think> middle <think>b</think> end.",
+   "turnSh": "Mixed  middle  end."
+  },
+  {
+   "input": "   leading and trailing   ",
+   "turnSh": "leading and trailing"
+  },
+  {
+   "input": "Ellipsis... and more?!",
+   "turnSh": "Ellipsis... and more?!"
+  }
+ ]
+}

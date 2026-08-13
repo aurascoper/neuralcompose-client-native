@@ -95,9 +95,11 @@
 //! Swift dialectic is the mechanism that keeps this honest; the harness is
 //! committed for exactly that reason.
 
+pub mod command;
 pub mod dialectic;
 pub mod dynamics;
 pub mod embedding;
+pub mod http;
 pub mod loops;
 pub mod profile;
 pub mod role;
