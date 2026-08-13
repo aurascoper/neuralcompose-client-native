@@ -194,10 +194,33 @@ gate this repository, and it does not change §6 or §8.
 ### §10.1 — Result: it matched, and the predicted divergence did not appear
 
 Run 2026-08-13 in `NeuralCompose-dialectic-fixture`, committed there as `5705082`. The
-Swift reproduces all 260 steps **bit-for-bit**, including all 11 speed-clamped ones. So the
-float64-vs-Float division named above is not observable at these values — the two roundings
-coincide. **§10's prediction was wrong in the harmless direction**: it said where a failure
-would be, and there was none.
+Swift reproduces all 260 steps **bit-for-bit**, including all 11 speed-clamped ones.
+**§10's prediction was wrong in the harmless direction**: it said where a failure would be,
+and there was none.
+
+**Why there was none — and the first answer here was too weak.** The Swift *is* `Float`
+throughout (`ParticleNavigatorEnv.swift:52-56` downcasts the `Double` config up front, and
+`let scale = maxSpeed / speed` is an f32÷f32 division), so the type difference is real and
+"agrees at these values" was the natural reading. But it is not luck, and the honest claim
+is **stronger** than "agrees on the 260 sampled steps":
+
+> Both operands of the division are exactly-representable binary32 values — Python's
+> `float(np.linalg.norm(vel))` widens an `f32` norm losslessly. So the only question is
+> whether computing that division in binary64 and rounding to binary32 can differ from
+> dividing in binary32 directly. **It cannot.** Double rounding is innocuous when the
+> intermediate format carries at least `2p + 2` bits, and binary64's 53 ≥ 2·24 + 2 = 50.
+> The subsequent multiply is a single f32-rounded operation on both sides too (NumPy's weak
+> promotion casts the scalar to `float32` first).
+
+Checked as well as reasoned: **0 disagreements in 5,000,000 sampled scale computations and
+0 in 1,607,683 full clamp evaluations**, including denormal and near-overflow speeds the
+arena cannot reach.
+
+This matters because the weak reading and the strong one support different claims. Had the
+divergence been value-dependent, 11 clamped steps out of 260 would be a thin sample and the
+same shape as the `requires_method` mutant surviving because no envelope omitted a method —
+a test passing because the fixture never visits the region where it would fail. It is not
+that shape. The clamp path is safe by the arithmetic, not by the sampling.
 
 Three independent implementations now agree exactly on `step()`: the Python original, the
 Rust port, and the Swift. Nothing pinned it in any language before today.
