@@ -53,6 +53,7 @@ struct Args {
     tts: String,
     eeg_url: Option<String>,
     world_model_demo: bool,
+    heldout: bool,
 }
 
 const USAGE: &str = "\
@@ -68,6 +69,7 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
   --tts <kokoro|espeak>           voice engine for --speak (default kokoro)
   --eeg-url <ws://…>              attach an EEG source (dialectical modes only)
   --world-model-demo              run the planner comparison and exit
+  --heldout                       with it: the §8 held-out set and seeds
   --json                          --verify-log <path>
 
 Standalone modes run BEFORE the loop and exit; when more than one is given the
@@ -91,6 +93,7 @@ fn parse_args() -> Result<Args, String> {
         tts: "kokoro".into(),
         eeg_url: None,
         world_model_demo: false,
+        heldout: false,
     };
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -138,6 +141,7 @@ fn parse_args() -> Result<Args, String> {
                 i += 1;
             }
             "--world-model-demo" => a.world_model_demo = true,
+            "--heldout" => a.heldout = true,
             "--mic" => a.mic = true,
             "--speak" => a.speak = true,
             "--tts" => {
@@ -410,7 +414,7 @@ fn main() {
     // Before `run()`, which opens with an unconditional `preflight` against
     // llama-server. The demo needs no model, no server and no microphone.
     if args.world_model_demo {
-        std::process::exit(world_model_demo(args.json));
+        std::process::exit(world_model_demo(args.json, args.heldout));
     }
 
     if let Err(e) = run(args) {
@@ -469,10 +473,11 @@ fn verify_log(payload: &std::path::Path) -> i32 {
 /// `docs/acceptance/worldmodel-demo.md` and committed at `05f688c`, before this
 /// function existed. It is not this function's job to decide whether the result
 /// is good — only to report it and apply §4 as written.
-fn world_model_demo(json: bool) -> i32 {
+fn world_model_demo(json: bool, heldout: bool) -> i32 {
     use neuralcompose_hypnagogic::worldmodel::{
-        demo_envelope, run_episode, worldmodel_method_identity, BangBang, EnvConfig, EpisodeResult,
-        MpcConfig, Mppi, PdController, Planner, DEFAULT_SEEDS, GOAL_TOLERANCE, HARD_CASES,
+        demo_envelope, heldout_cases, run_episode, worldmodel_method_identity, BangBang, EnvConfig,
+        EpisodeResult, MpcConfig, Mppi, PdController, Planner, DEFAULT_SEEDS, GOAL_TOLERANCE,
+        HARD_CASES, HELDOUT_SEEDS,
     };
 
     const MAX_STEPS: usize = 50;
@@ -481,11 +486,24 @@ fn world_model_demo(json: bool) -> i32 {
 
     let env = EnvConfig::default();
     let mpc = MpcConfig::default();
-    let trials = HARD_CASES.len() * DEFAULT_SEEDS.len();
+
+    // §8.1: the held-out run swaps BOTH the scenarios and the seeds. Seeds alone
+    // would refresh only MPPI, since the two controllers are deterministic.
+    let scenarios: Vec<_> = if heldout {
+        heldout_cases()
+    } else {
+        HARD_CASES.to_vec()
+    };
+    let seeds: &[u64] = if heldout {
+        &HELDOUT_SEEDS
+    } else {
+        &DEFAULT_SEEDS
+    };
+    let trials = scenarios.len() * seeds.len();
 
     let mut results: Vec<EpisodeResult> = Vec::new();
-    for scenario in HARD_CASES.iter() {
-        for seed in DEFAULT_SEEDS {
+    for scenario in scenarios.iter() {
+        for &seed in seeds {
             let mut arms: Vec<Box<dyn Planner>> = vec![
                 Box::new(Mppi::new(mpc, seed)),
                 Box::new(PdController::default()),
@@ -509,12 +527,20 @@ fn world_model_demo(json: bool) -> i32 {
         let reached = rows.iter().filter(|r| r.reached).count();
         let mean = rows.iter().map(|r| r.final_distance as f64).sum::<f64>() / rows.len() as f64;
         let stalls: u32 = rows.iter().map(|r| r.stalls).sum();
-        (reached, mean, stalls)
+        let steps = rows.iter().map(|r| r.steps as f64).sum::<f64>() / rows.len() as f64;
+        (reached, mean, stalls, steps)
     };
 
-    let (mppi_reached, mppi_mean, mppi_stalls) = summarise("mppi");
-    let (pd_reached, pd_mean, _) = summarise("pd");
-    let (bb_reached, bb_mean, _) = summarise("bang-bang");
+    let (mppi_reached, mppi_mean, mppi_stalls, mppi_steps) = summarise("mppi");
+    let (pd_reached, pd_mean, _, pd_steps) = summarise("pd");
+    let (bb_reached, bb_mean, _, bb_steps) = summarise("bang-bang");
+
+    // §8.2, evaluated where the numbers are so the claims and the code cannot
+    // drift apart. Percentages are excess over PD, the fastest arm in §6.
+    let over_pd = |x: f64| (x - pd_steps) / pd_steps * 100.0;
+    let c1 = pd_steps < bb_steps && bb_steps < mppi_steps;
+    let c2 = over_pd(mppi_steps) >= 25.0;
+    let c3 = over_pd(bb_steps) >= 5.0;
 
     // §4, applied as written. The order matters: non-discrimination is checked
     // BEFORE success, so a passing MPPI on an undiscriminating task cannot be
@@ -541,41 +567,64 @@ fn world_model_demo(json: bool) -> i32 {
             "registration": "docs/acceptance/worldmodel-demo.md",
             "threshold": {"reached": THRESHOLD, "of": trials, "goalTolerance": GOAL_TOLERANCE},
             "verdict": verdict,
+            "heldout": heldout,
+            "stepClaims": {
+                "registration": "§8.2",
+                "c1_ordering_pd_lt_bb_lt_mppi": c1,
+                "c2_mppi_over_pd_pct": over_pd(mppi_steps),
+                "c2_met": c2,
+                "c3_bangbang_over_pd_pct": over_pd(bb_steps),
+                "c3_met": c3,
+            },
             "arms": {
-                "mppi": {"reached": mppi_reached, "meanFinalDistance": mppi_mean, "stalls": mppi_stalls},
-                "pd": {"reached": pd_reached, "meanFinalDistance": pd_mean},
-                "bangBang": {"reached": bb_reached, "meanFinalDistance": bb_mean},
+                "mppi": {"reached": mppi_reached, "meanFinalDistance": mppi_mean, "meanSteps": mppi_steps, "stalls": mppi_stalls},
+                "pd": {"reached": pd_reached, "meanFinalDistance": pd_mean, "meanSteps": pd_steps},
+                "bangBang": {"reached": bb_reached, "meanFinalDistance": bb_mean, "meanSteps": bb_steps},
             },
             "episodes": results,
             "provenance": envelope,
         });
         println!("{}", serde_json::to_string_pretty(&doc).unwrap());
     } else {
-        println!("registration: docs/acceptance/worldmodel-demo.md (§3 bar: {THRESHOLD}/{trials})");
         println!(
-            "{:<10} {:>8} {:>20} {:>8}",
-            "arm", "reached", "mean final distance", "stalls"
+            "registration: docs/acceptance/worldmodel-demo.md ({} set, §3 bar {THRESHOLD}/{trials})",
+            if heldout { "§8 HELD-OUT" } else { "§3 original" }
         );
         println!(
-            "{:<10} {:>8} {:>20.4} {:>8}",
-            "mppi",
-            format!("{mppi_reached}/{trials}"),
-            mppi_mean,
-            mppi_stalls
+            "{:<10} {:>8} {:>20} {:>11} {:>8}",
+            "arm", "reached", "mean final distance", "mean steps", "stalls"
+        );
+        for (name, reached, mean, steps, stalls) in [
+            (
+                "mppi",
+                mppi_reached,
+                mppi_mean,
+                mppi_steps,
+                mppi_stalls.to_string(),
+            ),
+            ("pd", pd_reached, pd_mean, pd_steps, "-".to_string()),
+            ("bang-bang", bb_reached, bb_mean, bb_steps, "-".to_string()),
+        ] {
+            println!(
+                "{name:<10} {:>8} {mean:>20.4} {steps:>11.1} {stalls:>8}",
+                format!("{reached}/{trials}")
+            );
+        }
+        println!();
+        println!("§8.2 step claims (excess over pd):");
+        println!(
+            "  C1  ordering pd < bang-bang < mppi ....  {}",
+            if c1 { "HOLDS" } else { "FAILS" }
         );
         println!(
-            "{:<10} {:>8} {:>20.4} {:>8}",
-            "pd",
-            format!("{pd_reached}/{trials}"),
-            pd_mean,
-            "-"
+            "  C2  mppi over pd >= 25% .............. {:>7.1}%  {}",
+            over_pd(mppi_steps),
+            if c2 { "HOLDS" } else { "FAILS" }
         );
         println!(
-            "{:<10} {:>8} {:>20.4} {:>8}",
-            "bang-bang",
-            format!("{bb_reached}/{trials}"),
-            bb_mean,
-            "-"
+            "  C3  bang-bang over pd >= 5% .......... {:>7.1}%  {}",
+            over_pd(bb_steps),
+            if c3 { "HOLDS" } else { "FAILS" }
         );
         println!();
         match verdict {

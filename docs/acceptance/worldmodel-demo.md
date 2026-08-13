@@ -121,6 +121,12 @@ That §4 fired on its first use is the only reason this section does not read as
    hypothesis in the plan; measured, bang-bang has the *best* mean final distance of the
    three. It does overshoot — 19.7 steps against PD's 17.1 — but it reaches the goal every
    time, and the wall bounces that were supposed to defeat it do not.
+
+   > **Corrected by §8.4.** The distance ranking is **set-specific and does not
+   > generalize**: on the held-out scenarios bang-bang is *worst* of the three (0.0700
+   > against PD's 0.0392), not best. What survives is only the narrower claim — bang-bang
+   > reaches the goal on every trial of both sets, so it is not nearly-free to beat. The
+   > "best mean final distance" half of this finding should not be cited.
 3. **`corner_pn_to_np` is solved by all three arms**, in 18–28 steps. That is the direction
    `WorldModel/README.md` records as failing completely under *every* latent configuration
    tested (final distance 2.234–2.272 from a 2.263 start), with two hypotheses ruled out
@@ -205,7 +211,39 @@ values**, so the binary metric could only ever have come out saturated or catast
 
 ### §8.4 — Results
 
-*Empty. To be filled by one run under §8.1's data.*
+Measured 2026-08-13 on §8.1's held-out data. Reproducible byte-for-byte. 8 scenarios × 5
+fresh seeds = 40 trials.
+
+| arm | reached | mean final distance | mean steps |
+|---|---|---|---|
+| mppi | 40/40 | 0.0564 | 24.3 |
+| pd | 40/40 | 0.0392 | 16.5 |
+| bang-bang | 40/40 | **0.0700** | 17.0 |
+
+| claim | original set | held-out | verdict |
+|---|---|---|---|
+| C1 — ordering `pd < bang-bang < mppi` | holds | holds | **HOLDS** |
+| C2 — mppi over pd ≥ 25% | 54.5% | 47.1% | **HOLDS** |
+| C3 — bang-bang over pd ≥ 5% | 15.0% | **3.0%** | **FAILS** |
+
+**C3 failed, and it is the claim §8.2 named as the one that could.** The tight pair did not
+replicate: 15.0% on the set the metric was chosen from, 3.0% on data that did not inform
+the choice. That is what disclosed selection plus fresh data is for — had steps been
+presented as the plan all along, a 15% gap would have entered the record as a finding.
+
+**A second reversal, not registered and therefore reported as an observation only.**
+Bang-bang's mean final distance went from *best of three* (0.0326) on `HARD_CASES` to
+*worst of three* (0.0700) on the held-out set. So §6's finding #2 — "bang-bang has the best
+mean final distance" — **is set-specific and does not generalize**; it is corrected in §6.
+What survives from that finding is only the narrower part: bang-bang is not nearly-free to
+beat, because it reaches the goal every time in both sets.
+
+**What the metric actually discriminates.** Steps separates the *planner* from the
+*controllers* robustly (C1 and C2 both hold, at 47–55%). It does **not** reliably separate
+the two controllers from each other (C3, 3.0%). So the answer to §6's "what would be needed
+to discriminate" is partial: steps is enough to say MPPI is slower than either controller,
+and not enough to rank the controllers. Ranking those two would still need a new
+registration and a task that punishes overshoot.
 
 ## §9 — What `corner_pn_to_np` does and does not localize
 
