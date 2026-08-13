@@ -95,8 +95,50 @@ operation that forced it.**
 
 ## §6 — Results
 
-*Empty. To be filled by a single measured run, reported whether or not §3 is met, with
-§4 applied as written.*
+Measured 2026-08-13, one run, byte-identical on repetition. Seven `HARD_CASES` × seeds
+`[0,1,2,3,4]`, `max_steps = 50`, tolerance `0.1`. Parameters digest `28e15df058d157cd…`.
+
+| arm | reached | mean final distance | mean steps to goal |
+|---|---|---|---|
+| mppi | **35/35** | 0.0490 | 26.5 |
+| pd | **35/35** | 0.0341 | 17.1 |
+| bang-bang | **35/35** | 0.0326 | 19.7 |
+
+### Verdict: the task does not discriminate over true dynamics
+
+§3's bar was met — and §4 governs, because the PD arm cleared it too. This is **not**
+reported as an MPPI success. Every arm solved every trial.
+
+That §4 fired on its first use is the only reason this section does not read as a win.
+
+### Three things the numbers say that the plan assumed otherwise
+
+1. **MPPI is the *worst* of the three arms**, on both mean final distance and steps to
+   goal. Uniform candidate sampling over a 10-step horizon is a weak planner next to a
+   tuned PD when the model is exact and the budget is four times the minimum
+   (2.263 / 0.2 per step ≈ 12 steps needed, 50 allowed).
+2. **"Beating bang-bang is nearly free" is refuted.** It was recorded as an untested
+   hypothesis in the plan; measured, bang-bang has the *best* mean final distance of the
+   three. It does overshoot — 19.7 steps against PD's 17.1 — but it reaches the goal every
+   time, and the wall bounces that were supposed to defeat it do not.
+3. **`corner_pn_to_np` is solved by all three arms**, in 18–28 steps. That is the direction
+   `WorldModel/README.md` records as failing completely under *every* latent configuration
+   tested (final distance 2.234–2.272 from a 2.263 start), with two hypotheses ruled out
+   and the cause unknown.
+
+   Per §7 this is **not** an explanation of that failure — the predictor is not in the loop
+   here at all. What it does establish, narrowly, is that **the geometry alone is not what
+   makes that direction hard.** An exact model traverses it as easily as the other three
+   diagonals. Whatever is wrong lives in the learned predictor, which is where the README's
+   own remaining hypothesis already pointed.
+
+### What would be needed to discriminate
+
+Nothing here is retuned to produce a better answer — §4 forbids it, and the bar does not
+move after the fact. A discriminating experiment would need a **new registration** with its
+own date and its own threshold: a shorter step budget, actuation noise, a partially
+observed state, or obstacles — something that punishes greedy steering. This task, over
+exact dynamics, does not.
 
 ## §7 — Non-claims
 

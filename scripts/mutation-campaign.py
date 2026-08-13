@@ -22,6 +22,7 @@ REPO = Path(__file__).resolve().parent.parent
 SNAP = Path(tempfile.mkdtemp(prefix="nc-mutation-"))
 PROV = REPO / "crates/neuralcompose-mobile-core/src/provenance.rs"
 EEG = REPO / "crates/neuralcompose-hypnagogic/src/eeg.rs"
+WM = REPO / "crates/neuralcompose-hypnagogic/src/worldmodel.rs"
 
 # (name, file, old, new, why it should die)
 MUTANTS = [
@@ -81,6 +82,30 @@ MUTANTS = [
      "    if reports.iter().any(|r| !r.rms.is_finite()) {\n        return None;\n    }",
      "    if false {\n        return None;\n    }",
      "a_non_finite_sample_never_reaches_a_turn_line"),
+    ("env speed clamp removed", WM,
+     "    if speed > config.max_speed as f64 {",
+     "    if false {",
+     "env_conformance / the_speed_clamp_is_isotropic / never_leaves_the_arena"),
+    ("env restitution is perfectly elastic", WM,
+     "    restitution: 0.6,",
+     "    restitution: 1.0,",
+     "the_defaults_are_the_python_and_swift_values / a_wall_reverses_the_velocity"),
+    ("env wall clamp dropped so position escapes", WM,
+     "        if pos[i] > config.arena_half_extent {\n            pos[i] = config.arena_half_extent;",
+     "        if pos[i] > config.arena_half_extent {\n            pos[i] = pos[i];",
+     "env_conformance / the_particle_never_leaves_the_arena"),
+    ("env clamps speed AFTER integrating position", WM,
+     "    // Position integrates with the ALREADY-CLAMPED velocity (`env.py:63`).\n    for i in 0..2 {\n        pos[i] += vel[i] * config.dt;\n    }",
+     "    for i in 0..2 {\n        pos[i] += (vel[i] / 1.0000001) * config.dt;\n    }",
+     "env_conformance bit-exactness"),
+    ("env NaN guard removed", WM,
+     "    if !state.iter().all(|v| v.is_finite()) || !action.iter().all(|v| v.is_finite()) {\n        return None;\n    }",
+     "    if false {\n        return None;\n    }",
+     "a_non_finite_input_is_refused_rather_than_laundered"),
+    ("goal tolerance loosened tenfold", WM,
+     "pub const GOAL_TOLERANCE: f32 = 0.1;",
+     "pub const GOAL_TOLERANCE: f32 = 1.0;",
+     "an_episode_already_at_the_goal_takes_no_steps + the_mpc_defaults"),
 ]
 
 CMD = ["cargo", "+1.97.1", "test", "-j4",

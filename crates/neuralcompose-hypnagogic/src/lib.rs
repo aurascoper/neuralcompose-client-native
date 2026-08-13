@@ -106,3 +106,4 @@ pub mod profile;
 pub mod role;
 pub mod seams;
 pub mod turn_log;
+pub mod worldmodel;

@@ -89,7 +89,7 @@ pub const NEUTRAL_GLOSS: f32 = 0.5;
 /// order, and `Value`'s map preserves insertion order under the default
 /// features). A cross-implementation contract would want the full JCS instead —
 /// `neural-memory-server`'s personal crate already vendors one.
-fn bit_exact_numbers(v: &mut serde_json::Value) {
+pub(crate) fn bit_exact_numbers(v: &mut serde_json::Value) {
     match v {
         serde_json::Value::Number(n) => {
             // Integers already survive JSON exactly; leaving them legible keeps

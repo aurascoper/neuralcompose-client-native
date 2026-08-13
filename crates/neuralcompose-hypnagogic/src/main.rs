@@ -52,6 +52,7 @@ struct Args {
     speak: bool,
     tts: String,
     eeg_url: Option<String>,
+    world_model_demo: bool,
 }
 
 const USAGE: &str = "\
@@ -66,7 +67,11 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
   --speak                         synthesize audio instead of printing
   --tts <kokoro|espeak>           voice engine for --speak (default kokoro)
   --eeg-url <ws://…>              attach an EEG source (dialectical modes only)
+  --world-model-demo              run the planner comparison and exit
   --json                          --verify-log <path>
+
+Standalone modes run BEFORE the loop and exit; when more than one is given the
+precedence is --verify-log, then --world-model-demo. Neither needs llama-server.
 ";
 
 fn parse_args() -> Result<Args, String> {
@@ -85,6 +90,7 @@ fn parse_args() -> Result<Args, String> {
         speak: false,
         tts: "kokoro".into(),
         eeg_url: None,
+        world_model_demo: false,
     };
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -131,6 +137,7 @@ fn parse_args() -> Result<Args, String> {
                 a.eeg_url = Some(need(i)?);
                 i += 1;
             }
+            "--world-model-demo" => a.world_model_demo = true,
             "--mic" => a.mic = true,
             "--speak" => a.speak = true,
             "--tts" => {
@@ -400,6 +407,12 @@ fn main() {
         std::process::exit(verify_log(path));
     }
 
+    // Before `run()`, which opens with an unconditional `preflight` against
+    // llama-server. The demo needs no model, no server and no microphone.
+    if args.world_model_demo {
+        std::process::exit(world_model_demo(args.json));
+    }
+
     if let Err(e) = run(args) {
         eprintln!("error: {e}");
         std::process::exit(1);
@@ -445,6 +458,147 @@ fn verify_log(payload: &std::path::Path) -> i32 {
             1
         }
     }
+}
+
+// ──────────────────────────────────────────────────────── world model ──
+
+/// The registered planner comparison. Reads no clock beyond the build stamp,
+/// opens no socket, loads no model.
+///
+/// The threshold and the reading rule were pinned in
+/// `docs/acceptance/worldmodel-demo.md` and committed at `05f688c`, before this
+/// function existed. It is not this function's job to decide whether the result
+/// is good — only to report it and apply §4 as written.
+fn world_model_demo(json: bool) -> i32 {
+    use neuralcompose_hypnagogic::worldmodel::{
+        demo_envelope, run_episode, worldmodel_method_identity, BangBang, EnvConfig, EpisodeResult,
+        MpcConfig, Mppi, PdController, Planner, DEFAULT_SEEDS, GOAL_TOLERANCE, HARD_CASES,
+    };
+
+    const MAX_STEPS: usize = 50;
+    // §3, restated where the code applies it so the two cannot drift apart.
+    const THRESHOLD: usize = 33;
+
+    let env = EnvConfig::default();
+    let mpc = MpcConfig::default();
+    let trials = HARD_CASES.len() * DEFAULT_SEEDS.len();
+
+    let mut results: Vec<EpisodeResult> = Vec::new();
+    for scenario in HARD_CASES.iter() {
+        for seed in DEFAULT_SEEDS {
+            let mut arms: Vec<Box<dyn Planner>> = vec![
+                Box::new(Mppi::new(mpc, seed)),
+                Box::new(PdController::default()),
+                Box::new(BangBang),
+            ];
+            for planner in arms.iter_mut() {
+                results.push(run_episode(
+                    &env,
+                    planner.as_mut(),
+                    scenario,
+                    seed,
+                    MAX_STEPS,
+                    GOAL_TOLERANCE,
+                ));
+            }
+        }
+    }
+
+    let summarise = |id: &str| {
+        let rows: Vec<&EpisodeResult> = results.iter().filter(|r| r.planner == id).collect();
+        let reached = rows.iter().filter(|r| r.reached).count();
+        let mean = rows.iter().map(|r| r.final_distance as f64).sum::<f64>() / rows.len() as f64;
+        let stalls: u32 = rows.iter().map(|r| r.stalls).sum();
+        (reached, mean, stalls)
+    };
+
+    let (mppi_reached, mppi_mean, mppi_stalls) = summarise("mppi");
+    let (pd_reached, pd_mean, _) = summarise("pd");
+    let (bb_reached, bb_mean, _) = summarise("bang-bang");
+
+    // §4, applied as written. The order matters: non-discrimination is checked
+    // BEFORE success, so a passing MPPI on an undiscriminating task cannot be
+    // reported as a win.
+    let verdict = if mppi_reached >= THRESHOLD && pd_reached >= THRESHOLD {
+        "does-not-discriminate"
+    } else if mppi_reached >= THRESHOLD {
+        "threshold-met"
+    } else {
+        "threshold-missed"
+    };
+
+    let method = worldmodel_method_identity(
+        &env,
+        &mpc,
+        env!("CARGO_PKG_VERSION"),
+        option_env!("NC_HYPNAGOGIC_COMMIT").map(str::to_string),
+    );
+    let envelope = demo_envelope(method, Vec::new());
+
+    if json {
+        let doc = serde_json::json!({
+            "schemaId": "neuralcompose.hypnagogic.worldmodel-demo.v1",
+            "registration": "docs/acceptance/worldmodel-demo.md",
+            "threshold": {"reached": THRESHOLD, "of": trials, "goalTolerance": GOAL_TOLERANCE},
+            "verdict": verdict,
+            "arms": {
+                "mppi": {"reached": mppi_reached, "meanFinalDistance": mppi_mean, "stalls": mppi_stalls},
+                "pd": {"reached": pd_reached, "meanFinalDistance": pd_mean},
+                "bangBang": {"reached": bb_reached, "meanFinalDistance": bb_mean},
+            },
+            "episodes": results,
+            "provenance": envelope,
+        });
+        println!("{}", serde_json::to_string_pretty(&doc).unwrap());
+    } else {
+        println!("registration: docs/acceptance/worldmodel-demo.md (§3 bar: {THRESHOLD}/{trials})");
+        println!(
+            "{:<10} {:>8} {:>20} {:>8}",
+            "arm", "reached", "mean final distance", "stalls"
+        );
+        println!(
+            "{:<10} {:>8} {:>20.4} {:>8}",
+            "mppi",
+            format!("{mppi_reached}/{trials}"),
+            mppi_mean,
+            mppi_stalls
+        );
+        println!(
+            "{:<10} {:>8} {:>20.4} {:>8}",
+            "pd",
+            format!("{pd_reached}/{trials}"),
+            pd_mean,
+            "-"
+        );
+        println!(
+            "{:<10} {:>8} {:>20.4} {:>8}",
+            "bang-bang",
+            format!("{bb_reached}/{trials}"),
+            bb_mean,
+            "-"
+        );
+        println!();
+        match verdict {
+            "does-not-discriminate" => println!(
+                "verdict: THE TASK DOES NOT DISCRIMINATE over true dynamics.\n  \
+                 Both MPPI and the damped controller clear the bar, so this is not an\n  \
+                 MPPI success — §4 of the registration says so, and it said so first."
+            ),
+            "threshold-met" => println!(
+                "verdict: threshold met. MPPI {mppi_reached}/{trials}, PD {pd_reached}/{trials}."
+            ),
+            _ => println!(
+                "verdict: THRESHOLD MISSED. MPPI {mppi_reached}/{trials}, bar was {THRESHOLD}.\n  \
+                 Reported as a miss. The bar does not move."
+            ),
+        }
+        eprintln!(
+            "\nnote: pd and bang-bang are deterministic, so their five seeds are five\n\
+             identical trials, not five samples. Only mppi's seeds vary anything."
+        );
+    }
+
+    0
 }
 
 // ──────────────────────────────────────────────────────────────────── eeg ──
