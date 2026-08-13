@@ -236,6 +236,11 @@ where
     E: SentenceEmbedding,
     R: SelectionDraws,
 {
+    // Eight injected collaborators. Every one is a distinct type, so a
+    // transposed argument is a compile error rather than a runtime surprise —
+    // which is the failure clippy's threshold exists to catch. Grouping them
+    // into a struct would only move the same eight names one level down.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         listener: L,
         generator: G,

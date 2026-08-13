@@ -288,7 +288,7 @@ fn mirror_never_embeds_and_the_dialectical_modes_always_do() {
     ] {
         let trace = run_mode(mode, 3);
         assert!(
-            trace.iter().any(|e| *e == Event::Embed),
+            trace.contains(&Event::Embed),
             "{} never embedded",
             mode.id()
         );
@@ -452,4 +452,213 @@ fn a_failing_witness_degrades_visibly_rather_than_silently() {
         turn.witness_error.is_some(),
         "a failing witness left no trace — Reflective now looks like Focused"
     );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// The following cover mutants that survived the first mutation run of
+// `dialectic.rs`. Every one of them is behaviour the module header claims and
+// nothing above observed: the trajectory feeding the centroids, tension
+// carrying across turns, the prosody blend, and the per-profile silence bound.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// An embedder returning fixed vectors, keyed on the TEXT rather than on call
+/// order. Order-keying desynchronises under Reflective, which embeds a fourth
+/// string per turn (the witness finding) — the first draft of these tests did
+/// that and produced a spurious failure two turns in.
+struct FixedEmbedder {
+    vectors: Vec<Vec<f32>>,
+    candidate_index: usize,
+}
+impl SentenceEmbedding for FixedEmbedder {
+    fn embed(&mut self, text: &str) -> SeamResult<Embedding> {
+        let v = if text.starts_with("heard") {
+            self.vectors[0].clone()
+        } else if text.starts_with("witness") {
+            // Off both candidate axes, so it perturbs nothing being asserted.
+            vec![0.0, 0.0, 1.0]
+        } else {
+            let i = self.candidate_index % 2;
+            self.candidate_index += 1;
+            self.vectors[1 + i].clone()
+        };
+        Ok(Embedding::new(v, "fixed"))
+    }
+}
+
+struct QuietSpeaker;
+impl Speaking for QuietSpeaker {
+    fn speak(&mut self, _t: &str, _p: Prosody) -> SeamResult<()> {
+        Ok(())
+    }
+}
+struct PlainGenerator {
+    n: usize,
+}
+impl TextGenerating for PlainGenerator {
+    fn generate(&mut self, system: &str, _p: &str, _g: GenerationParams) -> SeamResult<String> {
+        if system == WITNESS_SYSTEM {
+            return Ok("witness observation".to_string());
+        }
+        self.n += 1;
+        Ok(format!("candidate {}", self.n))
+    }
+}
+struct PlainListener {
+    n: usize,
+}
+impl Listening for PlainListener {
+    fn listen(&mut self) -> SeamResult<Option<String>> {
+        self.n += 1;
+        Ok(Some(format!("heard {}", self.n)))
+    }
+}
+
+fn loop_with_vectors(
+    profile: ContextProfile,
+    vectors: Vec<Vec<f32>>,
+) -> DialecticLoop<PlainListener, PlainGenerator, QuietSpeaker, FixedEmbedder, ScriptedDraws> {
+    DialecticLoop::new(
+        PlainListener { n: 0 },
+        PlainGenerator { n: 0 },
+        QuietSpeaker,
+        FixedEmbedder {
+            vectors,
+            candidate_index: 0,
+        },
+        ScriptedDraws::new(vec![0.5]),
+        waking_roles().to_vec(),
+        profile,
+        DialecticConfig::default(),
+    )
+}
+
+/// Cycle: heard, candidate A, candidate B — three embeddings per turn.
+fn spread_vectors() -> Vec<Vec<f32>> {
+    vec![
+        vec![0.0, 1.0, 0.0],
+        vec![1.0, 0.0, 0.0],
+        vec![0.3, 0.2, 0.9],
+    ]
+}
+
+/// The trajectory must actually accumulate. Turn 0 has no history, so resonance
+/// and novelty are the neutral 0.5; by turn 2 both centroids exist and the
+/// scores must have moved off neutral.
+///
+/// Without this, a loop that never recorded anything would score every turn as
+/// an early turn forever — resonance and novelty pinned at 0.5 — and the
+/// profiles would differ only in their silence thresholds. Two mutants
+/// (`record_heard` and `record_reply` removed) survived until this existed.
+#[test]
+fn the_trajectory_accumulates_and_moves_the_scores_off_neutral() {
+    let mut l = loop_with_vectors(ContextProfile::Focused, spread_vectors());
+
+    let first = l.turn().unwrap().unwrap();
+    for s in &first.scored {
+        assert_eq!(s.energy.resonance, 0.5, "turn 0 must have no history");
+        assert_eq!(s.energy.novelty, 0.5, "turn 0 must have no replies");
+    }
+
+    l.turn().unwrap();
+    let third = l.turn().unwrap().unwrap();
+    assert!(
+        third.scored.iter().any(|s| s.energy.resonance != 0.5),
+        "resonance never left neutral — the heard trajectory is not accumulating"
+    );
+    assert!(
+        third.scored.iter().any(|s| s.energy.novelty != 0.5),
+        "novelty never left neutral — the reply trajectory is not accumulating"
+    );
+}
+
+/// Standing tension is the loop's headline property: contradiction persists
+/// across turns rather than being resolved every cycle. So after each turn the
+/// loop's standing tension must equal that turn's measured tension.
+#[test]
+fn standing_tension_carries_across_turns() {
+    let mut l = loop_with_vectors(ContextProfile::Reflective, spread_vectors());
+    for _ in 0..3 {
+        let t = l.turn().unwrap().unwrap();
+        assert_eq!(
+            l.standing_tension(),
+            t.resolution.tension,
+            "standing tension did not carry the turn's measured tension"
+        );
+    }
+    assert!(
+        l.standing_tension() > 0.0,
+        "tension stayed at zero across the whole run"
+    );
+}
+
+/// A spoken turn is voiced with the role voices blended by the competition's
+/// own probabilities — that blend is what makes tension audible. The waking
+/// roles' voices are nothing like the base hypnagogic prosody, so a loop that
+/// skipped blending would speak in the base voice and be caught here.
+#[test]
+fn a_spoken_turn_is_voiced_with_the_blended_role_prosody() {
+    let mut l = loop_with_vectors(ContextProfile::Focused, spread_vectors());
+    let turn = l.turn().unwrap().unwrap();
+    assert!(turn.spoken.is_some(), "expected a spoken turn");
+    assert_ne!(
+        turn.prosody,
+        DialecticConfig::default().prosody,
+        "the turn was voiced in the base prosody — the role blend was skipped"
+    );
+    // The blend of two waking voices must land between them, not on either.
+    let rate = turn.prosody.rate.expect("blended rate");
+    assert!(
+        rate > Prosody::WAKING_COHERENT.rate.unwrap() - 0.01
+            && rate < Prosody::WAKING_DIVERGENT.rate.unwrap() + 0.01,
+        "blended rate {rate} is outside the two role voices"
+    );
+}
+
+/// Vectors that force a stalemate: `heard` orthogonal to both candidates, and
+/// the candidates diametrically opposed. Both score identically (margin 0) at
+/// maximum tension (1.0), which is above every profile's `high_tension`.
+fn stalemate_vectors() -> Vec<Vec<f32>> {
+    vec![
+        vec![0.0, 1.0, 0.0],  // heard
+        vec![1.0, 0.0, 0.0],  // candidate A
+        vec![-1.0, 0.0, 0.0], // candidate B, opposed
+    ]
+}
+
+/// Each profile tolerates its own length of silence run before breaking it with
+/// a cue — Focused 2, Reflective 3, Contemplative 6. A loop that hardcoded the
+/// bound would still fall silent correctly and still eventually speak, so only
+/// counting the turns distinguishes it.
+#[test]
+fn the_silence_run_bound_comes_from_the_profile() {
+    for (profile, expected) in [
+        (ContextProfile::Focused, 2u32),
+        (ContextProfile::Reflective, 3),
+        (ContextProfile::Contemplative, 6),
+    ] {
+        let mut l = loop_with_vectors(profile, stalemate_vectors());
+        let mut spoke_on = None;
+        for turn_number in 1..=8u32 {
+            let t = l.turn().unwrap().unwrap();
+            assert!(
+                matches!(
+                    t.resolution.outcome,
+                    neuralcompose_hypnagogic::dynamics::DialecticalOutcome::Silent
+                ),
+                "{}: expected a stalemate, got {:?}",
+                profile.id(),
+                t.resolution.outcome
+            );
+            if t.spoken.is_some() {
+                spoke_on = Some(turn_number);
+                break;
+            }
+        }
+        assert_eq!(
+            spoke_on,
+            Some(expected),
+            "{} broke its silence run on the wrong turn",
+            profile.id()
+        );
+    }
 }
