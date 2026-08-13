@@ -66,6 +66,48 @@ pub const SOFTWARE_ID: &str = "neuralcompose-hypnagogic";
 /// gone.
 pub const NEUTRAL_GLOSS: f32 = 0.5;
 
+/// Rewrites every non-integer JSON number into a bit-exact hex string, in
+/// place, so a digest taken over the document cannot depend on how a float was
+/// rendered to decimal or parsed back.
+///
+/// **Why a digest must not eat a raw float.** `serde_json` writes the shortest
+/// round-tripping form but its *default* parser reads it back up to 1 ULP low
+/// (measured 2026-08-13; `float_roundtrip` is now enabled here, but nothing
+/// obliges a consumer in another crate, repo or language to do the same). Any
+/// read-modify-write path would then re-serialize a drifted value and produce a
+/// **different digest for the same logical record** — two stores disagreeing
+/// about a record they both hold, with no corruption anywhere to point at.
+///
+/// Excluding floats is not open to us: [`crate::dynamics::Tuning`] is twelve
+/// floats and they *are* the parameters this digest exists to seal. So the
+/// floats stay and their decimal rendering leaves. `f32` widens to `f64`
+/// exactly, so the bits are deterministic.
+///
+/// This is deliberately narrower than RFC 8785 canonical JSON: it fixes the
+/// number encoding only, because that is the part `serde_json` gets wrong. Key
+/// ordering is already stable here (serde emits struct fields in declaration
+/// order, and `Value`'s map preserves insertion order under the default
+/// features). A cross-implementation contract would want the full JCS instead —
+/// `neural-memory-server`'s personal crate already vendors one.
+fn bit_exact_numbers(v: &mut serde_json::Value) {
+    match v {
+        serde_json::Value::Number(n) => {
+            // Integers already survive JSON exactly; leaving them legible keeps
+            // a digest document a human can read.
+            if n.as_i64().is_none() && n.as_u64().is_none() {
+                let bits = n
+                    .as_f64()
+                    .expect("a JSON number is i64, u64 or f64")
+                    .to_bits();
+                *v = serde_json::Value::String(format!("f64:{bits:016x}"));
+            }
+        }
+        serde_json::Value::Array(items) => items.iter_mut().for_each(bit_exact_numbers),
+        serde_json::Value::Object(map) => map.iter_mut().for_each(|(_, x)| bit_exact_numbers(x)),
+        _ => {}
+    }
+}
+
 /// The envelope for a turn record: which build, under which frozen tuning.
 ///
 /// `parameters_digest` is a sha256 over the profile's own [`crate::dynamics::Tuning`],
@@ -88,14 +130,14 @@ pub fn dialectic_method_identity(
         profile: &'static str,
         tuning: crate::dynamics::Tuning,
     }
-    let digest = sha256_hex(
-        serde_json::to_vec(&Params {
-            domain: DIALECTIC_METHOD_ID,
-            profile: profile.id(),
-            tuning: profile.tuning(),
-        })
-        .expect("Tuning is always serializable"),
-    );
+    let mut doc = serde_json::to_value(Params {
+        domain: DIALECTIC_METHOD_ID,
+        profile: profile.id(),
+        tuning: profile.tuning(),
+    })
+    .expect("Tuning is always serializable");
+    bit_exact_numbers(&mut doc);
+    let digest = sha256_hex(serde_json::to_vec(&doc).expect("a rewritten document serializes"));
     MethodIdentity {
         method_id: DIALECTIC_METHOD_ID.to_string(),
         software_id: SOFTWARE_ID.to_string(),
@@ -820,6 +862,122 @@ mod tests {
             digests.len(),
             ContextProfile::ALL.len(),
             "two profiles share a parameters digest — the tuning is not sealed"
+        );
+    }
+
+    /// The read-modify-write property, which is what the byte-level payload
+    /// digest does NOT give you. `verify_turn_log` re-hashes the original bytes,
+    /// so it stays green even if parsing drifts every float in the file. Any
+    /// consumer that parses a record and writes it back — a mirror worker, a
+    /// coordinator, a promotion path — would then produce a different digest for
+    /// the same logical record, and nothing would look broken.
+    ///
+    /// This asserts the cycle is byte-identical. It fails if `float_roundtrip`
+    /// is ever dropped from `Cargo.toml`.
+    #[test]
+    fn a_turn_line_survives_a_parse_and_reserialize_cycle_byte_for_byte() {
+        let line = spoke_line(0)
+            .with_self_similarity(0.9243132)
+            .with_channel_health(vec![ChannelHealthLine {
+                channel: "TP9".into(),
+                rms_microvolts: 14.067217896390133,
+                status: ChannelHealthStatus::Healthy,
+            }]);
+        let once = encode_turn_line(&line);
+        let parsed: TurnLine = serde_json::from_str(&once).expect("parses");
+        let twice = encode_turn_line(&parsed);
+        assert_eq!(once, twice, "a parse cycle changed the bytes");
+        assert_eq!(
+            sha256_hex(once.as_bytes().to_vec()),
+            sha256_hex(twice.as_bytes().to_vec())
+        );
+        // The specific value that exposed the default parser.
+        assert!(once.contains("14.067217896390133"), "{once}");
+    }
+
+    /// `confidence` rides inside the record the payload digest covers, so it is
+    /// subject to the same drift as any other float. Pinned explicitly because
+    /// it is the field most likely to be added to a future identity document.
+    #[test]
+    fn a_confidence_value_survives_the_same_cycle() {
+        let mut line = spoke_line(0);
+        line.provenance.assertion_kind = AssertionKind::AgentInference;
+        line.provenance.confidence = Some(0.8414709848078965);
+        let once = encode_turn_line(&line);
+        let parsed: TurnLine = serde_json::from_str(&once).unwrap();
+        assert_eq!(parsed.provenance.confidence, line.provenance.confidence);
+        assert_eq!(once, encode_turn_line(&parsed));
+    }
+
+    /// The parameters digest must not depend on decimal float rendering at all:
+    /// the digest DOCUMENT must survive a text round trip, which is exactly what
+    /// a read-modify-write consumer does to it.
+    ///
+    /// Deliberately NOT "`Tuning` serialized directly equals `Tuning` laundered
+    /// through text". `Tuning` is `f32`; `to_value` widens it exactly, while
+    /// `to_string` writes the shortest **f32** form and reading that back as
+    /// `f64` is a genuinely different number. Those are not the same quantity
+    /// and never were. The first version of this test compared them and failed,
+    /// correctly — the test was wrong, not the code.
+    #[test]
+    fn the_parameters_digest_does_not_depend_on_float_rendering() {
+        for profile in ContextProfile::ALL {
+            let doc = serde_json::to_value(profile.tuning()).unwrap();
+
+            let mut direct = doc.clone();
+            bit_exact_numbers(&mut direct);
+            let before = sha256_hex(serde_json::to_vec(&direct).unwrap());
+
+            // The read-modify-write cycle. Without `float_roundtrip` this drifts.
+            let text = serde_json::to_string(&doc).unwrap();
+            let mut round_tripped: serde_json::Value = serde_json::from_str(&text).unwrap();
+            bit_exact_numbers(&mut round_tripped);
+            let after = sha256_hex(serde_json::to_vec(&round_tripped).unwrap());
+
+            assert_eq!(
+                before, after,
+                "{profile:?} digest moved across a JSON cycle"
+            );
+        }
+    }
+
+    /// The two properties `parameters_digest` exists for: stable run to run,
+    /// and distinct per profile.
+    #[test]
+    fn the_parameters_digest_is_stable_and_profile_specific() {
+        let of = |p| dialectic_method_identity(p, "0.0.0-test", None).parameters_digest;
+        for profile in ContextProfile::ALL {
+            assert_eq!(of(profile), of(profile), "{profile:?} digest is not stable");
+        }
+        let all: std::collections::BTreeSet<String> =
+            ContextProfile::ALL.iter().map(|p| of(*p)).collect();
+        assert_eq!(all.len(), ContextProfile::ALL.len());
+    }
+
+    /// The rewrite must actually remove the decimals, and must leave integers
+    /// alone — otherwise it is doing nothing and the test above passes for the
+    /// wrong reason.
+    #[test]
+    fn the_rewrite_replaces_floats_and_keeps_integers_legible() {
+        let mut doc = serde_json::json!({
+            "float": 0.1_f64,
+            "int": 7,
+            "nested": [1.5_f64, 2, {"deep": 0.25_f64}],
+            "text": "0.5"
+        });
+        bit_exact_numbers(&mut doc);
+        assert_eq!(doc["float"], serde_json::json!("f64:3fb999999999999a"));
+        assert_eq!(doc["int"], serde_json::json!(7), "an integer was rewritten");
+        assert_eq!(doc["nested"][0], serde_json::json!("f64:3ff8000000000000"));
+        assert_eq!(doc["nested"][1], serde_json::json!(2));
+        assert_eq!(
+            doc["nested"][2]["deep"],
+            serde_json::json!("f64:3fd0000000000000")
+        );
+        assert_eq!(
+            doc["text"],
+            serde_json::json!("0.5"),
+            "a string was touched"
         );
     }
 
