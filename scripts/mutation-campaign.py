@@ -13,10 +13,13 @@ Two rules this codebase learned the hard way and this script enforces:
 """
 import filecmp
 import shutil
-import tempfile
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from edit_guard import restore  # noqa: E402  the shared applied-check
 
 REPO = Path(__file__).resolve().parent.parent
 SNAP = Path(tempfile.mkdtemp(prefix="nc-mutation-"))
@@ -110,17 +113,6 @@ MUTANTS = [
 
 CMD = ["cargo", "+1.97.1", "test", "-j4",
        "-p", "neuralcompose-mobile-core", "-p", "neuralcompose-hypnagogic"]
-
-
-def restore(target, snapshot):
-    """Rewrite the file so its mtime is NOW.
-
-    `shutil.copy2` preserves the snapshot's timestamp, which is older than the
-    artifact cargo built from the mutant — cargo then skips the rebuild and the
-    next run tests the mutated binary against unmutated source. That produced a
-    phantom red baseline once already.
-    """
-    target.write_text(snapshot.read_text())
 
 
 def run_suite():

@@ -160,6 +160,37 @@ exact dynamics, does not.
   predictor from the loop entirely, so a success here is **not** an explanation of that
   failure — it only shows the geometry alone is not what makes it hard.
 
+## §10 — What a Swift conformance failure would mean, decided in advance
+
+The same `env_v1.json` pins `Sources/WorldModelDemo/ParticleNavigatorEnv.swift`, which
+today has four hand-computed literals and no reference. Registered before that test is
+run, because the interesting outcome is the one most easily explained away afterwards.
+
+> **If the Swift does not reproduce the fixture, that is a defect in the macOS app's
+> environment — the one `WorldModelDemo` actually runs on — not a problem with the fixture
+> and not an artifact of the Rust port.**
+
+The fixture is generated from `WorldModel/env.py` itself and the Rust matched it
+bit-for-bit on its first run. Two independent implementations agreeing leaves the third as
+the outlier; a fixture defect would have had to break Rust too.
+
+**The one place a mismatch is expected, if there is one.** `env.py:59-61` computes the
+speed norm and then divides in **float64** (`float(np.linalg.norm(vel))`, and `max_speed`
+is a Python float), while `ParticleNavigatorEnv.swift:63-67` does the whole clamp in
+`Float`. If mismatches land **only on the 11 speed-clamped steps**, that is this
+difference, and it is a real numerical divergence in the Swift rather than a rounding
+curiosity — the two implementations would disagree about the velocity after any saturating
+manoeuvre. Mismatches **away from** clamped steps are something else and would need
+separate diagnosis.
+
+**The NaN divergence cannot be what fires.** Swift's clamp turns a NaN action into full
+throttle, but the fixture's action script contains no non-finite value, so that path is
+never entered. It stays a known, separately-recorded defect.
+
+**Nothing here blocks anything.** A failure is written up in the NeuralCompose repository
+as a review note, the way the `cosineSimilarity` and `centroid` findings were. It does not
+gate this repository, and it does not change §6 or §8.
+
 ## §8 — Second registration: step count, with the selection disclosed
 
 Date: 2026-08-13, after §6. **Written and committed before the run it governs**, same as §3.
