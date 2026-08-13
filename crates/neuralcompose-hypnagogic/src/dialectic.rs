@@ -149,6 +149,9 @@ pub struct DialecticConfig {
     pub prosody: Prosody,
     pub silence_cues: Vec<String>,
     pub history_window: usize,
+    /// See [`crate::loops::MirrorConfig::chunk_replies`]. Set false for a
+    /// neural voice, which owns its own sentence-level prosody.
+    pub chunk_replies: bool,
 }
 
 impl Default for DialecticConfig {
@@ -161,6 +164,7 @@ impl Default for DialecticConfig {
                 .map(|s| s.to_string())
                 .collect(),
             history_window: 16,
+            chunk_replies: true,
         }
     }
 }
@@ -288,7 +292,7 @@ where
             // Nothing heard: speak a soft cue rather than competing over silence.
             _ => {
                 let cue = self.next_silence_cue();
-                for c in chunk(&cue) {
+                for c in self.split(&cue) {
                     self.speaker.speak(&c, self.config.prosody)?;
                 }
                 return Ok(None);
@@ -449,7 +453,17 @@ where
                     .map(|(s, p)| (self.role_prosody(&s.candidate.role_id), *p))
                     .collect();
                 turn_prosody = Prosody::blend(&weighted);
-                chunks = chunk(&c.text);
+                // The blend's NUMERIC fields carry the competition, but the
+                // voice must identify the SPEAKER. `Prosody::blend` returns the
+                // heaviest contributor's voice, and the heaviest contributor is
+                // not always the winner: selection is a tension-sharpened
+                // SAMPLE, so a lower-potential basin can take the turn — observed
+                // live, a turn spoke the pole scoring 1.518 over the one scoring
+                // 1.565. Leaving it would voice one pole's words in the other's
+                // voice, defeating the single requirement fixed voices exist to
+                // meet: a listener tracks which position speaks BY VOICE.
+                turn_prosody.voice = self.role_prosody(&c.role_id).voice;
+                chunks = self.split(&c.text);
                 for ch in &chunks {
                     self.speaker.speak(ch, turn_prosody)?;
                 }
@@ -462,7 +476,7 @@ where
                 if self.consecutive_silence >= self.profile.max_consecutive_silence() {
                     self.consecutive_silence += 0;
                     let cue = self.next_silence_cue();
-                    chunks = chunk(&cue);
+                    chunks = self.split(&cue);
                     for ch in &chunks {
                         self.speaker.speak(ch, self.config.prosody)?;
                     }
@@ -490,6 +504,21 @@ where
         }))
     }
 
+    /// Micro-phrases, or the whole utterance when a neural voice should own the
+    /// prosody.
+    fn split(&self, text: &str) -> Vec<String> {
+        if self.config.chunk_replies {
+            chunk(text)
+        } else {
+            let whole = text.trim();
+            if whole.is_empty() {
+                Vec::new()
+            } else {
+                vec![whole.to_string()]
+            }
+        }
+    }
+
     fn role_prosody(&self, id: &str) -> Prosody {
         self.roles
             .iter()
@@ -515,4 +544,220 @@ fn role_system(_role: &DialecticalRole) -> &'static str {
     "Your reply is spoken aloud by a text-to-speech engine. Plain conversational \
      prose only: no markdown, no asterisks, no headings, no lists, no stage \
      directions, no emoji."
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::seams::{
+        GenerationParams, Listening, ScriptedDraws, SeamResult, SentenceEmbedding, Speaking,
+        TextGenerating,
+    };
+
+    fn e(v: &[f32]) -> Embedding {
+        Embedding::new(v.to_vec(), "t")
+    }
+
+    const RING_INPUT: [[f32; 2]; 5] = [[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0], [1.0, 0.0], [1.0, 0.0]];
+
+    /// The trajectory rings are BOUNDED. Unbounded they grow for the life of a
+    /// session — a slow leak, and worse, a centroid drifting toward the whole
+    /// history instead of the recent window, so the dialogue stops responding to
+    /// where it actually is.
+    #[test]
+    fn the_trajectory_rings_are_bounded_to_the_history_window() {
+        let mut m = DialecticalMemory::new(2, 0.35);
+        for v in RING_INPUT {
+            m.record_heard(e(&v));
+        }
+        let bounded = m.history_centroid().expect("a centroid");
+        // The last two are both (1, 0), so the windowed centroid is exactly that.
+        assert!((bounded.values[0] - 1.0).abs() < 1e-6);
+        assert!(bounded.values[1].abs() < 1e-6);
+
+        // Companion: over all five the centroid is NOT (1, 0), so the assertion
+        // above genuinely discriminates windowed from unwindowed.
+        let mut unbounded = DialecticalMemory::new(99, 0.35);
+        for v in RING_INPUT {
+            unbounded.record_heard(e(&v));
+        }
+        assert!(
+            unbounded.history_centroid().unwrap().values[1].abs() > 1e-3,
+            "the two centroids are indistinguishable; this test cannot discriminate"
+        );
+    }
+
+    #[test]
+    fn the_reply_ring_is_bounded_too() {
+        let mut m = DialecticalMemory::new(1, 0.35);
+        m.record_reply(e(&[0.0, 1.0]));
+        m.record_reply(e(&[1.0, 0.0]));
+        assert!(
+            (m.reply_centroid().unwrap().values[0] - 1.0).abs() < 1e-6,
+            "the ring kept a stale reply"
+        );
+    }
+
+    #[test]
+    fn the_low_tension_streak_extends_and_resets() {
+        let mut m = DialecticalMemory::new(4, 0.35);
+        m.observe(0.1);
+        m.observe(0.35);
+        assert_eq!(m.low_tension_streak(), 2, "the ceiling is inclusive");
+        m.observe(0.36);
+        assert_eq!(
+            m.low_tension_streak(),
+            0,
+            "a tense turn must reset the streak"
+        );
+    }
+
+    #[test]
+    fn the_witness_prompt_carries_both_voices_and_the_question() {
+        let p = witness_prompt("i keep starting things", &["one".into(), "two".into()]);
+        assert!(p.contains("i keep starting things"));
+        assert!(p.contains("Voice 1: one"));
+        assert!(p.contains("Voice 2: two"));
+        assert!(p.contains("What did both voices avoid noticing?"));
+    }
+
+    struct L;
+    impl Listening for L {
+        fn listen(&mut self) -> SeamResult<Option<String>> {
+            Ok(Some("something".into()))
+        }
+    }
+    struct G(usize);
+    impl TextGenerating for G {
+        fn generate(&mut self, _s: &str, _p: &str, _g: GenerationParams) -> SeamResult<String> {
+            self.0 += 1;
+            Ok(format!("candidate {}", self.0))
+        }
+    }
+    struct Sp;
+    impl Speaking for Sp {
+        fn speak(&mut self, _t: &str, _p: Prosody) -> SeamResult<()> {
+            Ok(())
+        }
+    }
+    struct E(usize);
+    impl SentenceEmbedding for E {
+        fn embed(&mut self, text: &str) -> SeamResult<Embedding> {
+            let v = if text.starts_with("something") {
+                vec![1.0, 0.0]
+            } else {
+                self.0 += 1;
+                if self.0 == 1 {
+                    vec![0.99, 0.1]
+                } else {
+                    vec![0.1, 0.99]
+                }
+            };
+            Ok(Embedding::new(v, "t"))
+        }
+    }
+
+    /// The spoken turn must carry the voice of the pole that ACTUALLY SPOKE,
+    /// even when the other pole was the heavier contributor to the blend.
+    ///
+    /// The precondition is asserted, not assumed: unless the favourite and the
+    /// speaker differ, this case cannot tell "voice of the speaker" from "voice
+    /// of the favourite" and passes against either. A first version omitted
+    /// that and duly survived a mutation reverting the fix.
+    #[test]
+    fn the_spoken_voice_follows_the_speaker_not_the_favourite() {
+        // A draw at the top of the cumulative distribution lands in the LAST
+        // bucket — the least likely candidate.
+        let mut l = DialecticLoop::new(
+            L,
+            G(0),
+            Sp,
+            E(0),
+            ScriptedDraws::new(vec![0.999]),
+            crate::role::waking_roles().to_vec(),
+            ContextProfile::Focused,
+            DialecticConfig::default(),
+        );
+        let turn = l.turn().unwrap().unwrap();
+        let spoke = match &turn.resolution.outcome {
+            DialecticalOutcome::Spoke(c) => c.role_id.clone(),
+            other => panic!("expected a spoken turn, got {other:?}"),
+        };
+        let voice_of = |id: &str| {
+            crate::role::waking_roles()
+                .iter()
+                .find(|r| r.id == id)
+                .unwrap()
+                .voice
+                .voice
+        };
+
+        let potentials: Vec<f32> = turn.scored.iter().map(|s| s.potential).collect();
+        let probs = dynamics::probabilities(&potentials, turn.resolution.selection_temperature);
+        let heaviest = turn
+            .scored
+            .iter()
+            .zip(probs.iter())
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .map(|(s, _)| s.candidate.role_id.clone())
+            .unwrap();
+        assert_ne!(
+            heaviest, spoke,
+            "degenerate setup: the favourite IS the speaker, so this cannot discriminate"
+        );
+        assert_ne!(voice_of(&heaviest), voice_of(&spoke));
+        assert_eq!(
+            turn.prosody.voice,
+            voice_of(&spoke),
+            "spoke as {spoke} but voiced as {:?} (favourite was {heaviest})",
+            turn.prosody.voice
+        );
+        assert!(
+            turn.prosody.rate.is_some(),
+            "numeric fields must still blend"
+        );
+    }
+
+    /// A neural voice owns its own sentence prosody, so it must be handed whole
+    /// utterances. Chunking also costs a model load per fragment.
+    #[test]
+    fn disabling_chunking_speaks_one_whole_utterance() {
+        #[derive(Default)]
+        struct Counting(std::rc::Rc<std::cell::RefCell<Vec<String>>>);
+        impl Speaking for Counting {
+            fn speak(&mut self, t: &str, _p: Prosody) -> SeamResult<()> {
+                self.0.borrow_mut().push(t.to_string());
+                Ok(())
+            }
+        }
+        struct MultiSentence;
+        impl TextGenerating for MultiSentence {
+            fn generate(&mut self, _s: &str, _p: &str, _g: GenerationParams) -> SeamResult<String> {
+                Ok("One thing. Then another, softly.".into())
+            }
+        }
+        for (chunk_replies, want) in [(true, 3usize), (false, 1)] {
+            let said = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+            let mut l = DialecticLoop::new(
+                L,
+                MultiSentence,
+                Counting(std::rc::Rc::clone(&said)),
+                E(0),
+                ScriptedDraws::new(vec![0.5]),
+                crate::role::waking_roles().to_vec(),
+                ContextProfile::Focused,
+                DialecticConfig {
+                    chunk_replies,
+                    ..DialecticConfig::default()
+                },
+            );
+            l.turn().unwrap().unwrap();
+            assert_eq!(
+                said.borrow().len(),
+                want,
+                "chunk_replies={chunk_replies} produced {:?}",
+                said.borrow()
+            );
+        }
+    }
 }

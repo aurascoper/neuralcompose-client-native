@@ -127,6 +127,20 @@ pub struct Prosody {
     pub volume: Option<f32>,
     /// Seconds of silence before the utterance. `TimeInterval` in the Swift.
     pub pre_utterance_delay: Option<f64>,
+    /// Named voice, for synthesizers that ship fixed voices rather than
+    /// parametric ones (Kokoro has 54 and cannot clone or pitch-shift).
+    ///
+    /// **Discrete, so it selects rather than blends.** The Swift's whole
+    /// prosody model is continuous — a close competition is voiced in a
+    /// weighted mixture of the poles' voices, which is how tension becomes
+    /// audible. Two neural voices have no midpoint, so under a fixed-voice
+    /// engine that mechanism degrades: [`Prosody::blend`] takes the voice of
+    /// the heaviest contributor and blends only the numeric fields. Tension
+    /// stays audible through pacing, not through timbre. Stated because it is
+    /// a real loss, not an implementation detail.
+    ///
+    /// `None` leaves the choice to the engine.
+    pub voice: Option<&'static str>,
 }
 
 impl Prosody {
@@ -138,6 +152,7 @@ impl Prosody {
         pitch_multiplier: Some(0.8),
         volume: Some(0.6),
         pre_utterance_delay: Some(0.4),
+        voice: Some("af_heart"),
     };
 
     /// The coherence pole's sleep voice — identical to [`Self::HYPNAGOGIC`].
@@ -151,6 +166,7 @@ impl Prosody {
         pitch_multiplier: Some(0.98),
         volume: Some(0.6),
         pre_utterance_delay: Some(0.3),
+        voice: Some("af_sky"),
     };
 
     /// The coherence pole's **waking** voice — present and natural-paced, NOT
@@ -161,6 +177,7 @@ impl Prosody {
         pitch_multiplier: Some(1.0),
         volume: Some(0.9),
         pre_utterance_delay: Some(0.1),
+        voice: Some("am_michael"),
     };
 
     /// The displacement pole's **waking** voice — quicker and brighter so the
@@ -170,6 +187,7 @@ impl Prosody {
         pitch_multiplier: Some(1.06),
         volume: Some(0.9),
         pre_utterance_delay: Some(0.05),
+        voice: Some("bf_emma"),
     };
 
     /// Weighted mean of several prosodies — the mechanism that makes tension
@@ -201,11 +219,19 @@ impl Prosody {
             }
             (wsum > 0.0).then(|| acc / wsum)
         }
+        // A voice cannot be averaged, so the heaviest contributor supplies it.
+        // Ties go to the earlier entry, which keeps the result deterministic.
+        let voice = weighted
+            .iter()
+            .filter(|(p, w)| *w > 0.0 && p.voice.is_some())
+            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .and_then(|(p, _)| p.voice);
         Prosody {
             rate: mean_f32(weighted, |p| p.rate),
             pitch_multiplier: mean_f32(weighted, |p| p.pitch_multiplier),
             volume: mean_f32(weighted, |p| p.volume),
             pre_utterance_delay: mean_f64(weighted, |p| p.pre_utterance_delay),
+            voice,
         }
     }
 }
@@ -311,7 +337,46 @@ mod tests {
             pitch_multiplier: None,
             volume,
             pre_utterance_delay: None,
+            voice: None,
         }
+    }
+
+    fn voiced(name: &'static str) -> Prosody {
+        Prosody {
+            voice: Some(name),
+            ..Prosody::default()
+        }
+    }
+
+    /// A voice has no midpoint, so the blend must SELECT one rather than
+    /// inventing a value — and it must pick the pole that actually won, or the
+    /// spoken turn would carry the losing voice.
+    #[test]
+    fn blending_selects_the_heaviest_voice_rather_than_averaging() {
+        let b = Prosody::blend(&[(voiced("am_michael"), 0.2), (voiced("bf_emma"), 0.8)]);
+        assert_eq!(b.voice, Some("bf_emma"));
+        let flipped = Prosody::blend(&[(voiced("am_michael"), 0.9), (voiced("bf_emma"), 0.1)]);
+        assert_eq!(flipped.voice, Some("am_michael"));
+        // A zero-weight contributor cannot supply the voice.
+        let zeroed = Prosody::blend(&[(voiced("am_michael"), 0.0), (voiced("bf_emma"), 1.0)]);
+        assert_eq!(zeroed.voice, Some("bf_emma"));
+        assert_eq!(Prosody::blend(&[]).voice, None);
+    }
+
+    /// The four named voices must be four DIFFERENT voices, or the poles stop
+    /// being distinguishable by ear — which dialectic.py names as the
+    /// functional requirement that makes Kokoro's fixed voices a feature.
+    #[test]
+    fn the_named_prosodies_use_distinct_voices() {
+        let voices = [
+            Prosody::HYPNAGOGIC.voice,
+            Prosody::HYPNAGOGIC_DREAMER.voice,
+            Prosody::WAKING_COHERENT.voice,
+            Prosody::WAKING_DIVERGENT.voice,
+        ];
+        assert!(voices.iter().all(|v| v.is_some()));
+        let unique: std::collections::HashSet<_> = voices.iter().collect();
+        assert_eq!(unique.len(), 4, "two poles share a voice: {voices:?}");
     }
 
     #[test]

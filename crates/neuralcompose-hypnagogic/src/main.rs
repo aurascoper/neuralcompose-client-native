@@ -45,6 +45,7 @@ struct Args {
     verify_log: Option<PathBuf>,
     mic: bool,
     speak: bool,
+    tts: String,
 }
 
 const USAGE: &str = "\
@@ -56,7 +57,8 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
   --whisper <path>                --whisper-model <path>
   --log                           --log-dir <path>
   --mic                           capture audio instead of reading stdin
-  --speak                         synthesize with espeak-ng instead of printing
+  --speak                         synthesize audio instead of printing
+  --tts <kokoro|espeak>           voice engine for --speak (default kokoro)
   --json                          --verify-log <path>
 ";
 
@@ -74,6 +76,7 @@ fn parse_args() -> Result<Args, String> {
         verify_log: None,
         mic: false,
         speak: false,
+        tts: "kokoro".into(),
     };
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -118,6 +121,14 @@ fn parse_args() -> Result<Args, String> {
             }
             "--mic" => a.mic = true,
             "--speak" => a.speak = true,
+            "--tts" => {
+                let v = need(i)?;
+                if !matches!(v.as_str(), "kokoro" | "espeak") {
+                    return Err(format!("unknown --tts {v:?}; expected kokoro or espeak"));
+                }
+                a.tts = v;
+                i += 1;
+            }
             "--log" => a.log = true,
             "--json" => a.json = true,
             "-h" | "--help" => {
@@ -235,13 +246,79 @@ impl Speaking for EspeakSpeaker {
                 out.status
             )));
         }
-        let argv = command::play_argv(&wav);
-        Command::new(&argv[0])
-            .args(&argv[1..])
-            .status()
-            .map_err(|e| SeamError::Unavailable(format!("pw-play: {e}")))?;
+        play(&wav)?;
+        // With --speak there is otherwise no trace of a run at all. Echoing the
+        // spoken text keeps a session auditable by someone who was not
+        // listening, and makes "spoke nothing" distinguishable from "spoke".
+        eprintln!("  ♪ {text}");
         Ok(())
     }
+}
+
+/// Kokoro-82M via `tools/spoken-loop/speak.py`.
+///
+/// **Subprocess, not a link.** The script imports onnxruntime; this binary does
+/// not. That distinction is the whole point: client-native's
+/// single-inference-runtime rule governs what the shipped binary LINKS, and
+/// spawning a Python script adds nothing to its link graph, its memory
+/// footprint or its load time. Nothing here promotes a support-matrix row and
+/// nothing here is a precedent for what the product links — the runtime
+/// decision stays deferred and unmade, exactly as speak.py's own header says.
+///
+/// Prosody maps differently from espeak, and imperfectly:
+///   - `rate` -> `KOKORO_SPEED`, rescaled so 0.5 (the natural anchor) is 1.0
+///   - `voice` -> `KOKORO_VOICE`, a fixed named voice per role
+///   - `pitch_multiplier` -> **nothing**. Kokoro cannot pitch-shift, so that
+///     dimension of the Swift's prosody is simply unavailable here.
+struct KokoroSpeaker {
+    script: PathBuf,
+    python: PathBuf,
+    workdir: PathBuf,
+}
+
+impl Speaking for KokoroSpeaker {
+    fn speak(&mut self, text: &str, prosody: Prosody) -> SeamResult<()> {
+        let wav = self.workdir.join("reply.wav");
+        let mut cmd = Command::new(&self.python);
+        cmd.arg(&self.script).arg(&wav).arg(text);
+        if let Some(v) = prosody.voice {
+            cmd.env("KOKORO_VOICE", v);
+        }
+        if let Some(r) = prosody.rate {
+            // The Swift/AVSpeech scale puts "natural" at 0.5; Kokoro's speed
+            // multiplier puts it at 1.0. Clamped so a stray value cannot make
+            // an utterance unintelligible.
+            cmd.env("KOKORO_SPEED", format!("{:.2}", (r / 0.5).clamp(0.5, 2.0)));
+        }
+        let out = cmd
+            .output()
+            .map_err(|e| SeamError::Unavailable(format!("kokoro speak.py: {e}")))?;
+        if !out.status.success() {
+            return Err(SeamError::Failed(format!(
+                "speak.py exited {}: {}",
+                out.status,
+                String::from_utf8_lossy(&out.stderr).trim()
+            )));
+        }
+        play(&wav)?;
+        eprintln!("  ♪ [{}] {text}", prosody.voice.unwrap_or("engine default"));
+        Ok(())
+    }
+}
+
+/// Plays a rendered wav, checking the exit code — `.status()` yields `Ok` for a
+/// process that ran and failed, so a dead sink would otherwise be silent in
+/// both senses.
+fn play(wav: &std::path::Path) -> SeamResult<()> {
+    let argv = command::play_argv(wav);
+    let status = Command::new(&argv[0])
+        .args(&argv[1..])
+        .status()
+        .map_err(|e| SeamError::Unavailable(format!("pw-play: {e}")))?;
+    if !status.success() {
+        return Err(SeamError::Failed(format!("pw-play exited {status}")));
+    }
+    Ok(())
 }
 
 /// Prints instead of speaking — the default, so a run needs no audio stack.
@@ -433,14 +510,39 @@ fn run(args: Args) -> Result<(), String> {
         eprintln!("● input: stdin (pass --mic for the microphone)");
         Box::new(StdinListener)
     };
-    let speaker: Box<dyn Speaking> = if args.speak {
-        eprintln!("● output: espeak-ng + pw-play");
-        Box::new(EspeakSpeaker {
-            workdir: workdir.clone(),
-        })
-    } else {
-        eprintln!("● output: stdout (pass --speak to synthesize)");
-        Box::new(PrintSpeaker)
+    // Kokoro owns sentence-level prosody, so it must NOT be handed fragments:
+    // chunking both denies it that context and pays a model load per fragment.
+    let mut chunk_replies = true;
+    let speaker: Box<dyn Speaking> = match (args.speak, args.tts.as_str()) {
+        (true, "kokoro") => {
+            let script = kokoro_script()?;
+            let python = script.parent().unwrap().join(".venv/bin/python");
+            if !python.exists() {
+                return Err(format!(
+                    "kokoro needs the venv at {} — see tools/spoken-loop/README.md, \
+                     or pass --tts espeak",
+                    python.display()
+                ));
+            }
+            chunk_replies = false;
+            eprintln!("● output: Kokoro-82M via speak.py + pw-play (whole utterances, not chunks)");
+            eprintln!("●   onnxruntime is imported by that SCRIPT, not linked into this binary");
+            Box::new(KokoroSpeaker {
+                script,
+                python,
+                workdir: workdir.clone(),
+            })
+        }
+        (true, _) => {
+            eprintln!("● output: espeak-ng + pw-play (chunked micro-phrases)");
+            Box::new(EspeakSpeaker {
+                workdir: workdir.clone(),
+            })
+        }
+        (false, _) => {
+            eprintln!("● output: stdout (pass --speak to synthesize)");
+            Box::new(PrintSpeaker)
+        }
     };
 
     match args.mode.profile() {
@@ -451,7 +553,10 @@ fn run(args: Args) -> Result<(), String> {
                     server: args.server.clone(),
                 },
                 speaker,
-                MirrorConfig::default(),
+                MirrorConfig {
+                    chunk_replies,
+                    ..MirrorConfig::default()
+                },
             );
             for _ in 0..args.turns {
                 match l.turn() {
@@ -484,7 +589,10 @@ fn run(args: Args) -> Result<(), String> {
                 SystemDraws,
                 waking_roles().to_vec(),
                 profile,
-                DialecticConfig::default(),
+                DialecticConfig {
+                    chunk_replies,
+                    ..DialecticConfig::default()
+                },
             );
             for turn_number in 0..args.turns {
                 match l.turn() {
@@ -517,6 +625,32 @@ fn run(args: Args) -> Result<(), String> {
         write_log(&args.log_dir, &session_id, &payload, &r)?;
     }
     Ok(())
+}
+
+/// Locates `tools/spoken-loop/speak.py` relative to this repo.
+fn kokoro_script() -> Result<PathBuf, String> {
+    if let Ok(p) = std::env::var("NC_KOKORO_SPEAK") {
+        let p = PathBuf::from(p);
+        return if p.exists() {
+            Ok(p)
+        } else {
+            Err(format!(
+                "NC_KOKORO_SPEAK points at {} which does not exist",
+                p.display()
+            ))
+        };
+    }
+    // CARGO_MANIFEST_DIR is crates/neuralcompose-hypnagogic; the tool lives two
+    // levels up. Baked at build time so a run from any cwd finds it.
+    let guess = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tools/spoken-loop/speak.py");
+    if guess.exists() {
+        return Ok(guess);
+    }
+    Err(format!(
+        "cannot find tools/spoken-loop/speak.py (looked at {}); set NC_KOKORO_SPEAK \
+         or pass --tts espeak",
+        guess.display()
+    ))
 }
 
 fn build_embedder() -> Result<CpuEmbedder, String> {

@@ -70,6 +70,16 @@ pub struct MirrorConfig {
     /// the loop, but the Linux generator is a bare HTTP endpoint with no such
     /// prompt of its own, so it lives here.
     pub system: String,
+    /// Split replies into micro-phrases before speaking.
+    ///
+    /// True for parametric synthesizers (espeak-ng, AVSpeech), where per-phrase
+    /// prosody is the only prosody there is. **False for a neural voice**:
+    /// Kokoro generates sentence-level intonation, and handing it fragments
+    /// both denies it that context and pays a model load per fragment
+    /// (measured 2.87 s for two chunks against 2.25 s for the whole
+    /// utterance). Chunking is an artifact of the engine the Swift had, not a
+    /// property of the loop.
+    pub chunk_replies: bool,
 }
 
 pub const MIRROR_SYSTEM: &str = "You are a calm, passive presence beside someone drifting toward \
@@ -86,6 +96,7 @@ impl Default for MirrorConfig {
             prosody: Prosody::HYPNAGOGIC,
             silence_cues: DEFAULT_SILENCE_CUES.iter().map(|s| s.to_string()).collect(),
             system: MIRROR_SYSTEM.to_string(),
+            chunk_replies: true,
         }
     }
 }
@@ -158,7 +169,16 @@ impl<L: Listening, G: TextGenerating, S: Speaking> MirrorLoop<L, G, S> {
             None => (self.next_silence_cue(), true),
         };
 
-        let chunks = chunk(&spoken);
+        let chunks = if self.config.chunk_replies {
+            chunk(&spoken)
+        } else {
+            let whole = spoken.trim();
+            if whole.is_empty() {
+                Vec::new()
+            } else {
+                vec![whole.to_string()]
+            }
+        };
         for c in &chunks {
             self.speaker.speak(c, self.config.prosody)?;
         }
