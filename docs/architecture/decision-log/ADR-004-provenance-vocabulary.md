@@ -126,12 +126,19 @@ All four were verified against source, not against prose describing it.
 3. **That estimator is MLX-backed, not Core ML** (`Sources/BCILLM/SpectralStateEstimator.swift:23`).
    `turn_log.rs:30` claimed Core ML and was wrong.
 
-4. **ADR numbering is local to this repository.** This registry holds ADR-001,
-   ADR-002 and now ADR-004. `turn_log.rs` cited "ADR-005" and `embedding.rs`
-   cites "ADR-010" and `docs/architecture/embedding_contract.md`; those are
-   macOS-repository numbers and one absent document. The `turn_log.rs` citation
-   is now labelled foreign; `embedding.rs`'s is not yet, and is the known
-   remaining instance.
+4. **ADR numbering is local to this repository.** `turn_log.rs` cited "ADR-005"
+   and `embedding.rs` cites "ADR-010" and `docs/architecture/embedding_contract.md`;
+   those are macOS-repository numbers and one absent document. The `turn_log.rs`
+   citation is now labelled foreign; `embedding.rs`'s is not yet, and is the
+   known remaining instance.
+
+   **This ADR is 004 because 003 is taken by unmerged work**, not because 003 is
+   free. `ADR-003-embedding-candidate-selection.md` is committed at `471ae61` on
+   `origin/docs/adr-003-embedding-candidate`. It is invisible from a `main`-based
+   checkout, which is exactly how a number gets reused: *absent from this
+   working tree* is not *never written*. The first draft of this ADR asserted
+   the latter and was wrong. Check `git log --all` before claiming a number is
+   free.
 
 Related, and still open in the Swift repository: `Embedding.cosineSimilarity`
 returns `0` for incomparable operands
@@ -201,5 +208,13 @@ by skipping.
 - `evidence_mapping` will drift from upstream between runs of the drift script.
   That window is the honest cost of not having a runtime oracle, and it is
   written into the fixture's own comment rather than left implied.
+- **`serde_json`'s default parser does not round-trip `f64`.** Found 2026-08-13
+  while logging channel-health RMS: it writes the correct shortest form and
+  reads it back up to 1 ULP low (`14.067217896390133` → `…131`). The payload
+  digest still verifies, because that is over bytes — which is precisely why
+  this would never have surfaced on its own, and why a record that cannot
+  reproduce its own values is a provenance problem rather than a rounding one.
+  The `float_roundtrip` feature is now enabled in both crates that persist
+  records. No new dependency; a feature flag on one already present.
 - Promotes no support-matrix row. `attained_support_status()` returns exactly
   what it returned before; per ADR-002 there is no promotion by implication.

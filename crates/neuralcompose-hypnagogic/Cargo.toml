@@ -21,13 +21,22 @@ path = "src/main.rs"
 [dependencies]
 neuralcompose-mobile-core = { path = "../neuralcompose-mobile-core" }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# See mobile-core's Cargo.toml: the default parser does not round-trip f64.
+serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.11.0"
 # Blocking HTTP for llama-server. Already a vetted dev-dependency of
 # neuralcompose-mobile-core at the same major, so this promotes an existing
 # choice rather than making a new supply-chain decision. Blocking on purpose:
 # the workspace has no async runtime and a listen->generate->speak loop needs none.
 ureq = "2"
+# Blocking WebSocket client for the optional `--eeg-url` source. Already a
+# vetted dev-dependency of neuralcompose-mobile-core at this exact version, so
+# this promotes an existing choice rather than making a new supply-chain
+# decision. `default-features = false` with only `handshake` drops the TLS
+# stack: the EEG source is a loopback bridge or the fixture server, both `ws://`,
+# and pulling native-tls in for a link that never uses it would be cost without
+# a caller. `wss://` is therefore unsupported and fails at connect, loudly.
+tungstenite = { version = "0.28", default-features = false, features = ["handshake"] }
 
 [dependencies.neuralcompose-llama]
 path = "../neuralcompose-llama"

@@ -14,6 +14,7 @@
 
 use neuralcompose_hypnagogic::command;
 use neuralcompose_hypnagogic::dialectic::{DialecticConfig, DialecticLoop};
+use neuralcompose_hypnagogic::eeg::{eeg_reading_for_turn, EegTurnReading, SAMPLE_RATE_HZ};
 use neuralcompose_hypnagogic::embedding::Embedding;
 use neuralcompose_hypnagogic::http;
 use neuralcompose_hypnagogic::loops::{strip_for_speech, MirrorConfig, MirrorLoop};
@@ -26,10 +27,14 @@ use neuralcompose_hypnagogic::seams::{
 use neuralcompose_hypnagogic::turn_log::{
     turn_log_manifest_filename, turn_log_payload_filename, TurnLogRecorder,
 };
+use neuralcompose_mobile_core::channel_health::ChannelHealthThresholds;
+use neuralcompose_mobile_core::electrode_check::MainsThresholds;
+use neuralcompose_mobile_core::stream::{MonitorConfig, SocketEvent, StreamMonitor};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::Arc;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 // ─────────────────────────────────────────────────────────────────── args ──
 
@@ -46,6 +51,7 @@ struct Args {
     mic: bool,
     speak: bool,
     tts: String,
+    eeg_url: Option<String>,
 }
 
 const USAGE: &str = "\
@@ -59,6 +65,7 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
   --mic                           capture audio instead of reading stdin
   --speak                         synthesize audio instead of printing
   --tts <kokoro|espeak>           voice engine for --speak (default kokoro)
+  --eeg-url <ws://…>              attach an EEG source (dialectical modes only)
   --json                          --verify-log <path>
 ";
 
@@ -77,6 +84,7 @@ fn parse_args() -> Result<Args, String> {
         mic: false,
         speak: false,
         tts: "kokoro".into(),
+        eeg_url: None,
     };
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -117,6 +125,10 @@ fn parse_args() -> Result<Args, String> {
             }
             "--verify-log" => {
                 a.verify_log = Some(PathBuf::from(need(i)?));
+                i += 1;
+            }
+            "--eeg-url" => {
+                a.eeg_url = Some(need(i)?);
                 i += 1;
             }
             "--mic" => a.mic = true,
@@ -435,6 +447,86 @@ fn verify_log(payload: &std::path::Path) -> i32 {
     }
 }
 
+// ──────────────────────────────────────────────────────────────────── eeg ──
+
+/// A live EEG source: one WebSocket reader thread feeding a `StreamMonitor`.
+///
+/// Everything decided here is an effect — connect, read, clock. *Whether there
+/// is anything to report* is [`eeg_reading_for_turn`]'s job, in the lib, where
+/// it can be tested; this struct only supplies it a phase and a window.
+///
+/// The reader runs on its own thread because the dialectic blocks for seconds
+/// at a time in `generate`, and samples arriving during that must still land.
+/// `StreamMonitor` is `Sync` and takes `&self`, so no lock of ours is involved.
+struct EegSource {
+    monitor: Arc<StreamMonitor>,
+    /// Monotonic origin. `StreamMonitor` never reads a clock — every `now_ms`
+    /// it sees comes from here, and it must be monotonic or staleness is
+    /// nonsense. `Instant`, never `SystemTime`.
+    started: Instant,
+}
+
+impl EegSource {
+    /// Connects synchronously so a bad URL fails *before* the loop starts.
+    ///
+    /// The alternative — connecting on the reader thread — produces a run that
+    /// looks healthy and silently logs no channel health at all, which is
+    /// indistinguishable from an EEG that is attached but stale.
+    fn connect(url: &str) -> Result<Self, String> {
+        let monitor = Arc::new(StreamMonitor::new(MonitorConfig::default()));
+        let started = Instant::now();
+        monitor.on_socket_event(SocketEvent::Connecting, 0);
+
+        let (mut socket, _response) = tungstenite::connect(url).map_err(|e| {
+            format!(
+                "EEG source is not answering at {url} ({e}).\n\
+                 Start one first, e.g.:\n  \
+                 python3 tools/fixture-eeg-server/server.py --seconds 300\n\
+                 or tools/muse-ble-bridge/bridge.py for a real headband.\n\
+                 Note: only ws:// is supported (no TLS is linked in)."
+            )
+        })?;
+        monitor.on_socket_event(SocketEvent::Opened, started.elapsed().as_millis() as u64);
+
+        let reader = Arc::clone(&monitor);
+        std::thread::spawn(move || {
+            loop {
+                let now = started.elapsed().as_millis() as u64;
+                match socket.read() {
+                    Ok(tungstenite::Message::Text(t)) => {
+                        reader.on_frame(t.as_str().to_string(), now);
+                    }
+                    // Ping/pong/binary are not the contract; ignore rather than
+                    // treat as a close, which would misreport the phase.
+                    Ok(_) => {}
+                    Err(e) => {
+                        // A closed stream must reach the monitor, or `phase()`
+                        // keeps reporting Live off cached samples until the
+                        // staleness window expires.
+                        reader.on_socket_event(SocketEvent::Errored, now);
+                        eprintln!("⚡ eeg: stream ended ({e})");
+                        break;
+                    }
+                }
+            }
+        });
+
+        Ok(EegSource { monitor, started })
+    }
+
+    /// This turn's reading, or `None` when there is nothing current to report.
+    fn reading(&self) -> Option<EegTurnReading> {
+        let now = self.started.elapsed().as_millis() as u64;
+        eeg_reading_for_turn(
+            self.monitor.phase(now),
+            &self.monitor.snapshot().channels,
+            SAMPLE_RATE_HZ,
+            ChannelHealthThresholds::default(),
+            MainsThresholds::default(),
+        )
+    }
+}
+
 /// Fails fast, before the microphone is ever opened.
 ///
 /// `turn.sh` does the same thing with `curl /health`, and for the same reason: a
@@ -467,6 +559,28 @@ fn preflight(server: &str) -> Result<(), String> {
 
 fn run(args: Args) -> Result<(), String> {
     preflight(&args.server)?;
+
+    // Refused rather than warned: mirror mode writes no turn record at all, and
+    // the turn log is the ONLY place EEG appears (nothing here biases the
+    // dialectic). So `--mode mirror --eeg-url ...` would connect a headband,
+    // read it every turn, and produce no observable whatsoever — a run that
+    // looks like it worked and cannot be distinguished from one without the
+    // flag. The plan's own stage-3 check specified exactly that combination.
+    let eeg = match (&args.eeg_url, args.mode.profile()) {
+        (Some(url), None) => {
+            return Err(format!(
+                "--eeg-url {url} has no observable in mirror mode: mirror writes \
+                 no turn record, and the turn log is the only place EEG appears.\n\
+                 Use --mode focused|reflective|contemplative, and --log to persist it."
+            ))
+        }
+        (Some(url), Some(_)) => {
+            let src = EegSource::connect(url)?;
+            eprintln!("● eeg: {url}");
+            Some(src)
+        }
+        (None, _) => None,
+    };
 
     let workdir = std::env::temp_dir().join(format!("nc-hypnagogic-{}", std::process::id()));
     std::fs::create_dir_all(&workdir).map_err(|e| format!("workdir: {e}"))?;
@@ -602,19 +716,36 @@ fn run(args: Args) -> Result<(), String> {
             for turn_number in 0..args.turns {
                 match l.turn() {
                     Ok(Some(t)) => {
+                        // Built ONCE. Two calls would let the JSON echo and the
+                        // persisted record disagree — and the echo is what a
+                        // reader would trust while the record is what verifies.
+                        let mut line = t.to_turn_line(args.mode.id(), method.clone());
+                        if let Some(src) = eeg.as_ref() {
+                            match src.reading() {
+                                Some(r) => {
+                                    for note in &r.blocking {
+                                        eprintln!("⚡ {note}");
+                                    }
+                                    if let Some(hint) = r.common_mode {
+                                        eprintln!("⚡ {hint}");
+                                    }
+                                    line = line.with_channel_health(r.lines);
+                                }
+                                // Said out loud every turn on purpose: an
+                                // attached-but-not-live EEG writes exactly the
+                                // same record as no EEG at all, so silence here
+                                // would make the two indistinguishable.
+                                None => eprintln!(
+                                    "⚡ eeg: nothing current to report this turn \
+                                     (stream not live, or an incomplete montage)"
+                                ),
+                            }
+                        }
                         if args.json {
-                            println!(
-                                "{}",
-                                serde_json::to_string(
-                                    &t.to_turn_line(args.mode.id(), method.clone())
-                                )
-                                .unwrap()
-                            );
+                            println!("{}", serde_json::to_string(&line).unwrap());
                         }
                         if let Some(r) = recorder.as_mut() {
-                            payload.push_str(
-                                &r.on_turn(&t.to_turn_line(args.mode.id(), method.clone())),
-                            );
+                            payload.push_str(&r.on_turn(&line));
                             payload.push('\n');
                         }
                         if let Some(err) = &t.witness_error {

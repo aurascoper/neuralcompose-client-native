@@ -98,6 +98,7 @@
 pub mod command;
 pub mod dialectic;
 pub mod dynamics;
+pub mod eeg;
 pub mod embedding;
 pub mod http;
 pub mod loops;

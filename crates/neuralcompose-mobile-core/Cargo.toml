@@ -19,7 +19,12 @@ uniffi = ["dep:uniffi"]
 [dependencies]
 semver = "1.0.28"
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# `float_roundtrip`: serde_json's DEFAULT parser is approximate — it writes
+# the correct shortest form and reads it back up to 1 ULP low, so a persisted
+# f64 does not reproduce itself. Measured 2026-08-13: 14.067217896390133 came
+# back as ...131 from a channel-health line. The digest still verifies (it is
+# over bytes), which is exactly why this would never have surfaced on its own.
+serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.11.0"
 uniffi = { version = "=0.32.0", features = ["cli"], optional = true }
 

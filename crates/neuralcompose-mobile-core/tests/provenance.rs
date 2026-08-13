@@ -118,9 +118,9 @@ fn serde_spellings_are_the_wire() {
 #[test]
 fn mapping_targets_are_exactly_the_five_upstream_names() {
     let record = read("fixtures/evidence-class-names.json");
-    let upstream: std::collections::BTreeSet<String> = record["evidenceClasses"]
+    let upstream: std::collections::BTreeSet<String> = record["upstream"]["evidenceClasses"]
         .as_array()
-        .expect("evidenceClasses")
+        .expect("upstream.evidenceClasses")
         .iter()
         .map(|v| v.as_str().expect("string").to_string())
         .collect();
@@ -138,6 +138,158 @@ fn mapping_targets_are_exactly_the_five_upstream_names() {
         mapped, upstream,
         "the mapping and the recorded upstream class list disagree"
     );
+}
+
+/// The fixture must keep a chain back to the source it mirrors. Without the
+/// commit and the file digest, "these are the five names" is an assertion with
+/// no way to check it short of a full checkout.
+#[test]
+fn the_drift_record_pins_its_own_source() {
+    let up = &read("fixtures/evidence-class-names.json")["upstream"];
+    for field in ["repo", "path", "lines", "readOn"] {
+        assert!(
+            up[field].as_str().is_some_and(|s| !s.trim().is_empty()),
+            "upstream.{field} is missing"
+        );
+    }
+    for (field, len) in [("commit", 40), ("fileSha256", 64)] {
+        let v = up[field].as_str().unwrap_or_default();
+        assert!(
+            v.len() == len
+                && v.bytes()
+                    .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()),
+            "upstream.{field} is not {len} lowercase hex: {v:?}"
+        );
+    }
+}
+
+/// Local extensions are kept apart from mirrored names on purpose: otherwise an
+/// upstream addition and one of ours look identical to the drift check, and the
+/// only way to tell them apart is a hardcoded exclusion list — which is its own
+/// place to drift.
+///
+/// So the split is asserted structurally: every `NeverIngestible` kind is
+/// declared local, every local kind is `NeverIngestible`, and the two sets never
+/// overlap.
+#[test]
+fn local_extensions_are_disjoint_from_the_mirrored_names() {
+    let record = read("fixtures/evidence-class-names.json");
+    let upstream: std::collections::BTreeSet<String> = record["upstream"]["evidenceClasses"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
+    let local: std::collections::BTreeSet<String> = record["localExtensions"]["assertionKinds"]
+        .as_array()
+        .expect("localExtensions.assertionKinds")
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
+
+    assert!(
+        upstream.is_disjoint(&local),
+        "a name is claimed as both mirrored and local: {:?}",
+        upstream.intersection(&local).collect::<Vec<_>>()
+    );
+
+    let never: std::collections::BTreeSet<String> = AssertionKind::ALL
+        .iter()
+        .filter(|k| evidence_mapping(**k) == EvidenceMapping::NeverIngestible)
+        .map(|k| {
+            serde_json::to_value(k)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
+        .collect();
+    assert_eq!(
+        never, local,
+        "the kinds with no evidence class and the kinds declared local must be the same set"
+    );
+}
+
+/// "Four of the five mappings have no live ingestion path" is a fact about
+/// another repository, and stating it only in ADR prose lets it rot. Recorded as
+/// data instead: exactly one class is reachable through the agent write door
+/// (`write.rs:266-273` clamps before the digest), so wiring a second without
+/// updating the record fails here rather than quietly making the prose false.
+#[test]
+fn exactly_one_evidence_class_is_reachable_through_the_agent_door() {
+    let record = read("fixtures/evidence-class-names.json");
+    let upstream: std::collections::BTreeSet<String> = record["upstream"]["evidenceClasses"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
+    let writable: Vec<String> = record["agentWritableClasses"]["classes"]
+        .as_array()
+        .expect("agentWritableClasses.classes")
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
+
+    assert_eq!(
+        writable,
+        vec!["agentInference".to_string()],
+        "a second ingestion path was recorded; ADR-004's \"vocabulary alignment, \
+         not a pipe\" paragraph now needs rewriting"
+    );
+    assert!(
+        writable.iter().all(|c| upstream.contains(c)),
+        "a writable class is not one of the mirrored evidence classes"
+    );
+    assert_eq!(
+        upstream.len() - writable.len(),
+        4,
+        "the ADR says four mappings have no live ingestion path"
+    );
+}
+
+/// The `requires_method -> true` survivor generalizes: every kind permitted to
+/// omit an optional field needs a case that actually omits it. This is the
+/// kind × optional-field matrix, so the gap cannot reopen one field at a time.
+#[test]
+fn every_kind_is_exercised_with_each_optional_field_absent() {
+    /// A field's wire name and the edit that makes it absent.
+    type Absence = (&'static str, fn(&mut ProvenanceEnvelope));
+
+    let optional: [Absence; 4] = [
+        ("method", |e| e.method = None),
+        ("confidence", |e| e.confidence = None),
+        ("comparisonEmbeddingSpace", |e| {
+            e.comparison_embedding_space = None
+        }),
+        ("locator", |e| {
+            for i in e.inputs.iter_mut() {
+                i.locator = None;
+            }
+        }),
+    ];
+    let method_optional = [
+        AssertionKind::Observed,
+        AssertionKind::HumanDecision,
+        AssertionKind::ExternalClaim,
+    ];
+
+    for kind in AssertionKind::ALL {
+        for (field, clear) in &optional {
+            let mut env = envelope(kind);
+            if kind == AssertionKind::DerivedDeterministically {
+                env.inputs = base_inputs();
+            }
+            clear(&mut env);
+            let defects = validate(&env);
+            let expected_ok = *field != "method" || method_optional.contains(&kind);
+            assert_eq!(
+                defects.is_empty(),
+                expected_ok,
+                "{kind:?} with {field} absent produced {defects:?}"
+            );
+        }
+    }
 }
 
 // 3 -----------------------------------------------------------------------

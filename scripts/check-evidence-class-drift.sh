@@ -18,7 +18,8 @@ cd "$(dirname "$0")/.."
 
 RECORD=contracts/provenance/fixtures/evidence-class-names.json
 SERVER_DIR="${NEURAL_MEMORY_SERVER_DIR:-$HOME/src/neural-memory-server}"
-TERMS="$SERVER_DIR/$(python3 -c "import json,sys;print(json.load(open('$RECORD'))['sourcePath'])")"
+jq_field() { python3 -c "import json,sys;d=json.load(open('$RECORD'));print(d['upstream'][sys.argv[1]])" "$1"; }
+TERMS="$SERVER_DIR/$(jq_field path)"
 
 if [ ! -d "$SERVER_DIR" ]; then
   echo "evidence-class drift: FAILED — no checkout at $SERVER_DIR" >&2
@@ -27,7 +28,7 @@ if [ ! -d "$SERVER_DIR" ]; then
 fi
 if [ ! -f "$TERMS" ]; then
   echo "evidence-class drift: FAILED — $TERMS is missing" >&2
-  echo "  The enum moved. Update sourcePath in $RECORD after finding it." >&2
+  echo "  The enum moved. Update upstream.path in $RECORD after finding it." >&2
   exit 1
 fi
 
@@ -49,8 +50,20 @@ actual="$(
     | sed 's/^\(.\)/\l\1/'
 )"
 
-expected="$(python3 -c "import json;print('\n'.join(json.load(open('$RECORD'))['evidenceClasses']))")"
-recorded_commit="$(python3 -c "import json;print(json.load(open('$RECORD'))['checkedAgainstCommit'])")"
+expected="$(python3 -c "import json;print('\n'.join(json.load(open('$RECORD'))['upstream']['evidenceClasses']))")"
+recorded_commit="$(jq_field commit)"
+recorded_digest="$(jq_field fileSha256)"
+
+# The cheap check first: if the file the names were read from is byte-identical
+# at the recorded commit, the variant list cannot have moved. The parse below is
+# then a confirmation rather than the only mechanism.
+actual_digest="$(git -C "$SERVER_DIR" show "$recorded_commit:$(jq_field path)" 2>/dev/null | sha256sum | cut -d' ' -f1)"
+if [ -n "$actual_digest" ] && [ "$actual_digest" != "$recorded_digest" ]; then
+  echo "evidence-class drift: FAILED — $(jq_field path) at $recorded_commit digests to" >&2
+  echo "  $actual_digest, but the record pins $recorded_digest." >&2
+  echo "  Either the record is wrong or the commit is not what it was read from." >&2
+  exit 1
+fi
 
 fail=0
 if ! diff -u <(echo "$expected") <(echo "$actual") ; then
