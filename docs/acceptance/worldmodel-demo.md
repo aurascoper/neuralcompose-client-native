@@ -153,3 +153,84 @@ exact dynamics, does not.
   two hypotheses ruled out and the cause unknown. Planning over true dynamics removes the
   predictor from the loop entirely, so a success here is **not** an explanation of that
   failure — it only shows the geometry alone is not what makes it hard.
+
+## §8 — Second registration: step count, with the selection disclosed
+
+Date: 2026-08-13, after §6. **Written and committed before the run it governs**, same as §3.
+
+**The metric was chosen after seeing it separate.** §6's binary metric saturated at 35/35
+for all three arms; mean steps to goal did not — 17.1 / 19.7 / 26.5, a 55% spread that
+orders all three cleanly. Picking a metric because it worked is selection, and undisclosed
+selection is how a null result becomes a finding. So it is disclosed here, and it is
+re-run on data that did not inform the choice.
+
+### §8.1 — Fresh data, and what "fresh" can and cannot mean here
+
+**Seeds only refresh MPPI.** PD and bang-bang are deterministic: given a scenario they
+produce one trajectory, and running them under five more seeds yields five identical
+copies, not five samples. A seed-based replication would therefore test one third of the
+claim while looking like it tested all of it.
+
+So the held-out set is defined two ways, both by rule rather than by inspection:
+
+- **Fresh seeds `[5, 6, 7, 8, 9]`** — disjoint from §6's `[0..4]`. Refreshes MPPI.
+- **Fresh scenarios, generated not chosen**: starts at radius `0.8` and angles
+  `k · 45°` for `k = 0..7`, each with the antipodal goal `−start`. Eight scenarios,
+  none of which is a `HARD_CASES` member (whose corner coordinates `(±0.8, ±0.8)` sit at
+  radius 1.131). Refreshes all three arms.
+
+Reported as 8 scenarios × 5 seeds = 40 trials.
+
+### §8.2 — The claims, pinned
+
+> **C1 — the ordering replicates.** Mean steps to goal satisfies `pd < bang-bang < mppi`.
+>
+> **C2 — the separation is real, not noise.** MPPI's mean exceeds PD's by **≥ 25%**.
+> Observed in §6 was 55%; 25% is a deliberately conservative replication bar, because the
+> question is whether the effect exists, not whether it reproduces to two figures.
+>
+> **C3 — the tighter gap survives too.** Bang-bang's mean exceeds PD's by **≥ 5%**.
+> This is the one that can fail: §6 measured 15%, and it is the pair with the least room.
+
+If a claim fails it is reported failed. The metric is not swapped again — a second
+undisclosed selection would make the first disclosure worthless.
+
+### §8.3 — Why the binary metric saturated, stated so it is not rediscovered
+
+Mean final distances of 0.033–0.049 against a `0.1` bar means every arm clears by two to
+three times. Against an arena diagonal of ≈2.263 the tolerance is loose enough that
+`GOAL_TOLERANCE = 1.0` would still read 35/35 — which is exactly why that mutant survived
+the whole suite until §6's run forced a test for it. **The bar was never near the achieved
+values**, so the binary metric could only ever have come out saturated or catastrophic.
+
+### §8.4 — Results
+
+*Empty. To be filled by one run under §8.1's data.*
+
+## §9 — What `corner_pn_to_np` does and does not localize
+
+`WorldModel/README.md` records `(0.8,−0.8) → (−0.8,0.8)` failing completely under every
+latent configuration tested — final distance 2.234–2.272 from a 2.263 start — with two
+hypotheses ruled out (latent-vs-position monotonicity along the line; training-data
+density) and the cause open.
+
+§6 measured all three arms solving that direction over true dynamics in 18–28 steps. That
+supports a **third ruled-out hypothesis**, and it is narrower than it may look:
+
+> The environment is tractable in that direction **and** a controller family as simple as a
+> two-gain PD is adequate for it. So the failure is not in the dynamics and not in the
+> planner. It lives in the **representation, or in the cost computed from it.**
+
+**Why this does not repeat the retracted comparison.** The retracted draft set
+`ParticleNavigatorEnv` + `mpc.py` numbers against ledger node 25, which measured
+`synthetic_1f` + `forward_eval.py` — a different env, encoder, task and planner. This claim
+compares **no performance numbers across harnesses at all**. It is a statement about one
+environment — `ParticleNavigatorEnv`, the same one the failing latent configurations run
+in — that it is solvable and that steering it is easy. The latent results are cited only as
+the thing being explained, never as a number to beat. That distinction is the whole
+argument, so it is written here rather than left for a reader to reconstruct.
+
+**Still not an explanation.** Which of representation-or-cost is at fault, and why that
+direction specifically, is untouched. `README.md`'s own remaining hypothesis — multi-step
+predictor rollout fidelity for this action direction — is neither supported nor refuted by
+anything here.
