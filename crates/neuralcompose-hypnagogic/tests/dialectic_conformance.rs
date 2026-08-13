@@ -292,7 +292,9 @@ fn rust_dynamics_reproduce_the_swift() {
                     novelty: fc.novelty,
                 },
                 potential: fc.potential,
-                role_fulfillment: 0.0,
+                // The fixture harness does not compute this, and the loop's
+                // role lookup is outside its surface entirely.
+                role_fulfillment: None,
             });
         }
 

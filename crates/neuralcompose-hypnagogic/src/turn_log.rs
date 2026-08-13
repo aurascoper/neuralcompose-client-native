@@ -388,7 +388,7 @@ mod tests {
                 novelty: 0.4,
             },
             potential,
-            role_fulfillment: 0.1,
+            role_fulfillment: Some(0.1),
         }
     }
 

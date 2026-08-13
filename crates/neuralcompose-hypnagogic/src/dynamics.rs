@@ -96,10 +96,16 @@ pub struct ScoredCandidate {
     pub energy: DialecticalEnergy,
     pub potential: f32,
     /// How well this candidate satisfied the objective of the role that
-    /// produced it. Diagnostic: it lets a later stage notice a role that failed
-    /// its own brief (a displacement pass that produced something un-novel
-    /// because the model refused to diverge).
-    pub role_fulfillment: f32,
+    /// produced it, or `None` when the producing role could not be resolved.
+    ///
+    /// Diagnostic: it lets a later stage notice a role that failed its own brief
+    /// (a displacement pass that produced something un-novel because the model
+    /// refused to diverge). **That is exactly why this is an `Option` where the
+    /// Swift writes `role?.objective(energy) ?? 0`** — `0` *is* the
+    /// failed-its-brief signal, so a lookup miss would not hide among plausible
+    /// values, it would impersonate the diagnostic and report a maximally-failed
+    /// pole. See lib.rs's divergences section.
+    pub role_fulfillment: Option<f32>,
 }
 
 // ─────────────────────────────────────────────────────────────── outcome ──
@@ -446,7 +452,7 @@ mod tests {
                 novelty: 0.5,
             },
             potential,
-            role_fulfillment: 0.0,
+            role_fulfillment: Some(0.0),
         }
     }
 

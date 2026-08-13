@@ -17,7 +17,7 @@
 //! four differences are presets over knobs the engine already has; the fourth,
 //! the Reflective Witness, is a third generate call and therefore control flow.
 //!
-//! Not here, on purpose: `DialecticalMemory`, `SemanticGraph` and the v2
+//! Not here, on purpose: `SemanticGraph` and the v2
 //! weight field. Those are later milestones in the Swift, and `FIELD_V2.md`
 //! explicitly defers `fieldEnergy` as a latent state variable.
 //!
@@ -95,6 +95,7 @@
 //! Swift dialectic is the mechanism that keeps this honest; the harness is
 //! committed for exactly that reason.
 
+pub mod dialectic;
 pub mod dynamics;
 pub mod embedding;
 pub mod loops;
