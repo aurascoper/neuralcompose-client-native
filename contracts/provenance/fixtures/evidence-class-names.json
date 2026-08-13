@@ -1,0 +1,34 @@
+{
+  "comment": "DATED EVIDENCE, NOT A LIVE CHECK. `cargo test` here cannot see neural-memory-server, and there is no runtime oracle: its MCP surface exposes no tool returning the enum, because the agent write channel clamps to a single class before the digest is computed (see agentWritableClasses). This file is the chain back to source — repo, path, line range, commit, and the sha256 of the file the names were READ FROM at that commit. Drift is then one hash comparison; scripts/check-evidence-class-drift.sh confirms it against a checkout when one is present.",
+  "upstream": {
+    "comment": "Mirrored FROM neural-memory-server. Adding a name here is a claim that the enum changed, and must be re-read from source.",
+    "repo": "neural-memory-server",
+    "path": "crates/neural-memory-domain/src/terms.rs",
+    "lines": "49-63",
+    "commit": "5da4a5c5ab509e22bc9eb72dbeb6d3fac835606b",
+    "fileSha256": "6f4f06a0014cf8f3b16ecfc700018f88c0d2cb31f238f6fc4027b69cdde75255",
+    "readOn": "2026-08-13",
+    "evidenceClasses": [
+      "observed",
+      "derivedDeterministically",
+      "humanDecision",
+      "agentInference",
+      "externalClaim"
+    ]
+  },
+  "localExtensions": {
+    "comment": "OURS. No upstream counterpart, deliberately — a threshold whose own source calls it unvalidated is not evidence at any confidence, so it must map to NeverIngestible rather than to any evidence class. Kept separate from `upstream` so an upstream addition and a local one are not indistinguishable to the drift check; without the split the check would need a hardcoded exclusion list, which is its own place to drift.",
+    "assertionKinds": [
+      "heuristicAnnotation"
+    ]
+  },
+  "agentWritableClasses": {
+    "comment": "The only evidence class reachable through the MCP write door. Recorded as data rather than as ADR prose so that wiring a second path fails the suite instead of quietly making the prose false. A subset of upstream.evidenceClasses by construction.",
+    "repo": "neural-memory-server",
+    "path": "crates/neural-memory-store/src/write.rs",
+    "lines": "266-273",
+    "classes": [
+      "agentInference"
+    ]
+  }
+}

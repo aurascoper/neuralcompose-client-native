@@ -1,7 +1,9 @@
 # tools/
 
-Development bridges. **Neither is a product surface**, neither ships in any
-app, and neither is on the SwiftPM/Gradle/Cargo target graph.
+Development tools. **None is a product surface**, none ships in any app, and
+none is on the SwiftPM/Gradle/Cargo target graph.
+
+Two are EEG bridges; `spoken-loop` is a demo and is described at the bottom.
 
 The golden-capture gate assumes `Muse → bridge → /api/eeg/stream → app`, but
 nothing in this repository spoke that first hop: the macOS app consumes Muse
@@ -46,3 +48,32 @@ Mind Monitor → Settings → OSC Stream Target = this machine's LAN IP, port
 5000. Only `/muse/eeg` is consumed; `/muse/acc`, `/muse/gyro` and `/muse/batt`
 are ignored so continuing non-EEG traffic cannot make a dead EEG substream
 look alive.
+
+## `spoken-loop` — a demo, not a bridge
+
+One spoken turn on Linux: mic → whisper.cpp (CPU) → llama-server (Vulkan, HTTP)
+→ Kokoro-82M → speakers. Unlike the bridges it publishes no contract and touches
+no headband.
+
+```sh
+cd tools/spoken-loop                       # must be run from its own directory
+./turn.sh                                  # speak, then press Enter
+./turn.sh ~/src/whisper.cpp/samples/jfk.wav   # or feed a WAV and skip the mic
+```
+
+**A fresh checkout does not run**: `.venv` and `models/` are gitignored and must
+be created first — see that directory's README.
+
+Read `tools/spoken-loop/README.md` first. Three things it establishes that are
+easy to get wrong by assumption:
+
+- **It promotes no support-matrix row and must not be cited as if it did.** A
+  working spoken demo is exactly the artifact that later gets read as evidence
+  the platform works.
+- **It links onnxruntime** (for Kokoro). The single-runtime rule governs the
+  shipped binary, not this; the product's runtime decision is **deferred and
+  unmade**, and this dependency graph is not a precedent for it.
+- **Exactly one process may hold a Vulkan context.** llama-server holds it;
+  whisper is built `-DGGML_VULKAN=OFF` and Kokoro's onnxruntime has no GPU
+  provider. PR #30's device lock is process-local and cannot serialise across
+  processes.

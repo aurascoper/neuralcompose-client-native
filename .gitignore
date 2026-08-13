@@ -23,6 +23,12 @@ ios/NeuralComposeClient/Info.plist
 # Bridge tool environments (derived; see each tool's README)
 tools/muse-ble-bridge/.venv/
 tools/muse-osc-bridge/node_modules
+# No trailing slash: a trailing slash matches directories only, and git treats a
+# SYMLINK to a directory as a file. Symlinking a shared venv or model directory
+# in from outside the worktree is a reasonable thing to do, and the slashed form
+# let both through — caught by `git status` before the commit, not by the rule.
+tools/spoken-loop/.venv
+tools/spoken-loop/models
 
 # Agent scratch. Present in the working tree since before 2026-08-03 but never
 # committed, so it protected one machine and no other checkout. Committed
@@ -48,3 +54,4 @@ models/
 
 # Throwaway venvs for the one-shot ONNX inventory (tools/onnx/README.md).
 onnxenv/
+__pycache__/

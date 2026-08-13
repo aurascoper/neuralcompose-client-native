@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.neuralcompose.invalid/provenance/provenance-envelope.schema.json",
+  "title": "Provenance envelope",
+  "description": "How one recorded value came to be asserted. Embedded in the record it describes; the host record is the subject. Rust (crates/neuralcompose-mobile-core/src/provenance.rs) is authoritative for semantics — this schema is the description, the golden fixtures are the contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaId",
+    "assertionKind",
+    "method",
+    "inputs",
+    "confidence",
+    "comparisonEmbeddingSpace"
+  ],
+  "properties": {
+    "schemaId": {
+      "const": "neuralcompose.provenance-envelope.v1"
+    },
+    "assertionKind": {
+      "description": "Five of these are spelled as neural-memory-server's EvidenceClass serializes them. heuristicAnnotation has no counterpart there, deliberately.",
+      "enum": [
+        "observed",
+        "derivedDeterministically",
+        "humanDecision",
+        "agentInference",
+        "externalClaim",
+        "heuristicAnnotation"
+      ]
+    },
+    "method": {
+      "description": "null only for kinds that do not require a method. Never omitted.",
+      "oneOf": [
+        { "$ref": "#/$defs/methodIdentity" },
+        { "type": "null" }
+      ]
+    },
+    "inputs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/resourceRef" }
+    },
+    "confidence": {
+      "description": "null means unscored. Never promotes a kind.",
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "comparisonEmbeddingSpace": {
+      "description": "The single embedding space every compared vector came from. null means this assertion rests on no embedding comparison — it is NOT a wildcard, and two nulls never match.",
+      "type": ["string", "null"],
+      "minLength": 1
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "A derivation that named no inputs cannot be recomputed, and an unrecomputable derivation is just an assertion.",
+      "if": {
+        "properties": { "assertionKind": { "const": "derivedDeterministically" } },
+        "required": ["assertionKind"]
+      },
+      "then": {
+        "properties": { "inputs": { "minItems": 1 } }
+      }
+    },
+    {
+      "$comment": "Kinds that must name the software and frozen parameters that produced them.",
+      "if": {
+        "properties": {
+          "assertionKind": {
+            "enum": ["derivedDeterministically", "agentInference", "heuristicAnnotation"]
+          }
+        },
+        "required": ["assertionKind"]
+      },
+      "then": {
+        "properties": { "method": { "$ref": "#/$defs/methodIdentity" } }
+      }
+    },
+    {
+      "$comment": "An observation is measured, a derivation is recomputed, a human decision is a decision. None of the three is scored.",
+      "if": {
+        "properties": {
+          "assertionKind": {
+            "enum": ["observed", "derivedDeterministically", "humanDecision"]
+          }
+        },
+        "required": ["assertionKind"]
+      },
+      "then": {
+        "properties": { "confidence": { "type": "null" } }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256Hex": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "resourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resourceKind", "sha256Hex", "locator"],
+      "properties": {
+        "resourceKind": {
+          "$comment": "A free label, not an enum: a new kind of resource must not require a core release (ADR-002 decision 1).",
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256Hex": { "$ref": "#/$defs/sha256Hex" },
+        "locator": {
+          "description": "Where inside the resource. null means the whole of it.",
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      }
+    },
+    "methodIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "methodId",
+        "softwareId",
+        "softwareVersion",
+        "gitCommit",
+        "parametersDigest"
+      ],
+      "properties": {
+        "methodId": { "type": "string", "minLength": 1 },
+        "softwareId": { "type": "string", "minLength": 1 },
+        "softwareVersion": { "type": "string", "minLength": 1 },
+        "gitCommit": {
+          "description": "The full 40-character object name. null means this build did not come from a git checkout — never treated as pinned. An abbreviated commit is ambiguous and is rejected.",
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "parametersDigest": {
+          "description": "sha256 over the canonical parameter document. Not nullable: an empty parameter set still has a digest.",
+          "$ref": "#/$defs/sha256Hex"
+        }
+      }
+    }
+  }
+}

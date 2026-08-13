@@ -1,0 +1,42 @@
+[package]
+name = "neuralcompose-hypnagogic"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+description = "Hypnagogic loop modes, dialectical competition, turn logging and the world-model demo, ported from the macOS NeuralCompose Swift app."
+
+# Same split as the rest of the workspace: the LIB is pure (no clock, no
+# sockets, no filesystem, no subprocesses) and the BINARY owns every effect.
+# `mobile-core` holds that rule for its own reasons; here it is what lets the
+# whole dialectic be tested against a fixture with no llama.cpp, no whisper and
+# no llama-server present, which is exactly what CI has.
+[lib]
+name = "neuralcompose_hypnagogic"
+
+[[bin]]
+name = "neuralcompose-hypnagogic"
+path = "src/main.rs"
+
+[dependencies]
+neuralcompose-mobile-core = { path = "../neuralcompose-mobile-core" }
+serde = { version = "1", features = ["derive"] }
+# See mobile-core's Cargo.toml: the default parser does not round-trip f64.
+serde_json = { version = "1", features = ["float_roundtrip"] }
+sha2 = "0.11.0"
+# Blocking HTTP for llama-server. Already a vetted dev-dependency of
+# neuralcompose-mobile-core at the same major, so this promotes an existing
+# choice rather than making a new supply-chain decision. Blocking on purpose:
+# the workspace has no async runtime and a listen->generate->speak loop needs none.
+ureq = "2"
+# Blocking WebSocket client for the optional `--eeg-url` source. Already a
+# vetted dev-dependency of neuralcompose-mobile-core at this exact version, so
+# this promotes an existing choice rather than making a new supply-chain
+# decision. `default-features = false` with only `handshake` drops the TLS
+# stack: the EEG source is a loopback bridge or the fixture server, both `ws://`,
+# and pulling native-tls in for a link that never uses it would be cost without
+# a caller. `wss://` is therefore unsupported and fails at connect, loudly.
+tungstenite = { version = "0.28", default-features = false, features = ["handshake"] }
+
+[dependencies.neuralcompose-llama]
+path = "../neuralcompose-llama"
