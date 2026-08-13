@@ -191,6 +191,21 @@ never entered. It stays a known, separately-recorded defect.
 as a review note, the way the `cosineSimilarity` and `centroid` findings were. It does not
 gate this repository, and it does not change §6 or §8.
 
+### §10.1 — Result: it matched, and the predicted divergence did not appear
+
+Run 2026-08-13 in `NeuralCompose-dialectic-fixture`, committed there as `5705082`. The
+Swift reproduces all 260 steps **bit-for-bit**, including all 11 speed-clamped ones. So the
+float64-vs-Float division named above is not observable at these values — the two roundings
+coincide. **§10's prediction was wrong in the harmless direction**: it said where a failure
+would be, and there was none.
+
+Three independent implementations now agree exactly on `step()`: the Python original, the
+Rust port, and the Swift. Nothing pinned it in any language before today.
+
+**The test was verified capable of failing.** Scaling `restitution` by 1.0001 in the Swift
+turns it red in 6 places; restoring the file byte-identically turns it green. A conformance
+test nobody has watched fail is a guess, and this one was watched.
+
 ## §8 — Second registration: step count, with the selection disclosed
 
 Date: 2026-08-13, after §6. **Written and committed before the run it governs**, same as §3.
