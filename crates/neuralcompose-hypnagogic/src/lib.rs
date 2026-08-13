@@ -39,6 +39,40 @@
 //!   the Swift itself uses for an absent estimator (see
 //!   [`turn_log::NEUTRAL_GLOSS`]).
 //!
+//! ## Deliberate divergences from the Swift
+//!
+//! This port is otherwise faithful line for line, so every intentional
+//! deviation is listed here rather than left for a reader to find scattered
+//! across modules and wonder about. **All three are the same defect class** —
+//! an absent value given a numeric meaning the field can legitimately hold —
+//! and all three are on error paths only, so the happy path (one embedder, one
+//! dimension, all roles present) is identical and the conformance fixture is
+//! unaffected. The Swift side is tracked in
+//! `docs/reviews/absent-as-legitimate-value-2026-08-12.md`.
+//!
+//! 1. [`embedding::Embedding::cosine_similarity`] returns `Option<f32>`, not a
+//!    `0` sentinel. `0` is a legitimate cosine — orthogonal vectors from the
+//!    *same* model return it — so a sentinel makes an incomparable pair
+//!    indistinguishable from an unaligned one. Propagated through
+//!    [`dynamics::energy`], [`dynamics::tension`] and
+//!    [`dynamics::synthesis_score`] so **missing** (an early turn, legitimately
+//!    neutral at 0.5) stays distinct from **incomparable** (a defect).
+//! 2. [`dynamics::centroid`] refuses a mixed set instead of silently averaging
+//!    the comparable subset. A subset centroid is still a plausible vector, and
+//!    every similarity measured against it afterwards is plausible too.
+//! 3. `role_fulfillment` is `Option<f32>`, where the Swift writes
+//!    `role?.objective(energy) ?? 0` (`HypnagogicDialecticLoop.swift:241`).
+//!    This is the sharpest of the three: `role_fulfillment` exists so a later
+//!    stage can notice a role that *failed its own brief*, and `0` is precisely
+//!    that signal — so a role-lookup miss would not merely hide, it would
+//!    impersonate the diagnostic and report a maximally-failed pole.
+//!
+//! Checked before adopting (3): the conformance fixture cannot reach the
+//! lookup at all. `Sources/DialecticFixture` hardcodes `roleFulfillment: 0`,
+//! never emits the field, and exercises `DialecticalDynamics` rather than the
+//! loop — so this divergence cannot surface as a conformance failure that looks
+//! like a port error.
+//!
 //! ## Conformance status
 //!
 //! [`dynamics`] is **verified against the Swift**, not merely self-consistent:
