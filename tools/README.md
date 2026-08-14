@@ -3,6 +3,15 @@
 Development tools. **None is a product surface**, none ships in any app, and
 none is on the SwiftPM/Gradle/Cargo target graph.
 
+`launcher/` is the one that needs the sentence above qualified rather than
+quietly broken. It installs a `.desktop` entry, so it is the closest thing here
+to something a user launches — but it ships in no app, is on no target graph,
+and is not packaging: `ReleaseSupported` means signed packaging with install,
+upgrade, removal and acceptance gates, and this is a shell script. It **promotes
+no support-matrix row**. It is also the only component in the repository that
+starts another one; everything else preflights and refuses with "start it
+first", and that discipline is unchanged everywhere except there.
+
 Two are EEG bridges; `spoken-loop` is a demo and is described at the bottom.
 
 The golden-capture gate assumes `Muse → bridge → /api/eeg/stream → app`, but
