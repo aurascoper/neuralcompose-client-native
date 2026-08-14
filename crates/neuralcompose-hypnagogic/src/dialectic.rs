@@ -177,6 +177,12 @@ pub struct DialecticConfig {
     /// checkout, and that is never treated as a pinned build.
     pub software_version: String,
     pub git_commit: Option<String>,
+    /// Which sampler wrote the candidates, for the turn record's method
+    /// identity — see [`crate::turn_log::dialectic_method_identity`]. Supplied
+    /// by the shell for the same reason as `software_version`: the library
+    /// holds a `TextGenerating`, and a trait object cannot say where its text
+    /// came from.
+    pub generator: String,
 }
 
 impl Default for DialecticConfig {
@@ -193,6 +199,9 @@ impl Default for DialecticConfig {
             voice_both: false,
             software_version: env!("CARGO_PKG_VERSION").to_string(),
             git_commit: None,
+            // The local path is the default everywhere, including in tests, so
+            // a record that says anything else was an explicit choice.
+            generator: "llama-server".to_string(),
         }
     }
 }
@@ -226,7 +235,7 @@ impl DialecticTurn {
     /// `method` is passed in rather than derived here because a turn does not
     /// know which build ran it — [`DialecticLoop::method_identity`] is where the
     /// profile's tuning and the shell's version meet.
-    pub fn to_turn_line(&self, mode: &str, method: MethodIdentity) -> TurnLine {
+    pub fn to_turn_line(&self, mode: &str, method: MethodIdentity, generator: &str) -> TurnLine {
         let mut line = TurnLine::new(
             self.index,
             mode,
@@ -234,6 +243,7 @@ impl DialecticTurn {
             &self.scored,
             &self.resolution,
             method,
+            generator,
         )
         .with_witness(
             self.witness_attempted,
@@ -296,6 +306,7 @@ where
         // fixed for the life of the loop, so the digest cannot drift mid-session.
         let method = crate::turn_log::dialectic_method_identity(
             profile,
+            config.generator.clone(),
             config.software_version.clone(),
             config.git_commit.clone(),
         );

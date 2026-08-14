@@ -12,6 +12,7 @@ retro-edited from later conversations.
 | ADR-003 | Embedding candidate selection | Proposed · 2026-08-04 — **on an unmerged branch, see below** |
 | [ADR-004](ADR-004-provenance-vocabulary.md) | Provenance vocabulary: how a value came to exist | Proposed |
 | [ADR-005](ADR-005-eeg-capture-provenance.md) | Typed EEG capture: what was measured, what was interpreted, what was refused | Proposed |
+| [ADR-006](ADR-006-opt-in-cloud-generation.md) | Opt-in cloud generation: one seam leaves the machine, and the record says so | Proposed |
 
 **ADR-003 is taken, not vacant.** `ADR-003-embedding-candidate-selection.md`
 exists at commit `471ae61` on `origin/docs/adr-003-embedding-candidate`, pushed

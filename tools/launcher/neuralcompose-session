@@ -69,6 +69,13 @@ MIC_GATE="${MIC_GATE:-}"       # empty = calibrate against the room
 # and speaks once, and that shape had a reason. VOICE_BOTH=1 when you want to
 # hear the argument; the default should not decide that for every session.
 VOICE_BOTH="${VOICE_BOTH:-0}"
+# GENERATOR=claude sends your transcripts OFF THIS MACHINE through the `claude`
+# CLI, on your own subscription. Opt-in and never a default: it is the only
+# thing this launcher can start that talks to anything but 127.0.0.1. With it
+# set, no llama-server is started or needed — the embedder still runs locally,
+# so EMBED_MODEL is still required for the dialectical modes.
+GENERATOR="${GENERATOR:-llama}"   # llama (local) | claude (off-device)
+CLAUDE_MODEL="${CLAUDE_MODEL:-claude-sonnet-5}"
 LOG="${LOG:-1}"
 LOG_DIR="${LOG_DIR:-}"         # empty = the binary's own default
 WHISPER_MODEL="${WHISPER_MODEL:-$HOME/src/whisper.cpp/models/ggml-base.en.bin}"
@@ -152,8 +159,17 @@ if [ "$MODE" != mirror ] && ! ldd "$APP" 2>/dev/null | grep -qi libllama; then
   Mirror mode needs no embedder and works with the stub — set MODE=mirror."
 fi
 
-[ -f "$MODEL" ] || die "generation model not found: $MODEL
+case "$GENERATOR" in
+    llama)
+        [ -f "$MODEL" ] || die "generation model not found: $MODEL
   Set MODEL in $CONF, or export MODEL=/path/to/model.gguf"
+        ;;
+    claude)
+        command -v claude >/dev/null || die "GENERATOR=claude needs the \`claude\` CLI on PATH.
+  Install it and sign in, or unset GENERATOR to stay local."
+        ;;
+    *) die "unknown GENERATOR=$GENERATOR; expected llama or claude" ;;
+esac
 
 [ -f "$EMBED_MODEL" ] || die "embedding model not found: $EMBED_MODEL
   The dialectical modes need one. Set EMBED_MODEL in $CONF.
@@ -206,7 +222,18 @@ pick_server() {
 
 printf '\n  \033[1mNeuralCompose — hypnagogic session\033[0m\n\n'
 
-if curl -sf --max-time 2 "$SERVER_URL/health" >/dev/null 2>&1; then
+if [ "$GENERATOR" = claude ]; then
+    # Nothing to start and nothing to adopt: the CLI is the generator, and a
+    # llama-server would only sit idle holding the GPU. The backend report
+    # below is skipped for the same reason — there is no backend of ours.
+    ADOPTED=0
+    # Short here on purpose: the binary prints the full caveat list a few
+    # seconds later, right before the session. This is the early warning for
+    # someone who set GENERATOR by accident and is watching the launcher.
+    warn "generation: $CLAUDE_MODEL via the \`claude\` CLI — transcripts LEAVE THIS MACHINE.
+      Full caveats below. Ctrl-C now if that is a surprise."
+    NO_SERVER=1
+elif curl -sf --max-time 2 "$SERVER_URL/health" >/dev/null 2>&1; then
     say "llama-server: adopted the one already at $SERVER_URL"
     say "  its backend is not inspected — we did not start it, and its log is not ours"
     ADOPTED=1
@@ -246,7 +273,9 @@ fi
 
 # ── report the backend ACTUALLY attained ────────────────────────────────────
 
-if [ "$ADOPTED" = 1 ]; then
+if [ "${NO_SERVER:-0}" = 1 ]; then
+    say "gpu: not applicable — no llama-server this session (GENERATOR=claude)"
+elif [ "$ADOPTED" = 1 ]; then
     :
 elif [ "$NGL" = 0 ]; then
     say "gpu: none by request (NGL=0) — not a failure"
@@ -323,6 +352,7 @@ fi
 # ── run the session ─────────────────────────────────────────────────────────
 
 ARGS=(--mode "$MODE" --turns "$TURNS")
+[ "$GENERATOR" = claude ] && ARGS+=(--generator claude --claude-model "$CLAUDE_MODEL")
 [ "$LOG" = 1 ]   && ARGS+=(--log)
 [ -n "$LOG_DIR" ] && ARGS+=(--log-dir "$LOG_DIR")
 [ "$SPEAK" = 1 ] && ARGS+=(--speak --tts "$TTS")

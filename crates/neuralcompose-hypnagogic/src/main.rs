@@ -12,6 +12,7 @@
 //!
 //! Verification for this file is the end-to-end run, not the test suite.
 
+use neuralcompose_hypnagogic::claude_cli;
 use neuralcompose_hypnagogic::command;
 use neuralcompose_hypnagogic::dialectic::{DialecticConfig, DialecticLoop};
 use neuralcompose_hypnagogic::eeg::{
@@ -82,6 +83,11 @@ struct Args {
     verify_capture: Option<PathBuf>,
     world_model_demo: bool,
     heldout: bool,
+    /// `llama` (default, local) or `claude` (opt-in, off-device). Not a bool,
+    /// because a third generator is plausible and `--no-local` would be a worse
+    /// name for the same choice.
+    generator: String,
+    claude_model: String,
 }
 
 const USAGE: &str = "\
@@ -90,6 +96,10 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
   --mode <mirror|focused|reflective|contemplative>   default: mirror
   --turns <n>                                        default: 1; 0 = until you say stop
   --server <url>                                     default: http://127.0.0.1:8080
+  --generator <llama|claude>                         default: llama (local)
+                                  claude sends the prompt OFF THIS MACHINE via
+                                  the `claude` CLI. Opt-in, never a default.
+  --claude-model <id>                                default: claude-sonnet-5
   --whisper <path>                --whisper-model <path>
   --log                           --log-dir <path>
   --mic                           hands-free microphone: it cuts on silence,
@@ -141,6 +151,8 @@ fn parse_args() -> Result<Args, String> {
         verify_capture: None,
         world_model_demo: false,
         heldout: false,
+        generator: "llama".into(),
+        claude_model: claude_cli::DEFAULT_MODEL.into(),
     };
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -227,6 +239,20 @@ fn parse_args() -> Result<Args, String> {
                     return Err(format!("unknown --tts {v:?}; expected kokoro or espeak"));
                 }
                 a.tts = v;
+                i += 1;
+            }
+            "--generator" => {
+                let v = need(i)?;
+                if !matches!(v.as_str(), "llama" | "claude") {
+                    return Err(format!(
+                        "unknown --generator {v:?}; expected llama (local) or claude (off-device)"
+                    ));
+                }
+                a.generator = v;
+                i += 1;
+            }
+            "--claude-model" => {
+                a.claude_model = need(i)?;
                 i += 1;
             }
             "--log" => a.log = true,
@@ -542,6 +568,57 @@ impl TextGenerating for HttpGenerator {
             .into_string()
             .map_err(|e| SeamError::Failed(format!("reading the chat response: {e}")))?;
         Ok(strip_for_speech(&http::parse_chat_content(&raw)?))
+    }
+}
+
+/// Sonnet 5 (or any Claude model) through the local `claude` CLI — the port of
+/// `BCICloudBridge/ClaudeCLIGenerator.swift`. **Opt-in only**, behind
+/// `--generator claude`; the local path stays the default and is untouched.
+///
+/// ⚠️ This is the one seam in this binary that sends anything off this machine.
+/// The argv it sends is built and asserted in [`claude_cli`], which is where the
+/// egress boundary is stated; here there is only the spawn.
+///
+/// `GenerationParams` is accepted and dropped, because `claude -p` exposes
+/// neither temperature nor `max_tokens`. Through this generator the two poles
+/// differ **only** by their system prompts, not by sampling — the shell says so
+/// once at startup rather than leaving it to be discovered from the turn log.
+struct ClaudeCliGenerator {
+    model: String,
+    /// The subprocess runs here rather than in the invoking directory, so a
+    /// `CLAUDE.md` that happens to be beside the session cannot be discovered
+    /// and folded into a hypnagogic prompt.
+    workdir: PathBuf,
+}
+
+impl TextGenerating for ClaudeCliGenerator {
+    fn generate(
+        &mut self,
+        system: &str,
+        prompt: &str,
+        _params: GenerationParams,
+    ) -> SeamResult<String> {
+        let argv = claude_cli::argv(&self.model, system, prompt);
+        let out = Command::new("claude")
+            .args(&argv)
+            .current_dir(&self.workdir)
+            // Discarded for the same reason the Swift discards it: a chatty CLI
+            // writing into an unread pipe can fill the buffer and stall exit.
+            .stderr(std::process::Stdio::null())
+            .output()
+            .map_err(|e| {
+                SeamError::Unavailable(format!(
+                    "could not run the `claude` CLI ({e}) — is it on PATH and signed in?"
+                ))
+            })?;
+        if !out.status.success() {
+            return Err(SeamError::Failed(format!(
+                "the claude CLI exited {} (run `claude -p hello` to check your login)",
+                out.status
+            )));
+        }
+        let raw = String::from_utf8_lossy(&out.stdout);
+        Ok(strip_for_speech(&claude_cli::parse_result(&raw)?))
     }
 }
 
@@ -1423,8 +1500,44 @@ fn preflight(server: &str) -> Result<(), String> {
     }
 }
 
+/// The `--generator claude` counterpart of [`preflight`]: prove the CLI is
+/// there and signed in *before* the microphone opens, rather than discovering
+/// it on the first generate — same rule the local path already follows.
+///
+/// `claude -p` with a trivial prompt is the cheapest honest check. `--version`
+/// would prove the binary exists and nothing about the login, which is the
+/// failure that actually happens.
+fn preflight_claude(model: &str, workdir: &Path) -> Result<(), String> {
+    eprintln!("● checking the claude CLI (one short round trip)…");
+    let argv = claude_cli::argv(model, "Reply with the single word: ready", "ready?");
+    let out = Command::new("claude")
+        .args(&argv)
+        .current_dir(workdir)
+        .stderr(std::process::Stdio::null())
+        .output()
+        .map_err(|e| {
+            format!(
+                "the `claude` CLI is not runnable ({e}).\n\
+                 Install it and sign in, or drop --generator claude to stay local."
+            )
+        })?;
+    if !out.status.success() {
+        return Err(format!(
+            "the `claude` CLI exited {} — try `claude -p hello` to see why \
+             (usually: not signed in).",
+            out.status
+        ));
+    }
+    claude_cli::parse_result(&String::from_utf8_lossy(&out.stdout))
+        .map(|_| ())
+        .map_err(|e| format!("the claude CLI answered, but not in the expected shape: {e}"))
+}
+
 fn run(args: Args) -> Result<(), String> {
-    preflight(&args.server)?;
+    let cloud = args.generator == "claude";
+    if !cloud {
+        preflight(&args.server)?;
+    }
 
     // Refused rather than warned: mirror mode writes no turn record at all, and
     // the turn log is the ONLY place EEG appears (nothing here biases the
@@ -1436,7 +1549,29 @@ fn run(args: Args) -> Result<(), String> {
     std::fs::create_dir_all(&workdir).map_err(|e| format!("workdir: {e}"))?;
 
     eprintln!("● mode: {} ({})", args.mode.label(), args.mode.id());
-    eprintln!("● generation: llama-server at {}", args.server);
+    // The generator identity as recorded in every turn's method identity. Built
+    // here, once, so the banner and the record cannot disagree.
+    let generator_id = if cloud {
+        claude_cli::generator_id(&args.claude_model)
+    } else {
+        "llama-server".to_string()
+    };
+    if cloud {
+        preflight_claude(&args.claude_model, &workdir)?;
+        // Said at this volume on purpose. Everything else in this binary talks
+        // to 127.0.0.1 or to a subprocess; this is the one line where that
+        // stops being true, and a user who did not mean to opt in should be
+        // able to see it and Ctrl-C.
+        eprintln!("⚠ generation: {} via the `claude` CLI", args.claude_model);
+        eprintln!("⚠   YOUR TRANSCRIPTS LEAVE THIS MACHINE. Audio and EEG do not:");
+        eprintln!("⚠   whisper runs on-device and EEG never reaches a prompt.");
+        eprintln!("⚠   `claude -p` exposes no temperature, so the two poles differ");
+        eprintln!("⚠   by their system prompts ONLY — not by sampling.");
+        eprintln!("⚠   Measured: ~5.5 s and $0.01–$0.24 per generate call, and a");
+        eprintln!("⚠   reflective turn makes three. Ctrl-C now if that is a surprise.");
+    } else {
+        eprintln!("● generation: llama-server at {}", args.server);
+    }
     if let Some(p) = args.mode.profile() {
         eprintln!(
             "● profile: {} · inter-turn {:?} · silence run ≤{}{}",
@@ -1609,13 +1744,27 @@ fn run(args: Args) -> Result<(), String> {
         }
     };
 
+    // One constructor for both loops: a `Box<dyn TextGenerating>` is itself
+    // `TextGenerating` (the blanket impl in `seams.rs`), so the choice is made
+    // once here rather than duplicated per mode.
+    let make_generator = || -> Box<dyn TextGenerating> {
+        if cloud {
+            Box::new(ClaudeCliGenerator {
+                model: args.claude_model.clone(),
+                workdir: workdir.clone(),
+            })
+        } else {
+            Box::new(HttpGenerator {
+                server: args.server.clone(),
+            })
+        }
+    };
+
     match args.mode.profile() {
         None => {
             let mut l = MirrorLoop::new(
                 listener,
-                HttpGenerator {
-                    server: args.server.clone(),
-                },
+                make_generator(),
                 speaker,
                 MirrorConfig {
                     chunk_replies,
@@ -1646,9 +1795,7 @@ fn run(args: Args) -> Result<(), String> {
             embedder_backend = Some(backend);
             let mut l = DialecticLoop::new(
                 listener,
-                HttpGenerator {
-                    server: args.server.clone(),
-                },
+                make_generator(),
                 speaker,
                 embedder,
                 SystemDraws,
@@ -1661,6 +1808,7 @@ fn run(args: Args) -> Result<(), String> {
                     // build.rs. An unpinned build says so rather than naming a
                     // commit that does not describe it.
                     git_commit: option_env!("NC_HYPNAGOGIC_COMMIT").map(str::to_string),
+                    generator: generator_id.clone(),
                     ..DialecticConfig::default()
                 },
             );
@@ -1689,7 +1837,8 @@ fn run(args: Args) -> Result<(), String> {
                         // Built ONCE. Two calls would let the JSON echo and the
                         // persisted record disagree — and the echo is what a
                         // reader would trust while the record is what verifies.
-                        let mut line = t.to_turn_line(args.mode.id(), method.clone());
+                        let mut line =
+                            t.to_turn_line(args.mode.id(), method.clone(), &generator_id);
                         if let Some(src) = eeg.as_ref() {
                             match src.reading() {
                                 Ok(r) => {

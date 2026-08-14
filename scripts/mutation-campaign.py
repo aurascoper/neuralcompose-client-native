@@ -28,6 +28,7 @@ EEG = REPO / "crates/neuralcompose-hypnagogic/src/eeg.rs"
 WM = REPO / "crates/neuralcompose-hypnagogic/src/worldmodel.rs"
 BP = REPO / "crates/neuralcompose-mobile-core/src/band_power.rs"
 TL = REPO / "crates/neuralcompose-hypnagogic/src/turn_log.rs"
+CC = REPO / "crates/neuralcompose-hypnagogic/src/claude_cli.rs"
 
 # (name, file, old, new, why it should die)
 MUTANTS = [
@@ -95,8 +96,12 @@ MUTANTS = [
     # ADR-005: the capture gate. Each of these is a way the gate could stop
     # firing while every other test in the suite stayed green.
     ("gate accepts an exactly-zero band", EEG,
-     "                Some(p) if p == 0.0 => return Err(EegRefusal::BandExactlyZero),",
-     "                Some(p) if p < 0.0 => return Err(EegRefusal::BandExactlyZero),",
+     # Was written against `Some(p) if p == 0.0 =>`, which the source has not
+     # said for some time — so this mutant matched nothing and was reported as
+     # stale rather than as a survivor. A stale pattern is a check that is not
+     # running; it is worth exactly as much as no check at all.
+     "                Some(0.0) => return Err(EegRefusal::BandExactlyZero),",
+     "                Some(f64::MIN) => return Err(EegRefusal::BandExactlyZero),",
      "a_flat_channel_is_refused_as_exactly_zero_not_as_unmeasurable"),
     ("the two refusal reasons collapsed into one", EEG,
      "                None => return Err(EegRefusal::BandNotMeasurable),",
@@ -150,6 +155,35 @@ MUTANTS = [
      "pub const GOAL_TOLERANCE: f32 = 0.1;",
      "pub const GOAL_TOLERANCE: f32 = 1.0;",
      "an_episode_already_at_the_goal_takes_no_steps + the_mpc_defaults"),
+    # ---- ADR-006: the cloud-generation egress boundary ----
+    #
+    # The argv IS the boundary. Each of these is a one-token edit that would
+    # leave a working session behind — which is exactly the class of defect
+    # nobody notices from the outside.
+    ("built-in tools re-enabled on the cloud path", CC,
+     '        "--tools".into(),\n        String::new(),\n',
+     "",
+     "every_built_in_tool_is_disabled, the_argv_carries_exactly..."),
+    ("system prompt appended to Claude Code's own instead of replacing it", CC,
+     '        "--system-prompt".into(),',
+     '        "--append-system-prompt".into(),',
+     "the_argv_carries_exactly_the_system_prompt_and_the_transcript"),
+    ("an error envelope read as a reply", CC,
+     "    if env.is_error {",
+     "    if false {",
+     "an_error_envelope_is_never_mistaken_for_a_reply"),
+    ("the reply is not trimmed", CC,
+     "        .map(|r| r.trim().to_string())",
+     "        .map(|r| r.to_string())",
+     "the_result_is_read_from_the_envelope_and_trimmed"),
+    ("the generator is sealed but not readable", TL,
+     "        locator: Some(generator.to_string()),",
+     "        locator: None,",
+     "the_generator_is_readable_off_a_recorded_line_not_only_recomputable"),
+    ("the generator is named nowhere in the envelope", TL,
+     "        inputs: vec![generator_resource_ref(generator)],",
+     "        inputs: Vec::new(),",
+     "the_generator_is_readable_off_a_recorded_line_not_only_recomputable"),
 ]
 
 CMD = ["cargo", "+1.97.1", "test", "-j4",

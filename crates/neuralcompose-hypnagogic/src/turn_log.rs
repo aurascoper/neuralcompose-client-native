@@ -132,8 +132,17 @@ pub(crate) fn bit_exact_numbers(v: &mut serde_json::Value) {
 /// shell knows them, the same division of labour as `CaptureBuildIdentity`.
 /// `None` for the commit means the build did not come from a checkout; it is
 /// never treated as a pinned build.
+///
+/// `generator` names the sampler that wrote both candidates — `llama-server`
+/// for the local path, `claude-cli:<model>` for the opt-in cloud one. It is in
+/// the digest rather than beside it because **which model wrote the text is a
+/// parameter of the method, not a note about it**: two sessions with identical
+/// profiles and identical tuning are not the same method if one of them ran a
+/// 1.7B on this machine and the other sent the transcript to Anthropic. Before
+/// this field the two were indistinguishable in the record.
 pub fn dialectic_method_identity(
     profile: ContextProfile,
+    generator: impl Into<String>,
     software_version: impl Into<String>,
     git_commit: Option<String>,
 ) -> MethodIdentity {
@@ -142,11 +151,13 @@ pub fn dialectic_method_identity(
     struct Params {
         domain: &'static str,
         profile: &'static str,
+        generator: String,
         tuning: crate::dynamics::Tuning,
     }
     let mut doc = serde_json::to_value(Params {
         domain: DIALECTIC_METHOD_ID,
         profile: profile.id(),
+        generator: generator.into(),
         tuning: profile.tuning(),
     })
     .expect("Tuning is always serializable");
@@ -228,6 +239,21 @@ pub fn eeg_method_identity(
     }
 }
 
+/// Names the sampler that wrote a turn's candidates, digest and label both.
+///
+/// The label is in `locator` so the record is **readable** — the same id is
+/// also inside [`dialectic_method_identity`]'s digest, but a digest only
+/// answers "was it this?" for a reader who already guessed. Session eligibility
+/// here is a query over recorded annotations, and a query cannot recompute a
+/// hash it has no candidate for.
+fn generator_resource_ref(generator: &str) -> ResourceRef {
+    ResourceRef {
+        resource_kind: "textGenerator".to_string(),
+        sha256_hex: sha256_hex(generator.as_bytes().to_vec()),
+        locator: Some(generator.to_string()),
+    }
+}
+
 /// A turn record is a [`AssertionKind::HeuristicAnnotation`], and therefore
 /// [`neuralcompose_mobile_core::provenance::EvidenceMapping::NeverIngestible`].
 ///
@@ -237,14 +263,20 @@ pub fn eeg_method_identity(
 /// thresholds are unvalidated; and the Swift attaches `honestyCaveat` verbatim
 /// wherever a `SpectralState` reaches a human. None of that is an observation,
 /// and a confidence number would not make it one.
-fn turn_envelope(method: MethodIdentity) -> ProvenanceEnvelope {
+fn turn_envelope(method: MethodIdentity, generator: &str) -> ProvenanceEnvelope {
     ProvenanceEnvelope {
         schema_id: PROVENANCE_ENVELOPE_SCHEMA.to_string(),
         assertion_kind: AssertionKind::HeuristicAnnotation,
         method: Some(method),
         // The candidate embeddings are deliberately not logged (see the privacy
-        // note above), so there is nothing to name as an input digest.
-        inputs: Vec::new(),
+        // note above), so they are not named here. The generator is: it is the
+        // one input the method consumed that a reader cannot recover from any
+        // other field, and "a local 1.7B wrote this" and "this transcript was
+        // sent to Anthropic" must not be the same record. It rides `inputs`
+        // rather than a new column because `inputs` is exactly "what the method
+        // consumed", and a v4 schema for a fact this field already models would
+        // be a bump for nothing.
+        inputs: vec![generator_resource_ref(generator)],
         confidence: None,
         // A turn's outcome is not an embedding comparison; the per-candidate
         // scores inside it are, but those are not what this envelope covers.
@@ -476,6 +508,7 @@ impl TurnLine {
         scored: &[ScoredCandidate],
         resolution: &Resolution,
         method: MethodIdentity,
+        generator: &str,
     ) -> Self {
         let (outcome, spoken_text) = match &resolution.outcome {
             DialecticalOutcome::Spoke(c) => (format!("spoke:{}", c.role_id), Some(c.text.clone())),
@@ -513,7 +546,7 @@ impl TurnLine {
             witness_attempted: None,
             channel_health: None,
             channel_health_absent_reason: None,
-            provenance: turn_envelope(method),
+            provenance: turn_envelope(method, generator),
         }
     }
 
@@ -544,13 +577,16 @@ impl TurnLine {
             witness_attempted: None,
             channel_health: None,
             channel_health_absent_reason: None,
-            provenance: turn_envelope(MethodIdentity {
-                method_id: DIALECTIC_METHOD_ID.to_string(),
-                software_id: SOFTWARE_ID.to_string(),
-                software_version: "0".to_string(),
-                git_commit: None,
-                parameters_digest: "0".repeat(64),
-            }),
+            provenance: turn_envelope(
+                MethodIdentity {
+                    method_id: DIALECTIC_METHOD_ID.to_string(),
+                    software_id: SOFTWARE_ID.to_string(),
+                    software_version: "0".to_string(),
+                    git_commit: None,
+                    parameters_digest: "0".repeat(64),
+                },
+                "llama-server",
+            ),
         }
     }
 
@@ -856,7 +892,12 @@ mod tests {
     /// A fixed build identity for the record tests. Real runs get theirs from
     /// the shell; these tests only need it to be well formed.
     fn test_method() -> MethodIdentity {
-        dialectic_method_identity(ContextProfile::Reflective, "0.0.0-test", None)
+        dialectic_method_identity(
+            ContextProfile::Reflective,
+            "llama-server",
+            "0.0.0-test",
+            None,
+        )
     }
     use crate::dynamics::{
         DialecticalCandidate, DialecticalEnergy, DialecticalOutcome, Resolution, ScoredCandidate,
@@ -931,6 +972,7 @@ mod tests {
             &[scored("coherence", 1.2), scored("displacement", 1.0)],
             &resolution(DialecticalOutcome::Spoke(candidate("coherence"))),
             test_method(),
+            "llama-server",
         )
     }
 
@@ -959,6 +1001,7 @@ mod tests {
             &[],
             &resolution(DialecticalOutcome::Silent),
             test_method(),
+            "llama-server",
         );
         assert_eq!(silent.outcome, "silent");
         assert_eq!(silent.spoken_text, None);
@@ -971,6 +1014,7 @@ mod tests {
             &[],
             &resolution(DialecticalOutcome::Synthesized(candidate("third"))),
             test_method(),
+            "llama-server",
         );
         assert_eq!(synth.outcome, "synthesized:third");
     }
@@ -1015,6 +1059,7 @@ mod tests {
             &[],
             &resolution(DialecticalOutcome::Silent),
             test_method(),
+            "llama-server",
         );
         let (payload, manifest) = record(&[spoke_line(0), silent]);
         assert_eq!(manifest.silent_turn_count, 1);
@@ -1306,15 +1351,21 @@ mod tests {
     /// as if it identified the build.
     #[test]
     fn an_unpinned_build_says_so_rather_than_guessing() {
-        let unpinned = dialectic_method_identity(ContextProfile::Reflective, "0.0.0-test", None);
+        let unpinned = dialectic_method_identity(
+            ContextProfile::Reflective,
+            "llama-server",
+            "0.0.0-test",
+            None,
+        );
         assert!(unpinned.git_commit.is_none());
 
         let pinned = dialectic_method_identity(
             ContextProfile::Reflective,
+            "llama-server",
             "0.0.0-test",
             Some("0".repeat(40)),
         );
-        let mut env = turn_envelope(pinned);
+        let mut env = turn_envelope(pinned, "llama-server");
         assert_eq!(validate_provenance(&env), []);
 
         env.method.as_mut().unwrap().git_commit = Some("0123456".into());
@@ -1331,7 +1382,9 @@ mod tests {
     fn the_parameters_digest_distinguishes_the_profiles() {
         let digests: std::collections::BTreeSet<String> = ContextProfile::ALL
             .iter()
-            .map(|p| dialectic_method_identity(*p, "0.0.0-test", None).parameters_digest)
+            .map(|p| {
+                dialectic_method_identity(*p, "llama-server", "0.0.0-test", None).parameters_digest
+            })
             .collect();
         assert_eq!(
             digests.len(),
@@ -1416,13 +1469,73 @@ mod tests {
     /// and distinct per profile.
     #[test]
     fn the_parameters_digest_is_stable_and_profile_specific() {
-        let of = |p| dialectic_method_identity(p, "0.0.0-test", None).parameters_digest;
+        let of =
+            |p| dialectic_method_identity(p, "llama-server", "0.0.0-test", None).parameters_digest;
         for profile in ContextProfile::ALL {
             assert_eq!(of(profile), of(profile), "{profile:?} digest is not stable");
         }
         let all: std::collections::BTreeSet<String> =
             ContextProfile::ALL.iter().map(|p| of(*p)).collect();
         assert_eq!(all.len(), ContextProfile::ALL.len());
+    }
+
+    /// A digest answers "was it this?" only for a reader who already has a
+    /// candidate. Eligibility here is a query over recorded annotations, so the
+    /// generator has to be *readable* off a line as well as sealed in it — and
+    /// it has to survive the round trip through JSON that every consumer takes.
+    #[test]
+    fn the_generator_is_readable_off_a_recorded_line_not_only_recomputable() {
+        let line = TurnLine::new(
+            0,
+            "reflective",
+            "heard",
+            &[scored("coherence", 1.0)],
+            &resolution(DialecticalOutcome::Spoke(candidate("coherence"))),
+            test_method(),
+            "claude-cli:claude-sonnet-5",
+        );
+        let json = serde_json::to_string(&line).unwrap();
+        let back: TurnLine = serde_json::from_str(&json).unwrap();
+        let named: Vec<&ResourceRef> = back
+            .provenance
+            .inputs
+            .iter()
+            .filter(|r| r.resource_kind == "textGenerator")
+            .collect();
+        assert_eq!(named.len(), 1, "exactly one generator per turn");
+        assert_eq!(
+            named[0].locator.as_deref(),
+            Some("claude-cli:claude-sonnet-5"),
+            "a reader must be able to see that this text was written off-device"
+        );
+        assert_eq!(named[0].sha256_hex.len(), 64);
+        // And an envelope carrying an input must still validate — a readable
+        // field that trips the provenance checker would be worse than useless.
+        assert_eq!(validate_provenance(&back.provenance), []);
+    }
+
+    /// The whole point of putting the generator in the digest is that a local
+    /// session and a cloud session stop being indistinguishable in the record.
+    /// Asserting only that the digest is *stable* would pass whether or not the
+    /// field reached the document at all, so this asserts the difference — the
+    /// gate failing where it must — as well as the sameness.
+    #[test]
+    fn the_generator_reaches_the_digest_and_separates_local_from_cloud() {
+        let of = |g: &str| {
+            dialectic_method_identity(ContextProfile::Reflective, g, "0.0.0-test", None)
+                .parameters_digest
+        };
+        assert_eq!(of("llama-server"), of("llama-server"));
+        assert_ne!(
+            of("llama-server"),
+            of("claude-cli:claude-sonnet-5"),
+            "a local turn and a turn whose text was written off-device share a digest"
+        );
+        assert_ne!(
+            of("claude-cli:claude-sonnet-5"),
+            of("claude-cli:claude-opus-5"),
+            "two different cloud models share a digest"
+        );
     }
 
     /// The rewrite must actually remove the decimals, and must leave integers

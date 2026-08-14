@@ -95,6 +95,7 @@
 //! Swift dialectic is the mechanism that keeps this honest; the harness is
 //! committed for exactly that reason.
 
+pub mod claude_cli;
 pub mod command;
 pub mod dialectic;
 pub mod dynamics;

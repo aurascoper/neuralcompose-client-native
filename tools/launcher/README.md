@@ -82,6 +82,8 @@ key can also be set as an environment variable for a one-off run.
 
 | Key | Default | Notes |
 | --- | --- | --- |
+| `GENERATOR` | `llama` | `claude` sends transcripts off this machine |
+| `CLAUDE_MODEL` | `claude-sonnet-5` | only with `GENERATOR=claude` |
 | `MODEL` | `~/models/Qwen3-1.7B-Q8_0.gguf` | generation — see below |
 | `EMBED_MODEL` | `~/models/bge-small-en-v1.5-f32.gguf` | in-process, CPU |
 | `LLAMA_SERVER` | prefers `build-vulkan`, else PATH | |
@@ -132,6 +134,62 @@ by hand.
 # one-off
 MODE=mirror SPEAK=0 tools/launcher/neuralcompose-session
 ```
+
+## Sonnet 5, opt-in, and what it costs you
+
+`GENERATOR=claude` generates with a Claude model instead of the local one, via
+the `claude` CLI on your own subscription — no API key anywhere. It is the port
+of the Swift's `ClaudeCLIGenerator`, which has driven the macOS app's Stage-5
+loop since it shipped. **No llama-server is started or needed**; the embedder
+still runs locally, so `EMBED_MODEL` is still required for the dialectical
+modes.
+
+```sh
+GENERATOR=claude tools/launcher/neuralcompose-session
+```
+
+This is the only thing this launcher can start that talks to anything but
+`127.0.0.1`, and it is off by default at every layer. What leaves: the role's
+system prompt and the transcript. What does not: **audio** (whisper runs
+on-device; only its text is passed) and **EEG** (it never reaches a prompt at
+all — it is recorded provenance, not model input).
+
+Three things are worth knowing before you turn it on.
+
+**It is slower than the local 1.7B, not faster.** Measured on this machine:
+
+| | Per generate call | Reflective turn (3 calls) |
+| --- | --- | --- |
+| Qwen3-1.7B Q8, Vulkan | **1.39 s** | ~8 s including speech |
+| `claude-sonnet-5` via the CLI | **~5.5 s** | ~20 s including speech |
+
+Most of that is not the model — `duration_api_ms` was ~2.1 s of the 5.5 s. The
+rest is CLI startup per call, because each `claude -p` is a fresh process.
+
+**It costs real money, unpredictably.** Two consecutive identical calls measured
+**$0.0106** and **$0.2383**. The difference is the prompt cache: the CLI sends a
+~34–40 k-token prefix of its own, and that prefix is *not* stable between
+invocations (34 061 tokens on one call, 39 654 on the next), so a cache hit is
+luck rather than something you can arrange. Three calls per reflective turn.
+
+**Both poles lose their temperature.** `claude -p` exposes neither `temperature`
+nor `max_tokens`. The dialectic's 0.45 coherence pole and 1.0 displacement pole
+are *how* the two poles are made to diverge; through this generator they differ
+only by their system prompts. The competition still runs and the turn log still
+records both candidates — the two are just sampled identically.
+
+So: a prose-quality choice, not a latency or cost one. The turn log says which
+you used — every line carries a `textGenerator` input in its provenance
+envelope, with `locator` set to `llama-server` or `claude-cli:<model>`:
+
+```console
+$ jq -c '.provenance.inputs' session-*.turns.jsonl | head -1
+[{"resourceKind":"textGenerator","sha256Hex":"1f1a4850…","locator":"claude-cli:claude-haiku-4-5"}]
+```
+
+The same id is folded into the method identity's `parametersDigest`, so a local
+session and a cloud one are different methods rather than the same method with a
+note. Reasoning and ceilings: `docs/architecture/decision-log/ADR-006`.
 
 ## The stub build, which is the easy mistake
 
@@ -254,7 +312,16 @@ on Wayland with `xdg-terminal-exec` present:
 - open-ended: "Goodbye." ended the session; the log verified clean
 - an interrupted open-ended session kept all four of its turns
 
-**Not verified:** `EEG=muse` beyond its refusal path — that needs the headband.
+- `GENERATOR=claude`: refused when the CLI is absent from PATH (before anything
+  starts); a mirror turn on `claude-sonnet-5` and a logged reflective session on
+  `claude-haiku-4-5` both ran end to end, `--verify-log` clean, and every line
+  named `claude-cli:<model>` as its generator. The local path re-run alongside
+  still names `llama-server`, because a check that reported the cloud generator
+  in both cases would have proved nothing
+
+**Not verified:** `GENERATOR=claude` together with `--speak`, `--mic` or an EEG
+source — those seams are unchanged by it, but no run has exercised them
+together. `EEG=muse` beyond its refusal path — that needs the headband.
 The spoken stop phrase was exercised over stdin and over the mic, but the
 over-the-mic attempt was defeated by room noise rather than by the matching,
 which is a property of the room and not of the code.
