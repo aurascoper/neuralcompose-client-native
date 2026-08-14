@@ -164,10 +164,15 @@ impl MainsThresholds {
 pub struct ElectrodeReport {
     pub rms: f64,
     pub health: ChannelHealthStatus,
-    /// Power in the winning mains band.
-    pub mains_power: f64,
+    /// Power in the winning mains band. `None` when no band was measurable —
+    /// never `0.0`, which is a reading meaning "no line noise here" and the
+    /// opposite of "could not look".
+    pub mains_power: Option<f64>,
     /// Which line frequency carried more power. `None` when neither band is
     /// resolvable at this sample rate.
+    ///
+    /// `mains_power` and `line_hz` are `Some` and `None` together; neither is
+    /// meaningful without the other.
     pub line_hz: Option<f64>,
     pub verdict: ElectrodeVerdict,
 }
@@ -199,9 +204,14 @@ pub fn assess_channel(
     };
     let status = health.status(rms, n as u64);
 
-    // Measure both grids and keep the larger. Bands above Nyquist yield 0.0
-    // from `band_power`, which is why `line_hz` is an Option: a rate too low to
-    // see either line must report "cannot tell", never "clean".
+    // Measure both grids and keep the larger. `band_power` returns `None` for a
+    // band it cannot measure — above Nyquist, under a second of data, a
+    // non-finite sample — which is why `line_hz` is an Option: a window that
+    // cannot see either line must report "cannot tell", never "clean".
+    //
+    // A `None` here is SKIPPED, not folded in as a zero. Treating it as 0.0
+    // would make an unmeasurable band win the `p > bp` comparison against a
+    // genuinely quiet one and report a line frequency nothing established.
     //
     // Finiteness is established BEFORE the band comparison rather than folded
     // into it, for the reason `ChannelHealthThresholds::new` gives: writing the
@@ -220,33 +230,33 @@ pub fn assess_channel(
         if f0 + MAINS_HALF_WIDTH_HZ >= nyquist {
             continue;
         }
-        let p = band_power(
+        let Some(p) = band_power(
             samples,
             fs,
             (f0 - MAINS_HALF_WIDTH_HZ, f0 + MAINS_HALF_WIDTH_HZ),
-        );
+        ) else {
+            continue;
+        };
         if best.is_none_or(|(bp, _)| p > bp) {
             best = Some((p, f0));
         }
     }
 
     let (mains_power, line_hz) = match best {
-        Some((p, f0)) => (p, Some(f0)),
-        None => (0.0, None),
+        Some((p, f0)) => (Some(p), Some(f0)),
+        None => (None, None),
     };
 
-    let verdict = if status == ChannelHealthStatus::Unknown || line_hz.is_none() {
-        ElectrodeVerdict::Unknown
-    } else if status == ChannelHealthStatus::Dead {
-        ElectrodeVerdict::Lifted
-    } else if mains_power > mains.high {
-        ElectrodeVerdict::MainsPickup
-    } else if status == ChannelHealthStatus::Saturated {
-        ElectrodeVerdict::MuscleOrMotion
-    } else if mains_power > mains.watch {
-        ElectrodeVerdict::Elevated
-    } else {
-        ElectrodeVerdict::Ok
+    // Every threshold comparison below is reached only through `Some(power)`.
+    // An unmeasured band cannot clear a bar, and it cannot fail to clear one
+    // either — it produces `Unknown`, which is what the first arm says.
+    let verdict = match (status, mains_power) {
+        (ChannelHealthStatus::Unknown, _) | (_, None) => ElectrodeVerdict::Unknown,
+        (ChannelHealthStatus::Dead, _) => ElectrodeVerdict::Lifted,
+        (_, Some(p)) if p > mains.high => ElectrodeVerdict::MainsPickup,
+        (ChannelHealthStatus::Saturated, _) => ElectrodeVerdict::MuscleOrMotion,
+        (_, Some(p)) if p > mains.watch => ElectrodeVerdict::Elevated,
+        _ => ElectrodeVerdict::Ok,
     };
 
     ElectrodeReport {
@@ -306,14 +316,16 @@ pub fn common_mode_hint(reports: &[ElectrodeReport]) -> Option<&'static str> {
     }) {
         return None;
     }
-    let max = reports
-        .iter()
-        .map(|r| r.mains_power)
-        .fold(f64::MIN, f64::max);
-    let min = reports
-        .iter()
-        .map(|r| r.mains_power)
-        .fold(f64::MAX, f64::min);
+    // The `line_hz` guard above already implies every power is `Some`, but the
+    // spread is computed from this list rather than from that implication:
+    // a missing power must drop the claim, not silently shrink the sample the
+    // ratio is taken over.
+    let powers: Vec<f64> = reports.iter().filter_map(|r| r.mains_power).collect();
+    if powers.len() != reports.len() {
+        return None;
+    }
+    let max = powers.iter().copied().fold(f64::MIN, f64::max);
+    let min = powers.iter().copied().fold(f64::MAX, f64::min);
     if min <= 0.0 || max / min >= MAX_COMMON_MODE_SPREAD {
         return None;
     }
@@ -356,12 +368,20 @@ mod tests {
         assess_channel(x, FS, health(), MainsThresholds::default())
     }
 
+    /// The mains power of a report that is expected to have measured one.
+    /// Every caller below builds a 10 s window at 256 Hz, well over
+    /// `band_power`'s one-second floor, so a `None` here is a regression rather
+    /// than a case to handle.
+    fn mains(r: &ElectrodeReport) -> f64 {
+        r.mains_power.expect("this fixture window is measurable")
+    }
+
     #[test]
     fn a_clean_alpha_channel_is_ok() {
         let x = mixed(&[(10.0, 15.0), (20.0, 5.0)], 2560);
         let r = assess(&x);
         assert_eq!(r.verdict, ElectrodeVerdict::Ok, "{r:?}");
-        assert!(r.mains_power < 1e-6, "no line present: {}", r.mains_power);
+        assert!(mains(&r) < 1e-6, "no line present: {}", mains(&r));
     }
 
     #[test]
@@ -468,14 +488,14 @@ mod tests {
         let t = MainsThresholds::default();
         let mid = (t.watch * t.high).sqrt();
         let x = mixed(&[(10.0, 15.0), (60.0, 1.0)], 2560);
-        let scale = (mid / assess(&x).mains_power).sqrt();
+        let scale = (mid / mains(&assess(&x))).sqrt();
         let y = mixed(&[(10.0, 15.0), (60.0, scale)], 2560);
         let r = assess(&y);
         assert_eq!(r.verdict, ElectrodeVerdict::Elevated, "{r:?}");
         assert!(
-            r.mains_power > t.watch && r.mains_power <= t.high,
+            mains(&r) > t.watch && mains(&r) <= t.high,
             "fixture must land between the tiers, got {}",
-            r.mains_power
+            mains(&r)
         );
     }
 
@@ -485,7 +505,7 @@ mod tests {
         let t = MainsThresholds::default();
         let below = MainsThresholds::new(t.watch, 1e12).unwrap();
         let x = mixed(&[(10.0, 15.0), (60.0, 6.0)], 2560);
-        let p = assess(&x).mains_power;
+        let p = mains(&assess(&x));
         // Exactly at `watch` is clean, a hair above is elevated.
         let at = MainsThresholds::new(p, p * 10.0).unwrap();
         assert_eq!(
@@ -544,7 +564,7 @@ mod tests {
         ElectrodeReport {
             rms: 50.0,
             health: ChannelHealthStatus::Healthy,
-            mains_power,
+            mains_power: Some(mains_power),
             line_hz: Some(60.0),
             verdict,
         }

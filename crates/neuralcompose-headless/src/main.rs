@@ -429,9 +429,12 @@ fn emit_check(monitor: &StreamMonitor, now: u64) {
     );
     let reports = assess_all(monitor);
     for (r, name) in reports.iter().zip(CHANNEL_NAMES) {
-        let line = match r.line_hz {
-            Some(f) => format!("{:>9.1} @{:.0}Hz", r.mains_power, f),
-            None => "        —".to_string(),
+        // Matched as a pair: the power and the frequency are `Some` together,
+        // and printing a power without the line it belongs to would show a
+        // number for a band nothing established.
+        let line = match (r.mains_power, r.line_hz) {
+            (Some(p), Some(f)) => format!("{p:>9.1} @{f:.0}Hz"),
+            _ => "        —".to_string(),
         };
         let mark = if r.verdict.is_blocking() { "✗" } else { " " };
         println!(
