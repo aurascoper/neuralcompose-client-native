@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mutation run for ADR-003's provenance vocabulary.
+"""Mutation run for ADR-004's provenance vocabulary and ADR-005's EEG capture gate.
 
 Two rules this codebase learned the hard way and this script enforces:
 
@@ -26,6 +26,8 @@ SNAP = Path(tempfile.mkdtemp(prefix="nc-mutation-"))
 PROV = REPO / "crates/neuralcompose-mobile-core/src/provenance.rs"
 EEG = REPO / "crates/neuralcompose-hypnagogic/src/eeg.rs"
 WM = REPO / "crates/neuralcompose-hypnagogic/src/worldmodel.rs"
+BP = REPO / "crates/neuralcompose-mobile-core/src/band_power.rs"
+TL = REPO / "crates/neuralcompose-hypnagogic/src/turn_log.rs"
 
 # (name, file, old, new, why it should die)
 MUTANTS = [
@@ -74,17 +76,56 @@ MUTANTS = [
      "    pub method: Option<MethodIdentity>,",
      "test 5"),
     ("stale samples reported as current", EEG,
-     "    if !matches!(phase, StreamPhase::Live) {\n        return None;\n    }",
-     "    if false {\n        return None;\n    }",
+     "    if !matches!(phase, StreamPhase::Live) {\n        return Err(EegRefusal::StreamNotLive);\n    }",
+     "    if false {\n        return Err(EegRefusal::StreamNotLive);\n    }",
      "a_stale_stream_reports_nothing / no_phase_but_live_reports_anything"),
     ("a partial montage reported short", EEG,
-     "    if channels.len() != CHANNEL_COUNT || channels.iter().any(|c| c.is_empty()) {",
+     "    if channels.len() != CHANNEL_COUNT {",
      "    if false {",
-     "a_partial_montage_is_refused / a_channel_with_no_samples_yet"),
+     "a_partial_montage_is_refused_rather_than_reported_short"),
+    ("an empty channel reported anyway", EEG,
+     "    if channels.iter().any(|c| c.is_empty()) {",
+     "    if false {",
+     "a_channel_with_no_samples_yet_refuses_the_whole_reading"),
     ("NaN allowed into a turn line", EEG,
-     "    if reports.iter().any(|r| !r.rms.is_finite()) {\n        return None;\n    }",
-     "    if false {\n        return None;\n    }",
+     "    if reports.iter().any(|r| !r.rms.is_finite()) {\n        return Err(EegRefusal::NonFiniteRms);\n    }",
+     "    if false {\n        return Err(EegRefusal::NonFiniteRms);\n    }",
      "a_non_finite_sample_never_reaches_a_turn_line"),
+
+    # ADR-005: the capture gate. Each of these is a way the gate could stop
+    # firing while every other test in the suite stayed green.
+    ("gate accepts an exactly-zero band", EEG,
+     "                Some(p) if p == 0.0 => return Err(EegRefusal::BandExactlyZero),",
+     "                Some(p) if p < 0.0 => return Err(EegRefusal::BandExactlyZero),",
+     "a_flat_channel_is_refused_as_exactly_zero_not_as_unmeasurable"),
+    ("the two refusal reasons collapsed into one", EEG,
+     "                None => return Err(EegRefusal::BandNotMeasurable),",
+     "                None => return Err(EegRefusal::BandExactlyZero),",
+     "a_non_finite_sample / a_window_shorter_than_the_lowest_band"),
+    ("lag precondition no longer binds", EEG,
+     "    if channels.iter().any(|c| c.len() < minimum) {",
+     "    if channels.iter().any(|c| c.len() < 1) {",
+     "a_window_shorter_than_the_lowest_band_can_resolve_is_refused"),
+    ("band_power reverts to the 0.0 refusal sentinel", BP,
+     "    if !fs.is_finite() || fs <= 0.0 || n < fs as usize {\n        return None;\n    }",
+     "    if !fs.is_finite() || fs <= 0.0 || n < fs as usize {\n        return Some(0.0);\n    }",
+     "a_refusal_is_not_a_zero_measurement + the whole EEG gate"),
+    ("a derivation typed as an observation", TL,
+     "        assertion_kind: AssertionKind::DerivedDeterministically,",
+     "        assertion_kind: AssertionKind::Observed,",
+     "the_measurement_and_the_interpretation_carry_different_assertion_kinds"),
+    ("an annotation promoted out of the heuristic class", TL,
+     "        assertion_kind: AssertionKind::HeuristicAnnotation,\n        method: Some(method),\n        inputs: vec![window],",
+     "        assertion_kind: AssertionKind::DerivedDeterministically,\n        method: Some(method),\n        inputs: vec![window],",
+     "the_measurement_and_the_interpretation_carry_different_assertion_kinds"),
+    ("verify_turn_log stops checking the tiers", TL,
+     "                    if envelope.assertion_kind != expected {",
+     "                    if false {",
+     "a_derived_envelope_claiming_to_be_an_observation_is_refused"),
+    ("the window digest ignores the samples", TL,
+     "    for s in samples {\n        bytes.extend_from_slice(&s.to_bits().to_be_bytes());\n    }",
+     "    for _s in samples.iter().take(0) {\n        bytes.extend_from_slice(&0f64.to_bits().to_be_bytes());\n    }",
+     "both_tiers_name_the_same_window_and_the_windows_differ_per_channel"),
     ("env speed clamp removed", WM,
      "    if speed > config.max_speed as f64 {",
      "    if false {",

@@ -11,6 +11,7 @@ retro-edited from later conversations.
 | [ADR-002](ADR-002-runtime-targets-property-law-and-conformance.md) | Runtime targets, property law, and backend conformance | Proposed (M7-A2) |
 | ADR-003 | Embedding candidate selection | Proposed · 2026-08-04 — **on an unmerged branch, see below** |
 | [ADR-004](ADR-004-provenance-vocabulary.md) | Provenance vocabulary: how a value came to exist | Proposed |
+| [ADR-005](ADR-005-eeg-capture-provenance.md) | Typed EEG capture: what was measured, what was interpreted, what was refused | Proposed |
 
 **ADR-003 is taken, not vacant.** `ADR-003-embedding-candidate-selection.md`
 exists at commit `471ae61` on `origin/docs/adr-003-embedding-candidate`, pushed
