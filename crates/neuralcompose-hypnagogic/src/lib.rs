@@ -108,4 +108,5 @@ pub mod role;
 pub mod seams;
 pub mod session;
 pub mod turn_log;
+pub mod vad;
 pub mod worldmodel;

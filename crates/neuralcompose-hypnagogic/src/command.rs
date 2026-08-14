@@ -27,6 +27,32 @@ pub fn record_argv(out: &Path) -> Vec<String> {
     ]
 }
 
+/// Stream raw 16 kHz mono s16 from the microphone, for voice-activity capture.
+///
+/// `arecord -t raw`, not `pw-record`, and the reason is in
+/// `tools/spoken-loop/converse.py`: `pw-record` writes a WAV header to stdout
+/// and a level-detecting loop needs a bare sample stream. It still reaches the
+/// hardware through PipeWire's ALSA compatibility layer, so this is the same
+/// audio path the rest of the loop uses, not a second one.
+///
+/// `-q` because arecord otherwise writes a format banner to stderr on every
+/// turn.
+pub fn arecord_argv() -> Vec<String> {
+    vec![
+        "arecord".into(),
+        "-q".into(),
+        "-f".into(),
+        "S16_LE".into(),
+        "-r".into(),
+        crate::vad::RATE.to_string(),
+        "-c".into(),
+        "1".into(),
+        "-t".into(),
+        "raw".into(),
+        "-".into(),
+    ]
+}
+
 /// Transcribe `wav` with `whisper-cli`.
 ///
 /// `-nt` (no timestamps) and `-np` (no progress) are load-bearing: without them
