@@ -62,7 +62,13 @@ TTS="${TTS:-kokoro}"
 MIC="${MIC:-1}"                # hands-free; MIC=0 to type instead
 PUSH_TO_TALK="${PUSH_TO_TALK:-0}"
 MIC_GATE="${MIC_GATE:-}"       # empty = calibrate against the room
-VOICE_BOTH="${VOICE_BOTH:-1}"  # speak both poles, so the dialectic is audible
+# OFF by default, and the reason is the application rather than the feature.
+# This is a hypnagogic loop: you use it drifting toward sleep. Two voices taking
+# opposing positions at you is ACTIVATING — it invites you to follow an argument,
+# which is close to the opposite of sleep onset. The Swift competes internally
+# and speaks once, and that shape had a reason. VOICE_BOTH=1 when you want to
+# hear the argument; the default should not decide that for every session.
+VOICE_BOTH="${VOICE_BOTH:-0}"
 LOG="${LOG:-1}"
 LOG_DIR="${LOG_DIR:-}"         # empty = the binary's own default
 WHISPER_MODEL="${WHISPER_MODEL:-$HOME/src/whisper.cpp/models/ggml-base.en.bin}"

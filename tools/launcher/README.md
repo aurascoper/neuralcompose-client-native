@@ -94,20 +94,24 @@ key can also be set as an environment variable for a one-off run.
 | `MIC` | `1` | hands-free; `MIC=0` to type instead |
 | `PUSH_TO_TALK` | `0` | `1` for the old speak-then-press-Enter |
 | `MIC_GATE` | *(calibrate)* | a number overrides calibration entirely |
-| `VOICE_BOTH` | `1` | both poles speak; ignored in mirror mode |
+| `VOICE_BOTH` | `0` | `1` speaks both poles; ignored in mirror mode |
 | `WHISPER_MODEL` | `~/src/whisper.cpp/models/ggml-base.en.bin` | |
 | `LOG` | `1` | with `EEG` set, also writes the raw capture (~88 MB/hour) |
 
 ## What a session is like by default
 
-Hands-free, open-ended, and audibly a dialectic — which is what the app is for.
-You lie down; you do not press anything.
+Hands-free and open-ended. You lie down; you do not press anything, and one
+voice answers you.
+
+The competition still happens every turn — both poles are generated and scored,
+and the turn log records both. What the default decides is only how much of it
+you *hear*.
 
 1. The mic calibrates against the room for 3 s. **Stay quiet for that bit** — it
    is measuring your noise floor, and talking over it raises the gate.
 2. Speak whenever. It cuts on 1.2 s of silence and transcribes.
-3. **Both poles answer**, each in its own fixed voice, so you hear the
-   disagreement rather than a summary of it. Then the turn resolves.
+3. The turn resolves and **one voice answers** — the pole that actually won,
+   in its own voice. `VOICE_BOTH=1` speaks both instead; see below.
 4. Say **"stop"** (or "goodbye", "that's all") to finish. Ctrl-C also works: the
    turn log is written turn by turn, so an interrupted session keeps everything
    up to the interruption — it just has no manifest, which is the `.partial`
@@ -153,18 +157,22 @@ for `MODE=mirror` rather than blocking a mode that works.
 ## Model size is a latency decision, not a quality one
 
 A **reflective** turn makes three generate calls — both poles plus the Witness —
-so generation cost is tripled before you hear anything. With `VOICE_BOTH=1` the
-speech cost doubles too. That compounds into a wait that changes what the app
+so generation cost is tripled before you hear anything. `VOICE_BOTH=1` doubles
+the speech cost on top. That compounds into a wait that changes what the app
 *is*: a loop that answers 20 s after you stop speaking is a different experience
 from one that answers in 10, whatever the prose quality.
 
 Measured on this machine, Vulkan on the 890M, 60 max_tokens, thinking off:
 
-| Model | Load | Per generate | Turn (3 gen + ~6 s speech/STT) |
-| --- | --- | --- | --- |
-| Qwen3-0.6B Q8 (0.64 GB) | 2.6 s | **0.41 s** | **~7 s** |
-| Qwen3-1.7B Q8 (1.83 GB) | 6.1 s | **1.39 s** | **~10 s** ← default |
-| Qwen3-8B Q6 (6.73 GB) | 6.5 s | **4.35 s** | **~19 s** |
+| Model | Load | Per generate | Turn, `VOICE_BOTH=0` | with `VOICE_BOTH=1` |
+| --- | --- | --- | --- | --- |
+| Qwen3-0.6B Q8 (0.64 GB) | 2.6 s | **0.41 s** | ~5 s | ~7 s |
+| Qwen3-1.7B Q8 (1.83 GB) | 6.1 s | **1.39 s** | **~8 s** ← default | ~10 s |
+| Qwen3-8B Q6 (6.73 GB) | 6.5 s | **4.35 s** | ~17 s | ~19 s |
+
+Turn = three generations plus speech and transcription: about 4 s for one spoken
+utterance, about 6 s for two. Generation is measured; the speech figures are the
+Kokoro and whisper costs recorded elsewhere in this file.
 
 Both poles stay distinguishable at every size. Same prompt, "the room is quiet
 and I am drifting":
@@ -184,8 +192,8 @@ Three other levers, in order of how much they buy:
 
 - `MODE=focused` — drops the Witness, so two generate calls instead of three.
   About a third off the generation cost and it does not touch either pole.
-- `VOICE_BOTH=0` — one utterance spoken per turn instead of two. Halves the TTS,
-  at the cost of the thing that makes the dialectic audible.
+- `VOICE_BOTH` is already `0`; setting it to `1` doubles the TTS in exchange for
+  hearing the argument rather than its conclusion.
 - `TTS=espeak` — near-instant against Kokoro's ~2.25 s per utterance, and it
   sounds like it.
 
