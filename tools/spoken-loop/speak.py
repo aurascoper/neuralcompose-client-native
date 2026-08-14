@@ -13,7 +13,13 @@ demo, which links nothing into the product and promotes no support-matrix row.
 Nothing here is a precedent for what the product links.
 
 Usage:  speak.py OUT.wav [TEXT...]        (text from argv, else stdin)
-Env:    KOKORO_VOICE (default af_heart), KOKORO_SPEED (default 1.0)
+Env:    KOKORO_VOICE (default af_heart), KOKORO_SPEED (default 1.0),
+        KOKORO_VOLUME (default 1.0, a linear sample scale)
+
+KOKORO_VOLUME exists because Kokoro has no volume parameter of its own, and
+`Prosody.volume` is a real dimension of the dialectic's voices — a receding
+pole is quieter than a present one. Applied as a plain sample scale after
+synthesis, clamped so a stray value cannot clip the output into noise.
 """
 import os
 import sys
@@ -49,6 +55,12 @@ def main() -> int:
         speed=float(os.environ.get("KOKORO_SPEED", "1.0")),
         lang="en-us",
     )
+    # Clamped at 2.0: above that a scale stops being volume and starts being
+    # clipping, which is audible as distortion rather than as loudness.
+    volume = max(0.0, min(2.0, float(os.environ.get("KOKORO_VOLUME", "1.0"))))
+    if volume != 1.0:
+        samples = samples * volume
+
     sf.write(out, samples, rate)
     return 0
 
