@@ -88,11 +88,41 @@ key can also be set as an environment variable for a one-off run.
 | `SERVER_URL` | `http://127.0.0.1:8080` | |
 | `NGL` | `99` | `0` = CPU by request |
 | `MODE` | `reflective` | the only profile with the Witness branch |
-| `TURNS` | `8` | |
+| `TURNS` | `0` | 0 = open-ended, ended by voice |
 | `EEG` | `none` | `none` \| `fixture` \| `muse` |
 | `SPEAK` / `TTS` | `1` / `kokoro` | `espeak` needs no venv |
-| `MIC` | `0` | push-to-talk: speak, then press Enter |
+| `MIC` | `1` | hands-free; `MIC=0` to type instead |
+| `PUSH_TO_TALK` | `0` | `1` for the old speak-then-press-Enter |
+| `MIC_GATE` | *(calibrate)* | a number overrides calibration entirely |
+| `VOICE_BOTH` | `1` | both poles speak; ignored in mirror mode |
+| `WHISPER_MODEL` | `~/src/whisper.cpp/models/ggml-base.en.bin` | |
 | `LOG` | `1` | with `EEG` set, also writes the raw capture (~88 MB/hour) |
+
+## What a session is like by default
+
+Hands-free, open-ended, and audibly a dialectic — which is what the app is for.
+You lie down; you do not press anything.
+
+1. The mic calibrates against the room for 3 s. **Stay quiet for that bit** — it
+   is measuring your noise floor, and talking over it raises the gate.
+2. Speak whenever. It cuts on 1.2 s of silence and transcribes.
+3. **Both poles answer**, each in its own fixed voice, so you hear the
+   disagreement rather than a summary of it. Then the turn resolves.
+4. Say **"stop"** (or "goodbye", "that's all") to finish. Ctrl-C also works: the
+   turn log is written turn by turn, so an interrupted session keeps everything
+   up to the interruption — it just has no manifest, which is the `.partial`
+   case `verify_capture` already defines.
+
+If the room defeats calibration, `MIC_GATE=<n>` skips it. Watch the reported
+gate: this machine's ALC245 runs hot and gave 240 in a quiet room and 789 with
+audio playing, so a gate far above ~1000 usually means it calibrated against
+noise and will not hear you.
+
+**A live microphone is not a deterministic fixture.** In a noisy room the VAD
+will trigger on ambient sound and whisper will transcribe something from it —
+observed during verification, where playback in the room produced turns about
+"(upbeat music)". The gate is the only guard, and it is one you may have to set
+by hand.
 
 ```sh
 # one-off
@@ -160,7 +190,18 @@ on Wayland with `xdg-terminal-exec` present:
 - port 8788 already held → refused, rather than a session against whatever is
   on that port (`docs/acceptance/linux-headless-runtime.md:189-193`)
 
+- hands-free capture end to end: calibrated to gate 240 in a quiet room, picked
+  up speech played through the speakers, cut on silence, transcribed, replied —
+  no keypress anywhere
+- `--voice-both`: both candidates spoken per turn in different voices, and the
+  winner not repeated
+- open-ended: "Goodbye." ended the session; the log verified clean
+- an interrupted open-ended session kept all four of its turns
+
 **Not verified:** `EEG=muse` beyond its refusal path — that needs the headband.
+The spoken stop phrase was exercised over stdin and over the mic, but the
+over-the-mic attempt was defeated by room noise rather than by the matching,
+which is a property of the room and not of the code.
 `Terminal=true` on any desktop other than this one; it is resolved by
 `xdg-terminal-exec`, and without that some environments run the entry with no
 terminal attached, which for an interactive session means nowhere to type.

@@ -240,6 +240,43 @@ pub fn chunk(text: &str) -> Vec<String> {
 ///
 /// Ported from the shell pipeline `tools/spoken-loop/turn.sh` already worked
 /// out against this exact model family, rather than re-derived. It lives here,
+/// Utterances that end an open-ended session.
+///
+/// Deliberately short and few. This is matched against the WHOLE utterance, not
+/// searched for inside it — see [`is_stop_phrase`].
+pub const STOP_PHRASES: [&str; 8] = [
+    "stop",
+    "stop session",
+    "end session",
+    "end the session",
+    "goodbye",
+    "good night",
+    "goodnight",
+    "that's all",
+];
+
+/// Whether a transcript is the user asking to stop.
+///
+/// **Matches the whole utterance, never a substring.** "I want to stop
+/// procrastinating" contains "stop" and is emphatically not a request to end
+/// the session; a `contains` check would end a session mid-thought and the user
+/// would have no idea why. Everything a hypnagogic session is for happens in
+/// long rambling sentences, which is exactly where a substring match does the
+/// most damage.
+///
+/// Whisper supplies capitalisation and terminal punctuation of its own, so the
+/// comparison normalises both away before matching.
+pub fn is_stop_phrase(text: &str) -> bool {
+    let normalized: String = text
+        .trim()
+        .to_lowercase()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || c.is_whitespace() || *c == '\'')
+        .collect();
+    let normalized = normalized.split_whitespace().collect::<Vec<_>>().join(" ");
+    STOP_PHRASES.contains(&normalized.as_str())
+}
+
 /// pure and tested, instead of in the generator shell, because it is the same
 /// cleanup for every backend.
 pub fn strip_for_speech(text: &str) -> String {
@@ -285,6 +322,56 @@ pub struct UnreachableListener;
 impl Listening for UnreachableListener {
     fn listen(&mut self) -> SeamResult<Option<String>> {
         Err(SeamError::Unavailable("no listener is wired".into()))
+    }
+}
+
+#[cfg(test)]
+mod stop_phrase_tests {
+    use super::*;
+
+    #[test]
+    fn every_listed_phrase_stops_the_session() {
+        for p in STOP_PHRASES {
+            assert!(is_stop_phrase(p), "{p:?} did not register");
+        }
+    }
+
+    /// Whisper capitalises and punctuates. A stop phrase the user actually said
+    /// must not fail to register because of a full stop.
+    #[test]
+    fn transcription_punctuation_and_case_do_not_defeat_it() {
+        for s in [
+            "Stop.",
+            "  STOP  ",
+            "Goodbye!",
+            "Good night.",
+            "That's all.",
+        ] {
+            assert!(is_stop_phrase(s), "{s:?} did not register");
+        }
+    }
+
+    /// The failure this is shaped to avoid. Every one of these contains a stop
+    /// word and none is a request to stop; a `contains` check would end the
+    /// session mid-thought with no explanation.
+    #[test]
+    fn a_stop_word_inside_a_sentence_does_not_end_the_session() {
+        for s in [
+            "i want to stop procrastinating",
+            "I can't stop thinking about it",
+            "there's no end to it",
+            "we said goodbye at the station",
+            "that's all i could manage today",
+            "it was a good night",
+        ] {
+            assert!(!is_stop_phrase(s), "{s:?} would have ended the session");
+        }
+    }
+
+    #[test]
+    fn silence_is_not_a_stop_phrase() {
+        assert!(!is_stop_phrase(""));
+        assert!(!is_stop_phrase("   "));
     }
 }
 

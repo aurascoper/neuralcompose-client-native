@@ -20,7 +20,9 @@ use neuralcompose_hypnagogic::eeg::{
 use neuralcompose_hypnagogic::eligibility::{evaluate, tally, Registration};
 use neuralcompose_hypnagogic::embedding::Embedding;
 use neuralcompose_hypnagogic::http;
-use neuralcompose_hypnagogic::loops::{strip_for_speech, MirrorConfig, MirrorLoop};
+use neuralcompose_hypnagogic::loops::{
+    is_stop_phrase, strip_for_speech, MirrorConfig, MirrorLoop, STOP_PHRASES,
+};
 use neuralcompose_hypnagogic::profile::HypnagogicMode;
 use neuralcompose_hypnagogic::role::waking_roles;
 use neuralcompose_hypnagogic::seams::{
@@ -35,6 +37,7 @@ use neuralcompose_hypnagogic::turn_log::{
     eeg_method_identity, turn_log_manifest_filename, turn_log_payload_filename, TurnLine,
     TurnLogRecorder,
 };
+use neuralcompose_hypnagogic::vad;
 use neuralcompose_mobile_core::capture::{
     verify_capture, BridgeLocality, CaptureBuildIdentity, CaptureManifest, CaptureRecorder,
     ReplayVerdict,
@@ -44,7 +47,7 @@ use neuralcompose_mobile_core::electrode_check::MainsThresholds;
 use neuralcompose_mobile_core::provenance::MethodIdentity;
 use neuralcompose_mobile_core::stream::{MonitorConfig, SocketEvent, StreamMonitor};
 use sha2::{Digest, Sha256};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -64,6 +67,9 @@ struct Args {
     json: bool,
     verify_log: Option<PathBuf>,
     mic: bool,
+    push_to_talk: bool,
+    voice_both: bool,
+    mic_gate: Option<f64>,
     speak: bool,
     tts: String,
     eeg_url: Option<String>,
@@ -82,11 +88,16 @@ const USAGE: &str = "\
 neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
 
   --mode <mirror|focused|reflective|contemplative>   default: mirror
-  --turns <n>                                        default: 1
+  --turns <n>                                        default: 1; 0 = until you say stop
   --server <url>                                     default: http://127.0.0.1:8080
   --whisper <path>                --whisper-model <path>
   --log                           --log-dir <path>
-  --mic                           capture audio instead of reading stdin
+  --mic                           hands-free microphone: it cuts on silence,
+                                  so you never press a key
+  --push-to-talk                  the old --mic: speak, then press Enter
+  --voice-both                    speak BOTH poles each turn, in their own
+                                  voices, so the dialectic is audible
+  --mic-gate <n>                  skip calibration and use this speech gate
   --speak                         synthesize audio instead of printing
   --tts <kokoro|espeak>           voice engine for --speak (default kokoro)
   --eeg-url <ws://…>              attach an EEG source (dialectical modes only)
@@ -118,6 +129,9 @@ fn parse_args() -> Result<Args, String> {
         json: false,
         verify_log: None,
         mic: false,
+        push_to_talk: false,
+        voice_both: false,
+        mic_gate: None,
         speak: false,
         tts: "kokoro".into(),
         eeg_url: None,
@@ -192,6 +206,20 @@ fn parse_args() -> Result<Args, String> {
             "--world-model-demo" => a.world_model_demo = true,
             "--heldout" => a.heldout = true,
             "--mic" => a.mic = true,
+            "--voice-both" => a.voice_both = true,
+            "--push-to-talk" => {
+                a.mic = true;
+                a.push_to_talk = true;
+            }
+            "--mic-gate" => {
+                let v = need(i)?;
+                a.mic_gate = Some(
+                    v.parse::<f64>()
+                        .map_err(|_| format!("--mic-gate wants a number, got {v:?}"))?,
+                );
+                a.mic = true;
+                i += 1;
+            }
             "--speak" => a.speak = true,
             "--tts" => {
                 let v = need(i)?;
@@ -216,14 +244,214 @@ fn parse_args() -> Result<Args, String> {
 
 // ─────────────────────────────────────────────────────────────── the shell ──
 
+/// Hands-free capture: the mic stays open and utterances are cut on silence.
+///
+/// **This is what `--mic` does now.** It used to print "speak now, then press
+/// Enter" and block on stdin, which for a hypnagogic session — taken lying down
+/// with your eyes closed — defeats the exercise. [`PushToTalkListener`] is still
+/// there behind `--push-to-talk` for when a keypress is genuinely wanted.
+///
+/// `arecord -t raw` rather than `pw-record`, for the reason `converse.py` gives:
+/// `pw-record` writes a WAV header to stdout and this needs a bare sample
+/// stream. It still reaches the hardware through PipeWire's ALSA compatibility
+/// layer, so it is the same audio path.
+///
+/// The decision of when speech starts and stops is in [`vad`], with the measured
+/// rationale for every constant. This type is the microphone and the buffer.
+struct VadListener {
+    whisper: PathBuf,
+    model: PathBuf,
+    workdir: PathBuf,
+    /// `None` until the first `listen()`, which calibrates against the room.
+    /// Calibration happens once: the noise floor is a property of the room and
+    /// re-measuring it between turns would recalibrate against the tail of
+    /// whatever was just said.
+    gate: Option<f64>,
+    cfg: vad::VadConfig,
+    /// Overrides calibration entirely. For when the room defeats it and the
+    /// operator has a number that works — `converse.py` grew the same escape
+    /// hatch for the same reason.
+    forced_gate: Option<f64>,
+}
+
+impl VadListener {
+    /// Reads exactly one frame, or `None` at end of stream.
+    fn read_frame(stdout: &mut std::process::ChildStdout, buf: &mut [i16]) -> Option<()> {
+        let mut bytes = vec![0u8; buf.len() * 2];
+        let mut filled = 0;
+        while filled < bytes.len() {
+            match stdout.read(&mut bytes[filled..]) {
+                Ok(0) => return None,
+                Ok(n) => filled += n,
+                Err(_) => return None,
+            }
+        }
+        for (i, s) in buf.iter_mut().enumerate() {
+            *s = i16::from_le_bytes([bytes[i * 2], bytes[i * 2 + 1]]);
+        }
+        Some(())
+    }
+}
+
+impl Listening for VadListener {
+    fn listen(&mut self) -> SeamResult<Option<String>> {
+        let argv = command::arecord_argv();
+        let mut rec = Command::new(&argv[0])
+            .args(&argv[1..])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| SeamError::Unavailable(format!("arecord: {e}")))?;
+        let mut out = rec
+            .stdout
+            .take()
+            .ok_or_else(|| SeamError::Unavailable("arecord gave no stdout".into()))?;
+
+        let mut frame = vec![0i16; vad::FRAME_SAMPLES];
+
+        // Calibrate once, on the first turn.
+        if self.gate.is_none() {
+            if let Some(g) = self.forced_gate {
+                eprintln!("● mic: gate {g:.0} (set by hand, no calibration)");
+                self.gate = Some(g);
+            } else {
+                eprintln!("● mic: calibrating the room, stay quiet…");
+                let n = (3.0 * vad::RATE as f64 / vad::FRAME_SAMPLES as f64) as usize;
+                let mut levels = Vec::with_capacity(n);
+                for _ in 0..n {
+                    if Self::read_frame(&mut out, &mut frame).is_none() {
+                        break;
+                    }
+                    levels.push(vad::rms(&frame));
+                }
+                match vad::calibrate_gate(&mut levels, &self.cfg) {
+                    Some(g) => {
+                        eprintln!("● mic: gate {g:.0} — speak whenever you like");
+                        self.gate = Some(g);
+                    }
+                    // Refused rather than defaulted: a gate nobody chose is how
+                    // a loop ends up listening forever or triggering on nothing.
+                    None => {
+                        let _ = rec.kill();
+                        return Err(SeamError::Unavailable(
+                            "the microphone produced no audio to calibrate against. \
+                             Check an input device exists and is not muted, or pass \
+                             --mic-gate with a number."
+                                .into(),
+                        ));
+                    }
+                }
+            }
+        }
+
+        let gate = self.gate.expect("set above");
+        let mut v = vad::Vad::new(gate, self.cfg);
+        let mut pcm: Vec<i16> = Vec::new();
+        let mut ring: Vec<Vec<i16>> = Vec::new();
+
+        loop {
+            if Self::read_frame(&mut out, &mut frame).is_none() {
+                let _ = rec.kill();
+                let _ = rec.wait();
+                return Ok(None);
+            }
+            match v.observe(vad::rms(&frame)) {
+                vad::VadStep::Waiting => {
+                    // Hold the last few frames so an utterance includes its own
+                    // onset. Without this every turn loses its first syllable,
+                    // which whisper then guesses at.
+                    ring.push(frame.clone());
+                    let keep = self.cfg.onset_frames as usize;
+                    if ring.len() > keep {
+                        ring.remove(0);
+                    }
+                }
+                vad::VadStep::Speaking => {
+                    if pcm.is_empty() {
+                        for f in ring.drain(..) {
+                            pcm.extend_from_slice(&f);
+                        }
+                    }
+                    pcm.extend_from_slice(&frame);
+                }
+                vad::VadStep::Ended => {
+                    pcm.extend_from_slice(&frame);
+                    break;
+                }
+            }
+        }
+
+        let _ = rec.kill();
+        let _ = rec.wait();
+
+        let wav = self.workdir.join("turn.wav");
+        write_wav(&wav, &pcm).map_err(|e| SeamError::Failed(format!("writing {wav:?}: {e}")))?;
+        transcribe(&self.whisper, &self.model, &wav)
+    }
+}
+
+/// Minimal 16-bit mono PCM WAV. Written by hand rather than adding a crate for
+/// 44 bytes of header — the whole workspace has seven dependencies.
+fn write_wav(path: &Path, pcm: &[i16]) -> std::io::Result<()> {
+    let data_len = (pcm.len() * 2) as u32;
+    let mut f = std::fs::File::create(path)?;
+    f.write_all(b"RIFF")?;
+    f.write_all(&(36 + data_len).to_le_bytes())?;
+    f.write_all(b"WAVEfmt ")?;
+    f.write_all(&16u32.to_le_bytes())?; // PCM header size
+    f.write_all(&1u16.to_le_bytes())?; // format: PCM
+    f.write_all(&1u16.to_le_bytes())?; // channels
+    f.write_all(&vad::RATE.to_le_bytes())?;
+    f.write_all(&(vad::RATE * 2).to_le_bytes())?; // byte rate
+    f.write_all(&2u16.to_le_bytes())?; // block align
+    f.write_all(&16u16.to_le_bytes())?; // bits per sample
+    f.write_all(b"data")?;
+    f.write_all(&data_len.to_le_bytes())?;
+    for s in pcm {
+        f.write_all(&s.to_le_bytes())?;
+    }
+    Ok(())
+}
+
+/// Shared by both microphone listeners.
+fn transcribe(whisper: &Path, model: &Path, wav: &Path) -> SeamResult<Option<String>> {
+    let argv = command::whisper_argv(whisper, model, wav);
+    let out = Command::new(&argv[0])
+        .args(&argv[1..])
+        .output()
+        .map_err(|e| SeamError::Unavailable(format!("whisper-cli: {e}")))?;
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        let head: Vec<&str> = stderr
+            .lines()
+            .filter(|l| !l.trim().is_empty())
+            .take(3)
+            .collect();
+        return Err(SeamError::Failed(format!(
+            "whisper-cli exited {}: {}",
+            out.status,
+            head.join(" / ")
+        )));
+    }
+    let text = String::from_utf8_lossy(&out.stdout)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    Ok(if text.is_empty() { None } else { Some(text) })
+}
+
 /// Spawns `pw-record`, waits for Enter, then transcribes with whisper-cli.
-struct MicListener {
+///
+/// Behind `--push-to-talk` since `--mic` became hands-free. Kept because a
+/// keypress is deterministic and a voice gate is not, which matters when you are
+/// demonstrating something rather than using it.
+struct PushToTalkListener {
     whisper: PathBuf,
     model: PathBuf,
     workdir: PathBuf,
 }
 
-impl Listening for MicListener {
+impl Listening for PushToTalkListener {
     fn listen(&mut self) -> SeamResult<Option<String>> {
         let wav = self.workdir.join("turn.wav");
         eprintln!("● speak now, then press Enter");
@@ -267,32 +495,10 @@ impl Listening for MicListener {
             Ok(_) => {}
         }
 
-        let argv = command::whisper_argv(&self.whisper, &self.model, &wav);
-        let out = Command::new(&argv[0])
-            .args(&argv[1..])
-            .output()
-            .map_err(|e| SeamError::Unavailable(format!("whisper-cli: {e}")))?;
-        if !out.status.success() {
-            // First lines only. whisper-cli prints its whole usage screen on a
-            // bad invocation, and relaying sixty lines of option documentation
-            // hides the one line that says what failed.
-            let stderr = String::from_utf8_lossy(&out.stderr);
-            let head: Vec<&str> = stderr
-                .lines()
-                .filter(|l| !l.trim().is_empty())
-                .take(3)
-                .collect();
-            return Err(SeamError::Failed(format!(
-                "whisper-cli exited {}: {}",
-                out.status,
-                head.join(" / ")
-            )));
-        }
-        let text = String::from_utf8_lossy(&out.stdout)
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ");
-        Ok(if text.is_empty() { None } else { Some(text) })
+        // Shared with the VAD listener, including the stderr trimming: whisper
+        // prints its whole usage screen on a bad invocation, and sixty lines of
+        // option documentation hides the one line that says what failed.
+        transcribe(&self.whisper, &self.model, &wav)
     }
 }
 
@@ -1255,7 +1461,18 @@ fn run(args: Args) -> Result<(), String> {
     let mut recorder = args
         .log
         .then(|| TurnLogRecorder::new(session_id.clone(), args.mode.id()));
-    let mut payload = String::new();
+    // Opened up front so the payload exists from the first turn. `write_log`
+    // now only publishes the manifest — the bytes it describes are already on
+    // disk, which is the same ordering rule as before and a stronger version of
+    // it: the manifest can never precede its payload because the payload is
+    // written first by construction rather than by call order.
+    let mut turn_file: Option<std::fs::File> = if args.log {
+        std::fs::create_dir_all(&args.log_dir).map_err(|e| format!("log dir: {e}"))?;
+        let p = args.log_dir.join(turn_log_payload_filename(&session_id));
+        Some(std::fs::File::create(&p).map_err(|e| format!("turn log {}: {e}", p.display()))?)
+    } else {
+        None
+    };
     // `None` in mirror mode, which loads no embedder at all — absent because
     // there was nothing to read back, not because the read failed.
     let mut embedder_backend: Option<&'static str> = None;
@@ -1336,12 +1553,22 @@ fn run(args: Args) -> Result<(), String> {
         None => None,
     };
 
-    let listener: Box<dyn Listening> = if args.mic {
-        eprintln!("● input: microphone via pw-record + whisper-cli");
-        Box::new(MicListener {
+    let listener: Box<dyn Listening> = if args.mic && args.push_to_talk {
+        eprintln!("● input: microphone, push-to-talk (speak, then press Enter)");
+        Box::new(PushToTalkListener {
             whisper: args.whisper.clone(),
             model: args.whisper_model.clone(),
             workdir: workdir.clone(),
+        })
+    } else if args.mic {
+        eprintln!("● input: microphone, hands-free (arecord + whisper-cli)");
+        Box::new(VadListener {
+            whisper: args.whisper.clone(),
+            model: args.whisper_model.clone(),
+            workdir: workdir.clone(),
+            gate: None,
+            cfg: vad::VadConfig::default(),
+            forced_gate: args.mic_gate,
         })
     } else {
         eprintln!("● input: stdin (pass --mic for the microphone)");
@@ -1429,6 +1656,7 @@ fn run(args: Args) -> Result<(), String> {
                 profile,
                 DialecticConfig {
                     chunk_replies,
+                    voice_both: args.voice_both,
                     // `None` whenever the tree was dirty at build time — see
                     // build.rs. An unpinned build says so rather than naming a
                     // commit that does not describe it.
@@ -1437,9 +1665,27 @@ fn run(args: Args) -> Result<(), String> {
                 },
             );
             let method = l.method_identity();
-            for turn_number in 0..args.turns {
+            // `--turns 0` runs until the session is ended by voice or by the
+            // input stream closing. A hypnagogic session has no natural turn
+            // count — you stop when you drift off — and a fixed one either cuts
+            // it short or leaves the loop talking to an empty room.
+            let open_ended = args.turns == 0;
+            if open_ended {
+                eprintln!(
+                    "● open-ended: say {:?} to finish (or Ctrl-C — the log is written as it goes)",
+                    STOP_PHRASES[0]
+                );
+            }
+            let mut turn_number = 0u32;
+            let mut stopped = false;
+            while !stopped && (open_ended || turn_number < args.turns) {
                 match l.turn() {
                     Ok(Some(t)) => {
+                        // Checked before the record is written, so the turn that
+                        // ends the session is still logged. It was a real turn.
+                        if open_ended && is_stop_phrase(&t.heard) {
+                            stopped = true;
+                        }
                         // Built ONCE. Two calls would let the JSON echo and the
                         // persisted record disagree — and the echo is what a
                         // reader would trust while the record is what verifies.
@@ -1471,9 +1717,18 @@ fn run(args: Args) -> Result<(), String> {
                         if args.json {
                             println!("{}", serde_json::to_string(&line).unwrap());
                         }
-                        if let Some(r) = recorder.as_mut() {
-                            payload.push_str(&r.on_turn(&line));
-                            payload.push('\n');
+                        // Appended and flushed per turn, not accumulated. An
+                        // open-ended session can run for hours, and buffering
+                        // the whole log in memory means a Ctrl-C — the ordinary
+                        // way to end one — loses every turn of it. A payload
+                        // with no manifest is the `.partial` case the capture
+                        // side already defines, and is recoverable; a payload
+                        // that never existed is not.
+                        if let (Some(r), Some(f)) = (recorder.as_mut(), turn_file.as_mut()) {
+                            let encoded = r.on_turn(&line);
+                            if let Err(e) = writeln!(f, "{encoded}").and_then(|()| f.flush()) {
+                                eprintln!("⚠ turn log: {e}");
+                            }
                         }
                         if let Some(err) = &t.witness_error {
                             eprintln!("witness failed on turn {}: {err}", t.index);
@@ -1482,9 +1737,13 @@ fn run(args: Args) -> Result<(), String> {
                     Ok(None) => eprintln!("turn {turn_number} skipped (nothing heard)"),
                     Err(e) => eprintln!("turn failed: {e}"),
                 }
-                if turn_number + 1 < args.turns {
+                turn_number += 1;
+                if !stopped && (open_ended || turn_number < args.turns) {
                     std::thread::sleep(profile.inter_turn_delay());
                 }
+            }
+            if stopped {
+                eprintln!("● stopping, as asked");
             }
         }
     }
@@ -1511,7 +1770,7 @@ fn run(args: Args) -> Result<(), String> {
     };
 
     if let Some(r) = recorder {
-        write_log(&args.log_dir, &session_id, &payload, &r)?;
+        write_log(&args.log_dir, &session_id, turn_file.take(), &r)?;
         let session = SessionRecord {
             schema_id: SESSION_RECORD_SCHEMA.to_string(),
             session_id: session_id.clone(),
@@ -1731,12 +1990,20 @@ fn read_hci_adapters() -> Vec<HciAdapter> {
 fn write_log(
     dir: &std::path::Path,
     session_id: &str,
-    payload: &str,
+    turn_file: Option<std::fs::File>,
     recorder: &TurnLogRecorder,
 ) -> Result<(), String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("log dir: {e}"))?;
     let payload_path = dir.join(turn_log_payload_filename(session_id));
-    std::fs::write(&payload_path, payload).map_err(|e| format!("writing the turn log: {e}"))?;
+    // The payload was written turn by turn. Close it here, before the manifest
+    // that describes it: a manifest visible over a payload with buffered bytes
+    // still outstanding would advertise a digest for something not fully on
+    // disk.
+    if let Some(mut f) = turn_file {
+        f.flush()
+            .map_err(|e| format!("flushing the turn log: {e}"))?;
+        drop(f);
+    }
     let manifest = recorder.manifest();
     let manifest_path = dir.join(turn_log_manifest_filename(session_id));
     std::fs::write(

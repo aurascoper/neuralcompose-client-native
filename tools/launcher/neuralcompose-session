@@ -42,15 +42,19 @@ SERVER_URL="${SERVER_URL:-http://127.0.0.1:8080}"
 NGL="${NGL:-99}"
 CTX="${CTX:-4096}"
 MODE="${MODE:-reflective}"
-TURNS="${TURNS:-8}"
+TURNS="${TURNS:-0}"            # 0 = open-ended, ended by voice
 EEG="${EEG:-none}"            # none | fixture | muse
 EEG_URL="${EEG_URL:-ws://127.0.0.1:8788/api/eeg/stream}"
 FIXTURE_SECONDS="${FIXTURE_SECONDS:-3600}"
 SPEAK="${SPEAK:-1}"
 TTS="${TTS:-kokoro}"
-MIC="${MIC:-0}"
+MIC="${MIC:-1}"                # hands-free; MIC=0 to type instead
+PUSH_TO_TALK="${PUSH_TO_TALK:-0}"
+MIC_GATE="${MIC_GATE:-}"       # empty = calibrate against the room
+VOICE_BOTH="${VOICE_BOTH:-1}"  # speak both poles, so the dialectic is audible
 LOG="${LOG:-1}"
-LOG_DIR="${LOG_DIR:-}"   # empty = the binary's own default
+LOG_DIR="${LOG_DIR:-}"         # empty = the binary's own default
+WHISPER_MODEL="${WHISPER_MODEL:-$HOME/src/whisper.cpp/models/ggml-base.en.bin}"
 
 RUNDIR="$(mktemp -d -t nc-session-XXXXXX)"
 SERVER_LOG="$RUNDIR/llama-server.log"
@@ -149,7 +153,16 @@ if [ "$SPEAK" = 1 ] && [ "$TTS" = kokoro ]; then
 fi
 
 if [ "$MIC" = 1 ]; then
-    command -v pw-record >/dev/null || die "--mic needs pw-record (pipewire)"
+    # Hands-free capture reads a raw stream from arecord; push-to-talk writes a
+    # WAV with pw-record. Different tools, so each is checked for what it uses.
+    if [ "$PUSH_TO_TALK" = 1 ]; then
+        command -v pw-record >/dev/null || die "--push-to-talk needs pw-record (pipewire)"
+    else
+        command -v arecord >/dev/null || die "hands-free capture needs arecord (alsa-utils).
+  Install it, or set PUSH_TO_TALK=1 to use pw-record and press Enter each turn."
+    fi
+    [ -f "$WHISPER_MODEL" ] || die "whisper model not found: $WHISPER_MODEL
+  Set WHISPER_MODEL in $CONF, or set MIC=0 to type instead."
 fi
 
 # ── choose the llama-server binary ──────────────────────────────────────────
@@ -296,11 +309,19 @@ ARGS=(--mode "$MODE" --turns "$TURNS")
 [ "$LOG" = 1 ]   && ARGS+=(--log)
 [ -n "$LOG_DIR" ] && ARGS+=(--log-dir "$LOG_DIR")
 [ "$SPEAK" = 1 ] && ARGS+=(--speak --tts "$TTS")
-[ "$MIC" = 1 ]   && ARGS+=(--mic)
+[ "$MIC" = 1 ]   && ARGS+=(--mic --whisper-model "$WHISPER_MODEL")
+[ "$PUSH_TO_TALK" = 1 ] && ARGS+=(--push-to-talk)
+[ -n "$MIC_GATE" ] && ARGS+=(--mic-gate "$MIC_GATE")
+# Only dialectical modes have two poles to voice; mirror would reject it.
+[ "$VOICE_BOTH" = 1 ] && [ "$MODE" != mirror ] && ARGS+=(--voice-both)
 ARGS+=("${EEG_ARGS[@]+"${EEG_ARGS[@]}"}")
 
 printf '\n'
-say "session: $MODE, $TURNS turns"
+if [ "$TURNS" = 0 ]; then
+    say "session: $MODE, open-ended — say \"stop\" to finish"
+else
+    say "session: $MODE, $TURNS turns"
+fi
 printf '\n  ─────────────────────────────────────────────\n\n'
 
 # `|| true` so a non-zero exit from the session still runs teardown through the
