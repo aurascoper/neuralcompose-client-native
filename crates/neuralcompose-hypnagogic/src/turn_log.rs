@@ -29,23 +29,37 @@ use crate::dynamics::{DialecticalOutcome, Resolution, ScoredCandidate};
 use crate::profile::ContextProfile;
 use neuralcompose_mobile_core::audio::sha256_hex;
 use neuralcompose_mobile_core::channel_health::ChannelHealthStatus;
+use neuralcompose_mobile_core::channel_health::ChannelHealthThresholds;
+use neuralcompose_mobile_core::electrode_check::MainsThresholds;
 use neuralcompose_mobile_core::provenance::{
-    validate as validate_provenance, AssertionKind, MethodIdentity, ProvenanceEnvelope,
-    PROVENANCE_ENVELOPE_SCHEMA,
+    present_option, validate as validate_provenance, AssertionKind, MethodIdentity,
+    ProvenanceEnvelope, ResourceRef, PROVENANCE_ENVELOPE_SCHEMA,
 };
 use neuralcompose_mobile_core::types::CHANNEL_ORDER;
 use serde::{Deserialize, Serialize};
 
-/// v2 adds the required `provenance` envelope. Bumped rather than edited in
-/// place: `contracts/README.md`'s rule is that contract changes are new
-/// versions, and [`verify_turn_log`] already refuses a line whose schema it does
-/// not recognize — which is the correct treatment of a v1 log by a v2 reader.
-pub const TURN_LINE_SCHEMA: &str = "neuralcompose.hypnagogic.turn.v2";
+/// v2 added the required `provenance` envelope. v3 replaces the flat
+/// `channelHealth` line with [`ChannelRecord`], which separates what was
+/// measured from what was interpreted, and adds
+/// [`TurnLine::channel_health_absent_reason`].
+///
+/// Bumped rather than edited in place: `contracts/README.md`'s rule is that
+/// contract changes are new versions, and [`verify_turn_log`] already refuses a
+/// line whose schema it does not recognize — which is the correct treatment of
+/// a v2 log by a v3 reader.
+pub const TURN_LINE_SCHEMA: &str = "neuralcompose.hypnagogic.turn.v3";
 pub const TURN_MANIFEST_SCHEMA: &str = "neuralcompose.hypnagogic.turnlog.v1";
 
 /// Identifies this crate as the producing software in every turn's envelope.
 pub const DIALECTIC_METHOD_ID: &str = "neuralcompose.hypnagogic.dialectic.v1";
 pub const SOFTWARE_ID: &str = "neuralcompose-hypnagogic";
+
+/// Identifies the channel-health computation in a [`ChannelRecord`] envelope.
+///
+/// Separate from [`DIALECTIC_METHOD_ID`] because it seals a different parameter
+/// set: sample rate, buffer length, thresholds and band edges, none of which
+/// the dialectic's tuning covers.
+pub const EEG_HEALTH_METHOD_ID: &str = "neuralcompose.eeg.channel-health.v1";
 
 /// The neutral gloss. `SpectralState` comes from an **MLX**-backed estimator
 /// (`Sources/BCILLM/SpectralStateEstimator.swift:23` in the macOS repository,
@@ -147,6 +161,73 @@ pub fn dialectic_method_identity(
     }
 }
 
+/// Seals the parameters behind a channel-health computation.
+///
+/// Same recipe as [`dialectic_method_identity`] — serialize a parameter
+/// document, rewrite its floats to bit-exact form, digest it — over a different
+/// parameter set.
+///
+/// **The window length is deliberately absent from this digest.** It varies per
+/// turn as the `StreamMonitor` ring fills, so it is per-observation data, not
+/// configuration; it lives on [`ChannelWindow::sample_count`] instead. Folding
+/// it in here would give the same configuration a different method identity on
+/// every turn of the same session, which is the opposite of what a method
+/// identity is for.
+///
+/// **The shaping is named honestly.** There is no filter in this pipeline. The
+/// only shaping is mean removal plus a Hann window, both inside `band_power`,
+/// so the document says so and records `filter: null` rather than naming a
+/// stage that does not exist.
+pub fn eeg_method_identity(
+    sample_rate_hz: f64,
+    keep_samples: u32,
+    health: ChannelHealthThresholds,
+    mains: MainsThresholds,
+    software_version: impl Into<String>,
+    git_commit: Option<String>,
+) -> MethodIdentity {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Params {
+        domain: &'static str,
+        sample_rate_hz: f64,
+        keep_samples: u32,
+        detrend: &'static str,
+        window: &'static str,
+        filter: Option<&'static str>,
+        gate_bands: [(f64, f64); 4],
+        dead_rms: f64,
+        saturated_rms: f64,
+        minimum_samples: u64,
+        mains_watch: f64,
+        mains_high: f64,
+    }
+    let mut doc = serde_json::to_value(Params {
+        domain: EEG_HEALTH_METHOD_ID,
+        sample_rate_hz,
+        keep_samples,
+        detrend: "mean-removal",
+        window: "hann",
+        filter: None,
+        gate_bands: crate::eeg::GATE_BANDS,
+        dead_rms: health.dead_rms,
+        saturated_rms: health.saturated_rms,
+        minimum_samples: health.minimum_samples,
+        mains_watch: mains.watch,
+        mains_high: mains.high,
+    })
+    .expect("plain scalars are always serializable");
+    bit_exact_numbers(&mut doc);
+    let digest = sha256_hex(serde_json::to_vec(&doc).expect("a rewritten document serializes"));
+    MethodIdentity {
+        method_id: EEG_HEALTH_METHOD_ID.to_string(),
+        software_id: SOFTWARE_ID.to_string(),
+        software_version: software_version.into(),
+        git_commit,
+        parameters_digest: digest,
+    }
+}
+
 /// A turn record is a [`AssertionKind::HeuristicAnnotation`], and therefore
 /// [`neuralcompose_mobile_core::provenance::EvidenceMapping::NeverIngestible`].
 ///
@@ -171,6 +252,71 @@ fn turn_envelope(method: MethodIdentity) -> ProvenanceEnvelope {
     }
 }
 
+/// The envelope on a [`ChannelDerived`]: a named transform over a named window.
+///
+/// `confidence` is `None` because
+/// [`AssertionKind::DerivedDeterministically`] does not take one — a
+/// deterministic computation has no confidence, it has inputs and a method.
+/// `comparison_embedding_space` is `None` because no embedding is involved.
+pub(crate) fn derived_envelope(method: MethodIdentity, window: ResourceRef) -> ProvenanceEnvelope {
+    ProvenanceEnvelope {
+        schema_id: PROVENANCE_ENVELOPE_SCHEMA.to_string(),
+        assertion_kind: AssertionKind::DerivedDeterministically,
+        method: Some(method),
+        inputs: vec![window],
+        confidence: None,
+        comparison_embedding_space: None,
+    }
+}
+
+/// The envelope on a [`ChannelAnnotation`].
+///
+/// `confidence` is `None` even though
+/// [`AssertionKind::HeuristicAnnotation`] permits one. There is no calibrated
+/// basis for a number here — the thresholds come from one subject in one mains
+/// environment — and a confidence attached to an uncalibrated threshold is the
+/// laundering this whole vocabulary exists to prevent.
+///
+/// The same window is named as the input, so a reader can see that the
+/// classification and the measurement are about the same samples.
+pub(crate) fn annotation_envelope(
+    method: MethodIdentity,
+    window: ResourceRef,
+) -> ProvenanceEnvelope {
+    ProvenanceEnvelope {
+        schema_id: PROVENANCE_ENVELOPE_SCHEMA.to_string(),
+        assertion_kind: AssertionKind::HeuristicAnnotation,
+        method: Some(method),
+        inputs: vec![window],
+        confidence: None,
+        comparison_embedding_space: None,
+    }
+}
+
+/// Names the window a channel's numbers were computed from.
+///
+/// The digest is over the **window**, not the whole capture file: a capture's
+/// `payloadSha256Hex` only exists at `finish()`, at end of session, and these
+/// envelopes are written during it. Digesting the samples actually consumed is
+/// both computable at turn time and the stronger claim — it makes the
+/// derivation reproducible rather than merely attributed.
+pub fn window_resource_ref(samples: &[f64], recording_id: Option<&str>) -> ResourceRef {
+    // Bit-exact bytes, so the digest cannot depend on decimal rendering — the
+    // same reason `bit_exact_numbers` exists for the method documents.
+    let mut bytes = Vec::with_capacity(samples.len() * 8);
+    for s in samples {
+        bytes.extend_from_slice(&s.to_bits().to_be_bytes());
+    }
+    ResourceRef {
+        resource_kind: "eeg-window".to_string(),
+        sha256_hex: sha256_hex(bytes),
+        // `None` when the run is not recording a capture: the window was
+        // consumed and digested, but no file holds it, and pointing at a file
+        // that does not exist would be worse than admitting there is none.
+        locator: recording_id.map(|id| format!("{id}.eeg.jsonl")),
+    }
+}
+
 /// One scored candidate as persisted — text and scalars, never the embedding.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -183,15 +329,93 @@ pub struct CandidateLine {
     pub potential: f32,
 }
 
-/// Per-channel signal health at the time of the turn. Absent entirely when no
-/// EEG source is attached; when present it is always all four channels in the
-/// frozen `TP9, AF7, AF8, TP10` order.
+/// Which samples a channel's numbers were computed from.
+///
+/// Enough for a reader to find the window inside the session's `.eeg.jsonl` and
+/// recompute the derivation. Not itself an assertion — it is the coordinates of
+/// one, which is why it carries no envelope of its own.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelWindow {
+    /// How many samples were in the buffer. Varies per turn while the ring
+    /// fills, which is exactly why it is recorded rather than digested into the
+    /// method identity.
+    pub sample_count: u64,
+    /// Seconds since stream start for the newest sample in the window — the
+    /// wire axis, never wall clock. With `sample_count` this locates the window
+    /// in the capture.
+    ///
+    /// `None` when the source supplied none. Not `0.0`: that is a real
+    /// timestamp meaning the first sample of the stream, and the two must stay
+    /// distinguishable.
+    #[serde(deserialize_with = "present_option")]
+    pub last_source_timestamp: Option<f64>,
+}
+
+/// What was **measured**: numbers a named transform produced from the samples.
+///
+/// [`AssertionKind::DerivedDeterministically`], not `Observed`. The only
+/// observed thing in this pipeline is the raw frame, which lives in the
+/// session's `.eeg.jsonl`; an RMS is a computation over it, and the envelope's
+/// single input names the window it consumed.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ChannelHealthLine {
-    pub channel: String,
+pub struct ChannelDerived {
     pub rms_microvolts: f64,
+    /// Power in the winning mains band. `None` when no band was measurable —
+    /// never `0.0`, which is a reading meaning "no line noise here".
+    #[serde(deserialize_with = "present_option")]
+    pub mains_power: Option<f64>,
+    pub provenance: ProvenanceEnvelope,
+}
+
+/// What was **interpreted**: a classification against thresholds nobody has
+/// validated physiologically.
+///
+/// [`AssertionKind::HeuristicAnnotation`], and therefore `NeverIngestible`.
+///
+/// This is the naming rule applied to itself. `status` reads `healthy`,
+/// `saturated`, `dead` — state words, claims about an electrode rather than
+/// about a number — and `channel_health.rs:24-32` says outright that the
+/// thresholds behind them are not physiologically validated. A field whose name
+/// implies a state cannot be typed as a measurement, so it is not.
+///
+/// `mains_power` deliberately lives on [`ChannelDerived`] instead: it is a
+/// power figure, and bundling it here would put a measurement and an
+/// interpretation under one envelope, collapsing two epistemic classes into the
+/// looser of them.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelAnnotation {
     pub status: ChannelHealthStatus,
+    /// The electrode verdict's stable id — `ok`, `mains-pickup`, `lifted` and
+    /// so on. The **enum**, never `ElectrodeVerdict::advice()`.
+    ///
+    /// Eligibility has to be able to query why a session was excluded, and
+    /// mains pickup is an exclusion reason, so the classification must be on
+    /// the record. The original decision that kept this out of the log
+    /// (`eeg.rs`) was about the advice *sentence* — a turn record should not
+    /// carry a line telling a future reader to reseat an electrode that was
+    /// reseated months ago — and that reason still holds. The sentence stays
+    /// out; the classification comes in.
+    pub verdict: String,
+    /// Which line frequency carried more power. `None` means *cannot tell* at
+    /// this sample rate, never *clean*.
+    #[serde(deserialize_with = "present_option")]
+    pub mains_line_hz: Option<f64>,
+    pub provenance: ProvenanceEnvelope,
+}
+
+/// Per-channel signal health at the time of the turn. Absent entirely when no
+/// EEG source is attached or the window was refused; when present it is always
+/// all four channels in the frozen `TP9, AF7, AF8, TP10` order.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChannelRecord {
+    pub channel: String,
+    pub window: ChannelWindow,
+    pub derived: ChannelDerived,
+    pub annotation: ChannelAnnotation,
 }
 
 /// One turn.
@@ -227,7 +451,18 @@ pub struct TurnLine {
     /// Whether the Witness RAN — true even if the call failed or produced
     /// nothing, so a broken witness is distinguishable from a disabled one.
     pub witness_attempted: Option<bool>,
-    pub channel_health: Option<Vec<ChannelHealthLine>>,
+    #[serde(deserialize_with = "present_option")]
+    pub channel_health: Option<Vec<ChannelRecord>>,
+    /// Why `channel_health` is absent, when it is.
+    ///
+    /// The pair is the point. An absent reading and a dead electrode both
+    /// produce `channelHealth: null`, and until this field existed nothing
+    /// downstream could tell them apart — so session eligibility had to be a
+    /// human verdict reconstructed after the fact instead of a query. Exactly
+    /// one of these two fields is `Some` on any line where an EEG was attached;
+    /// both are `null` when there was no EEG at all.
+    #[serde(deserialize_with = "present_option")]
+    pub channel_health_absent_reason: Option<String>,
     /// Which build, under which frozen tuning, produced this line (ADR-004).
     pub provenance: ProvenanceEnvelope,
 }
@@ -277,12 +512,60 @@ impl TurnLine {
             self_similarity: None,
             witness_attempted: None,
             channel_health: None,
+            channel_health_absent_reason: None,
             provenance: turn_envelope(method),
         }
     }
 
-    pub fn with_channel_health(mut self, health: Vec<ChannelHealthLine>) -> Self {
+    /// A minimal silent line, for tests in other modules that need a `TurnLine`
+    /// to hang channel records off and do not care about the competition.
+    ///
+    /// `#[cfg(test)]` so it cannot be reached from a real run: a turn line with
+    /// no candidates and a placeholder method identity is not a record of
+    /// anything, and nothing outside a test should be able to write one.
+    #[cfg(test)]
+    pub(crate) fn silent_for_test() -> Self {
+        Self {
+            schema_id: TURN_LINE_SCHEMA.to_string(),
+            index: 0,
+            mode: "reflective".to_string(),
+            heard: String::new(),
+            candidates: Vec::new(),
+            tension: 0.0,
+            margin: 0.0,
+            selection_temperature: 1.0,
+            gloss_scalar: NEUTRAL_GLOSS,
+            spectral_state: None,
+            outcome: "silent".to_string(),
+            spoken_text: None,
+            witness_finding: None,
+            witness_distance: None,
+            self_similarity: None,
+            witness_attempted: None,
+            channel_health: None,
+            channel_health_absent_reason: None,
+            provenance: turn_envelope(MethodIdentity {
+                method_id: DIALECTIC_METHOD_ID.to_string(),
+                software_id: SOFTWARE_ID.to_string(),
+                software_version: "0".to_string(),
+                git_commit: None,
+                parameters_digest: "0".repeat(64),
+            }),
+        }
+    }
+
+    /// Records a reading. Clears any absent-reason: the two are mutually
+    /// exclusive by construction, not by the caller remembering.
+    pub fn with_channel_health(mut self, health: Vec<ChannelRecord>) -> Self {
         self.channel_health = Some(health);
+        self.channel_health_absent_reason = None;
+        self
+    }
+
+    /// Records why there was no reading. Clears any health for the same reason.
+    pub fn with_channel_health_absent(mut self, reason: &str) -> Self {
+        self.channel_health = None;
+        self.channel_health_absent_reason = Some(reason.to_string());
         self
     }
 
@@ -359,6 +642,21 @@ pub enum TurnLogFailure {
     ProvenanceDefective {
         line_number: u64,
         defect: String,
+    },
+    /// A channel record's envelope claims a different assertion kind than its
+    /// tier. The severity is not cosmetic: `derived` claiming `observed` would
+    /// route an uncalibrated computation through
+    /// [`neuralcompose_mobile_core::provenance::EvidenceMapping::Ingestible`]
+    /// and into a memory store as though it were a measurement.
+    ChannelAssertionKindWrong {
+        line_number: u64,
+        channel: String,
+        found: String,
+    },
+    /// Both a reading and a reason for its absence. The writer contradicted
+    /// itself and a reader cannot tell which half to believe.
+    ChannelHealthContradiction {
+        line_number: u64,
     },
     TurnCountMismatch,
     SilentCountMismatch,
@@ -482,10 +780,47 @@ pub fn verify_turn_log(jsonl: &str, manifest: &TurnLogManifest) -> TurnLogVerdic
                 defect: format!("{defect:?}"),
             });
         }
+        // A reading and a reason for its absence are mutually exclusive. Both
+        // present means the writer contradicted itself, and a reader would have
+        // to guess which half to believe.
+        if line.channel_health.is_some() && line.channel_health_absent_reason.is_some() {
+            return fail(TurnLogFailure::ChannelHealthContradiction { line_number });
+        }
         if let Some(health) = &line.channel_health {
             let order: Vec<&str> = health.iter().map(|h| h.channel.as_str()).collect();
             if order != CHANNEL_ORDER {
                 return fail(TurnLogFailure::ChannelOrderMismatch { line_number });
+            }
+            // The tiers are enforced here, not left to whoever writes the
+            // record. A `derived` envelope that says `observed` would make an
+            // uncalibrated computation ingestible as an observation, which is
+            // the single failure this vocabulary exists to prevent — and it
+            // would be invisible in the JSON to anyone not checking.
+            for record in health {
+                for (envelope, expected) in [
+                    (
+                        &record.derived.provenance,
+                        AssertionKind::DerivedDeterministically,
+                    ),
+                    (
+                        &record.annotation.provenance,
+                        AssertionKind::HeuristicAnnotation,
+                    ),
+                ] {
+                    if envelope.assertion_kind != expected {
+                        return fail(TurnLogFailure::ChannelAssertionKindWrong {
+                            line_number,
+                            channel: record.channel.clone(),
+                            found: format!("{:?}", envelope.assertion_kind),
+                        });
+                    }
+                    if let Some(defect) = validate_provenance(envelope).first() {
+                        return fail(TurnLogFailure::ProvenanceDefective {
+                            line_number,
+                            defect: format!("{}: {defect:?}", record.channel),
+                        });
+                    }
+                }
             }
         }
         turns += 1;
@@ -556,6 +891,35 @@ mod tests {
             margin: 0.2,
             selection_temperature: 0.36,
             decisive: false,
+        }
+    }
+
+    /// A well-formed channel record with both envelopes correctly typed.
+    /// Correctly typed on purpose: tests that assert the *wrong* kind is caught
+    /// build their own, so this helper cannot be the reason they pass.
+    fn channel_record(channel: &str, rms: f64) -> ChannelRecord {
+        let window = ResourceRef {
+            resource_kind: "eeg-window".into(),
+            sha256_hex: "a".repeat(64),
+            locator: Some("session-test.eeg.jsonl".into()),
+        };
+        ChannelRecord {
+            channel: channel.to_string(),
+            window: ChannelWindow {
+                sample_count: 1280,
+                last_source_timestamp: Some(5.0),
+            },
+            derived: ChannelDerived {
+                rms_microvolts: rms,
+                mains_power: Some(8.11),
+                provenance: derived_envelope(test_method(), window.clone()),
+            },
+            annotation: ChannelAnnotation {
+                status: ChannelHealthStatus::Healthy,
+                verdict: "ok".into(),
+                mains_line_hz: Some(60.0),
+                provenance: annotation_envelope(test_method(), window),
+            },
         }
     }
 
@@ -724,17 +1088,128 @@ mod tests {
         );
     }
 
+    /// The single failure this whole vocabulary exists to prevent, asserted at
+    /// the verifier rather than trusted at the writer.
+    ///
+    /// An `rms` envelope that says `observed` maps to `Ingestible`, so an
+    /// uncalibrated computation over one unvalidated channel could be ingested
+    /// as a measurement — and nothing in the JSON would look wrong to anyone
+    /// who was not specifically checking.
+    #[test]
+    fn a_derived_envelope_claiming_to_be_an_observation_is_refused() {
+        let mut records: Vec<ChannelRecord> = CHANNEL_ORDER
+            .iter()
+            .map(|c| channel_record(c, 12.0))
+            .collect();
+        records[2].derived.provenance.assertion_kind = AssertionKind::Observed;
+
+        let (payload, manifest) = record(&[spoke_line(0).with_channel_health(records)]);
+        assert_eq!(
+            verify_turn_log(&payload, &manifest),
+            TurnLogVerdict::Failed {
+                failure: TurnLogFailure::ChannelAssertionKindWrong {
+                    line_number: 1,
+                    channel: "AF8".to_string(),
+                    found: "Observed".to_string(),
+                }
+            }
+        );
+    }
+
+    /// The other direction: a status promoted out of `heuristicAnnotation`
+    /// would stop being `NeverIngestible`, which is the only thing standing
+    /// between a spectral gloss and a training label.
+    #[test]
+    fn an_annotation_promoted_out_of_the_heuristic_class_is_refused() {
+        let mut records: Vec<ChannelRecord> = CHANNEL_ORDER
+            .iter()
+            .map(|c| channel_record(c, 12.0))
+            .collect();
+        records[0].annotation.provenance.assertion_kind = AssertionKind::DerivedDeterministically;
+
+        let (payload, manifest) = record(&[spoke_line(0).with_channel_health(records)]);
+        assert!(matches!(
+            verify_turn_log(&payload, &manifest),
+            TurnLogVerdict::Failed {
+                failure: TurnLogFailure::ChannelAssertionKindWrong { .. }
+            }
+        ));
+    }
+
+    /// A reading and a reason for its absence are contradictory, and the
+    /// builders make them mutually exclusive — but a hand-written or
+    /// hand-edited line can still carry both, so the verifier says so.
+    #[test]
+    fn a_reading_and_a_reason_for_its_absence_cannot_both_be_present() {
+        let mut line = spoke_line(0).with_channel_health(
+            CHANNEL_ORDER
+                .iter()
+                .map(|c| channel_record(c, 12.0))
+                .collect(),
+        );
+        line.channel_health_absent_reason = Some("stream-not-live".to_string());
+
+        let (payload, manifest) = record(&[line]);
+        assert_eq!(
+            verify_turn_log(&payload, &manifest),
+            TurnLogVerdict::Failed {
+                failure: TurnLogFailure::ChannelHealthContradiction { line_number: 1 }
+            }
+        );
+    }
+
+    /// The builders are what normally hold that invariant, so they are pinned
+    /// too — setting one must clear the other.
+    #[test]
+    fn the_builders_keep_a_reading_and_an_absence_mutually_exclusive() {
+        let health: Vec<ChannelRecord> = CHANNEL_ORDER
+            .iter()
+            .map(|c| channel_record(c, 12.0))
+            .collect();
+
+        let a = spoke_line(0)
+            .with_channel_health_absent("stream-not-live")
+            .with_channel_health(health.clone());
+        assert!(a.channel_health.is_some());
+        assert_eq!(a.channel_health_absent_reason, None);
+
+        let b = spoke_line(0)
+            .with_channel_health(health)
+            .with_channel_health_absent("band-exactly-zero");
+        assert_eq!(b.channel_health, None);
+        assert_eq!(
+            b.channel_health_absent_reason.as_deref(),
+            Some("band-exactly-zero")
+        );
+    }
+
+    /// An absent reading is written as an explicit `null`, never omitted. A
+    /// missing key would be indistinguishable from a producer that predates the
+    /// field, which is exactly the confusion `present_option` exists to stop.
+    #[test]
+    fn an_absent_reading_is_a_null_not_a_missing_key() {
+        let line = spoke_line(0);
+        let encoded = encode_turn_line(&line);
+        assert!(encoded.contains("\"channelHealth\":null"), "{encoded}");
+        assert!(
+            encoded.contains("\"channelHealthAbsentReason\":null"),
+            "{encoded}"
+        );
+
+        // And a line that simply omits them does not parse.
+        let stripped = encoded
+            .replace(",\"channelHealth\":null", "")
+            .replace(",\"channelHealthAbsentReason\":null", "");
+        assert!(
+            serde_json::from_str::<TurnLine>(&stripped).is_err(),
+            "a line missing both EEG fields parsed as though absent"
+        );
+    }
+
     #[test]
     fn channel_health_must_be_all_four_in_the_frozen_order() {
-        let health = |channels: &[&str]| -> Vec<ChannelHealthLine> {
-            channels
-                .iter()
-                .map(|c| ChannelHealthLine {
-                    channel: c.to_string(),
-                    rms_microvolts: 12.0,
-                    status: ChannelHealthStatus::Healthy,
-                })
-                .collect()
+        let health = |channels: &[&str]| -> Vec<ChannelRecord> {
+            channels.iter().map(|c| channel_record(c, 12.0)).collect()
         };
 
         let good = spoke_line(0).with_channel_health(health(&CHANNEL_ORDER));
@@ -878,11 +1353,7 @@ mod tests {
     fn a_turn_line_survives_a_parse_and_reserialize_cycle_byte_for_byte() {
         let line = spoke_line(0)
             .with_self_similarity(0.9243132)
-            .with_channel_health(vec![ChannelHealthLine {
-                channel: "TP9".into(),
-                rms_microvolts: 14.067217896390133,
-                status: ChannelHealthStatus::Healthy,
-            }]);
+            .with_channel_health(vec![channel_record("TP9", 14.067217896390133)]);
         let once = encode_turn_line(&line);
         let parsed: TurnLine = serde_json::from_str(&once).expect("parses");
         let twice = encode_turn_line(&parsed);

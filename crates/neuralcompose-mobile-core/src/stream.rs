@@ -287,3 +287,22 @@ impl StreamMonitor {
         inner.gave_up = false;
     }
 }
+
+/// Deliberately a **second, non-exported** impl block.
+///
+/// Everything here is for the Linux shell's provenance records and has no
+/// mobile caller. Putting it in the `uniffi::export` block above would
+/// regenerate the Swift and Kotlin bindings — and trip
+/// `scripts/check-binding-drift.sh` — to add a method neither shell calls.
+impl StreamMonitor {
+    /// Source timestamp of the newest buffered sample: seconds since stream
+    /// start, the wire axis, never wall clock. `None` when nothing is buffered.
+    ///
+    /// Paired with the sample count, this locates the window that
+    /// [`Self::snapshot`] just returned inside a recorded `.eeg.jsonl`, which is
+    /// what makes a derivation over that window reproducible rather than merely
+    /// attributed.
+    pub fn newest_source_timestamp(&self) -> Option<f64> {
+        self.inner.lock().unwrap().buffer.newest_source_timestamp()
+    }
+}

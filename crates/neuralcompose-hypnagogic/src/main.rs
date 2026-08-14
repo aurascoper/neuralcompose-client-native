@@ -14,7 +14,10 @@
 
 use neuralcompose_hypnagogic::command;
 use neuralcompose_hypnagogic::dialectic::{DialecticConfig, DialecticLoop};
-use neuralcompose_hypnagogic::eeg::{eeg_reading_for_turn, EegTurnReading, SAMPLE_RATE_HZ};
+use neuralcompose_hypnagogic::eeg::{
+    eeg_reading_for_turn, EegRecordContext, EegRefusal, EegTurnReading, SAMPLE_RATE_HZ,
+};
+use neuralcompose_hypnagogic::eligibility::{evaluate, tally, Registration};
 use neuralcompose_hypnagogic::embedding::Embedding;
 use neuralcompose_hypnagogic::http;
 use neuralcompose_hypnagogic::loops::{strip_for_speech, MirrorConfig, MirrorLoop};
@@ -24,16 +27,28 @@ use neuralcompose_hypnagogic::seams::{
     GenerationParams, Listening, Prosody, SeamError, SeamResult, SelectionDraws, SentenceEmbedding,
     Speaking, TextGenerating,
 };
+use neuralcompose_hypnagogic::session::{
+    claim_envelope, host_envelope, ClaimedSource, HciAdapter, PowerState, SessionRecord,
+    SESSION_RECORD_SCHEMA,
+};
 use neuralcompose_hypnagogic::turn_log::{
-    turn_log_manifest_filename, turn_log_payload_filename, TurnLogRecorder,
+    eeg_method_identity, turn_log_manifest_filename, turn_log_payload_filename, TurnLine,
+    TurnLogRecorder,
+};
+use neuralcompose_mobile_core::capture::{
+    verify_capture, BridgeLocality, CaptureBuildIdentity, CaptureManifest, CaptureRecorder,
+    ReplayVerdict,
 };
 use neuralcompose_mobile_core::channel_health::ChannelHealthThresholds;
 use neuralcompose_mobile_core::electrode_check::MainsThresholds;
+use neuralcompose_mobile_core::provenance::MethodIdentity;
 use neuralcompose_mobile_core::stream::{MonitorConfig, SocketEvent, StreamMonitor};
+use sha2::{Digest, Sha256};
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 // ─────────────────────────────────────────────────────────────────── args ──
@@ -52,6 +67,13 @@ struct Args {
     speak: bool,
     tts: String,
     eeg_url: Option<String>,
+    /// Operator's claim about what is on the other end, e.g.
+    /// `muse-s-board-39`. Recorded as an `externalClaim`, never as an
+    /// observation — this process cannot see the board.
+    eeg_source: Option<String>,
+    eeg_preset: Option<String>,
+    eligibility: Option<PathBuf>,
+    verify_capture: Option<PathBuf>,
     world_model_demo: bool,
     heldout: bool,
 }
@@ -68,9 +90,15 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
   --speak                         synthesize audio instead of printing
   --tts <kokoro|espeak>           voice engine for --speak (default kokoro)
   --eeg-url <ws://…>              attach an EEG source (dialectical modes only)
+  --eeg-source <id>               what you believe is attached, e.g. muse-s-board-39
+  --eeg-preset <name>             BrainFlow preset, if you set one
+                                  (both are recorded as YOUR claim, not a reading)
   --world-model-demo              run the planner comparison and exit
   --heldout                       with it: the §8 held-out set and seeds
   --json                          --verify-log <path>
+  --eligibility <turns.jsonl>     query a recorded session against the sealed
+                                  pre-registration in contracts/eeg/
+  --verify-capture <eeg.jsonl>    replay a raw capture against its manifest
 
 Standalone modes run BEFORE the loop and exit; when more than one is given the
 precedence is --verify-log, then --world-model-demo. Neither needs llama-server.
@@ -92,6 +120,10 @@ fn parse_args() -> Result<Args, String> {
         speak: false,
         tts: "kokoro".into(),
         eeg_url: None,
+        eeg_source: None,
+        eeg_preset: None,
+        eligibility: None,
+        verify_capture: None,
         world_model_demo: false,
         heldout: false,
     };
@@ -138,6 +170,22 @@ fn parse_args() -> Result<Args, String> {
             }
             "--eeg-url" => {
                 a.eeg_url = Some(need(i)?);
+                i += 1;
+            }
+            "--eeg-source" => {
+                a.eeg_source = Some(need(i)?);
+                i += 1;
+            }
+            "--eeg-preset" => {
+                a.eeg_preset = Some(need(i)?);
+                i += 1;
+            }
+            "--eligibility" => {
+                a.eligibility = Some(PathBuf::from(need(i)?));
+                i += 1;
+            }
+            "--verify-capture" => {
+                a.verify_capture = Some(PathBuf::from(need(i)?));
                 i += 1;
             }
             "--world-model-demo" => a.world_model_demo = true,
@@ -188,16 +236,55 @@ impl Listening for MicListener {
         let _ = rec.kill();
         let _ = rec.wait();
 
+        // Check the recording exists BEFORE handing it to whisper.
+        //
+        // Without this, a capture that produced nothing — no audio source, a
+        // denied device, `pw-record` dying on startup, or a turn ended before
+        // the first buffer was flushed — reaches whisper-cli as a missing file
+        // and comes back as sixty lines of usage text. That is a real failure
+        // reported as a help screen, and it buries the one sentence that says
+        // what went wrong.
+        //
+        // `tools/spoken-loop/shell.py` already refuses a zero-byte WAV at the
+        // same point; this is the Rust path catching up to it.
+        match std::fs::metadata(&wav) {
+            Err(e) => {
+                return Err(SeamError::Failed(format!(
+                    "no recording at {}: {e}. pw-record produced nothing — check that \
+                     an input device exists and is not muted.",
+                    wav.display()
+                )))
+            }
+            // A WAV header with no frames is ~44 bytes and transcribes to
+            // silence, which is indistinguishable from a turn the user chose
+            // not to speak. Treated as silence rather than an error: the mirror
+            // loop already has a meaning for "nothing was heard".
+            Ok(m) if m.len() <= 44 => {
+                eprintln!("● nothing was recorded (empty capture)");
+                return Ok(None);
+            }
+            Ok(_) => {}
+        }
+
         let argv = command::whisper_argv(&self.whisper, &self.model, &wav);
         let out = Command::new(&argv[0])
             .args(&argv[1..])
             .output()
             .map_err(|e| SeamError::Unavailable(format!("whisper-cli: {e}")))?;
         if !out.status.success() {
+            // First lines only. whisper-cli prints its whole usage screen on a
+            // bad invocation, and relaying sixty lines of option documentation
+            // hides the one line that says what failed.
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            let head: Vec<&str> = stderr
+                .lines()
+                .filter(|l| !l.trim().is_empty())
+                .take(3)
+                .collect();
             return Err(SeamError::Failed(format!(
                 "whisper-cli exited {}: {}",
                 out.status,
-                String::from_utf8_lossy(&out.stderr).trim()
+                head.join(" / ")
             )));
         }
         let text = String::from_utf8_lossy(&out.stdout)
@@ -255,10 +342,41 @@ struct EspeakSpeaker {
     workdir: PathBuf,
 }
 
+/// Honours `Prosody::pre_utterance_delay` — the silence *before* an utterance.
+///
+/// This was dropped on the floor by every speaker until now. It is not a
+/// decoration: `loops.rs` records that the contemplative voices carry over a
+/// second of it, and the profile's whole character is pacing rather than
+/// timbre. On a fixed-voice engine, where two neural voices have no midpoint
+/// and `Prosody::blend` can only pick the heavier one,
+/// **pacing is the channel tension is still audible through** — so silently
+/// discarding it removed the one prosodic dimension Kokoro had left.
+///
+/// Applied in the speakers rather than in `play()`, because the delay belongs
+/// before the utterance as a whole, not between synthesis and playback.
+/// `PrintSpeaker` deliberately does not call this: a dry run that pauses for
+/// real seconds while printing text buys nothing.
+fn pre_utterance_pause(prosody: &Prosody) {
+    if let Some(seconds) = prosody.pre_utterance_delay {
+        // Clamped: a blended delay is a weighted mean of the poles' values and
+        // cannot legitimately be huge, but a stray one must not hang a session.
+        if seconds.is_finite() && seconds > 0.0 {
+            std::thread::sleep(std::time::Duration::from_secs_f64(seconds.min(5.0)));
+        }
+    }
+}
+
 impl Speaking for EspeakSpeaker {
     fn speak(&mut self, text: &str, prosody: Prosody) -> SeamResult<()> {
+        pre_utterance_pause(&prosody);
         let wav = self.workdir.join("reply.wav");
-        let argv = command::espeak_argv(text, &wav, prosody.rate, prosody.pitch_multiplier);
+        let argv = command::espeak_argv(
+            text,
+            &wav,
+            prosody.rate,
+            prosody.pitch_multiplier,
+            prosody.volume,
+        );
         let out = Command::new(&argv[0])
             .args(&argv[1..])
             .output()
@@ -288,11 +406,21 @@ impl Speaking for EspeakSpeaker {
 /// nothing here is a precedent for what the product links — the runtime
 /// decision stays deferred and unmade, exactly as speak.py's own header says.
 ///
-/// Prosody maps differently from espeak, and imperfectly:
+/// Prosody maps differently from espeak, and imperfectly. The full mapping,
+/// stated so an unmapped dimension is a recorded loss rather than a silent one:
 ///   - `rate` -> `KOKORO_SPEED`, rescaled so 0.5 (the natural anchor) is 1.0
 ///   - `voice` -> `KOKORO_VOICE`, a fixed named voice per role
+///   - `volume` -> `KOKORO_VOLUME`, applied by `speak.py` as a sample scale,
+///     since Kokoro itself has no volume parameter
+///   - `pre_utterance_delay` -> honoured by [`pre_utterance_pause`] before the
+///     subprocess runs. It used to map to nothing, which quietly removed the
+///     contemplative profile's pacing on Linux — and on a fixed-voice engine
+///     pacing is the dimension carrying tension, because the voices cannot
+///     blend.
 ///   - `pitch_multiplier` -> **nothing**. Kokoro cannot pitch-shift, so that
-///     dimension of the Swift's prosody is simply unavailable here.
+///     dimension of the Swift's prosody is genuinely unavailable here. This is
+///     the one remaining gap, and it is a property of the engine rather than
+///     of this wiring.
 struct KokoroSpeaker {
     script: PathBuf,
     python: PathBuf,
@@ -301,11 +429,18 @@ struct KokoroSpeaker {
 
 impl Speaking for KokoroSpeaker {
     fn speak(&mut self, text: &str, prosody: Prosody) -> SeamResult<()> {
+        pre_utterance_pause(&prosody);
         let wav = self.workdir.join("reply.wav");
         let mut cmd = Command::new(&self.python);
         cmd.arg(&self.script).arg(&wav).arg(text);
         if let Some(v) = prosody.voice {
             cmd.env("KOKORO_VOICE", v);
+        }
+        if let Some(vol) = prosody.volume {
+            // Kokoro has no volume parameter; speak.py scales the samples.
+            // Clamped there as well as here, because the script is also run by
+            // hand.
+            cmd.env("KOKORO_VOLUME", format!("{:.2}", vol.clamp(0.0, 2.0)));
         }
         if let Some(r) = prosody.rate {
             // The Swift/AVSpeech scale puts "natural" at 0.5; Kokoro's speed
@@ -411,6 +546,16 @@ fn main() {
         std::process::exit(verify_log(path));
     }
 
+    if let Some(path) = &args.verify_capture {
+        std::process::exit(verify_capture_file(path));
+    }
+
+    // Like --verify-log: reads a recorded session and exits. Needs no server,
+    // no model and no headband, so it runs before `preflight`.
+    if let Some(path) = &args.eligibility {
+        std::process::exit(eligibility_query(path, args.json));
+    }
+
     // Before `run()`, which opens with an unconditional `preflight` against
     // llama-server. The demo needs no model, no server and no microphone.
     if args.world_model_demo {
@@ -420,6 +565,153 @@ fn main() {
     if let Err(e) = run(args) {
         eprintln!("error: {e}");
         std::process::exit(1);
+    }
+}
+
+/// Replays a raw capture against its manifest.
+///
+/// `verify_capture` has existed in `mobile-core` since M4 and had no Linux
+/// caller — only the iOS and Android shells. Writing 88 MB an hour of corpus
+/// that nothing on this platform can check is the same shape of gap this work
+/// exists to close, so the shell that writes captures also verifies them.
+fn verify_capture_file(payload: &Path) -> i32 {
+    // `<id>.eeg.jsonl` -> `<id>.eeg.manifest.json`, NOT `<id>.manifest.json`.
+    // The turn log's manifest sits in the same directory under that shorter
+    // name, and `with_extension("").with_extension(...)` — the idiom
+    // `--verify-log` uses — lands on it: it strips `.jsonl`, then replaces
+    // `.eeg`. The first run of this check read the turn-log manifest and
+    // reported "not a capture manifest", which is the correct complaint about
+    // the wrong file.
+    let name = payload
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let Some(stem) = name.strip_suffix(".eeg.jsonl") else {
+        eprintln!(
+            "{}: expected a capture payload named <id>.eeg.jsonl",
+            payload.display()
+        );
+        return 1;
+    };
+    let manifest_path = payload.with_file_name(format!("{stem}.eeg.manifest.json"));
+    let jsonl = match std::fs::read_to_string(payload) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("cannot read {}: {e}", payload.display());
+            return 1;
+        }
+    };
+    let manifest_raw = match std::fs::read_to_string(&manifest_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("cannot read {}: {e}", manifest_path.display());
+            return 1;
+        }
+    };
+    let manifest: CaptureManifest = match serde_json::from_str(&manifest_raw) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("{} is not a capture manifest: {e}", manifest_path.display());
+            return 1;
+        }
+    };
+    let messages = manifest.messages_received;
+    match verify_capture(jsonl, manifest) {
+        ReplayVerdict::Verified {
+            accepted_sample_count,
+        } => {
+            println!(
+                "{}: VERIFIED ({accepted_sample_count} samples, {messages} messages)",
+                payload.display()
+            );
+            0
+        }
+        ReplayVerdict::Failed { failure } => {
+            println!("{}: FAILED {failure:?}", payload.display());
+            3
+        }
+    }
+}
+
+/// Runs the sealed eligibility query over a recorded turn log.
+///
+/// Exit codes are distinct on purpose: `0` eligible, `3` ineligible, `1` could
+/// not tell. A run that could not read the registration must not be
+/// indistinguishable from a session that failed it.
+fn eligibility_query(payload: &Path, json: bool) -> i32 {
+    // Compiled in, so the binary that reads a session carries the same
+    // registration bytes the tests verified against. Reading them from disk at
+    // runtime would let a session be judged against a file edited after the
+    // build.
+    const SEALED: &[u8] = include_bytes!("../../../contracts/eeg/eligibility-v1.json");
+    const SEAL: &str = include_str!("../../../contracts/eeg/eligibility-v1.json.sha256");
+
+    let registration = match Registration::load_sealed(SEALED, SEAL) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("the eligibility pre-registration did not verify: {e:?}");
+            return 1;
+        }
+    };
+
+    let jsonl = match std::fs::read_to_string(payload) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("cannot read {}: {e}", payload.display());
+            return 1;
+        }
+    };
+    let mut lines = Vec::new();
+    for (i, raw) in jsonl.lines().enumerate() {
+        if raw.trim().is_empty() {
+            continue;
+        }
+        match serde_json::from_str::<TurnLine>(raw) {
+            Ok(l) => lines.push(l),
+            Err(e) => {
+                // Refused, not skipped. A log this build cannot fully parse
+                // must not be scored on the subset it happens to understand.
+                eprintln!("line {} of {} did not parse: {e}", i + 1, payload.display());
+                return 1;
+            }
+        }
+    }
+
+    let verdict = evaluate(
+        tally(&lines, &registration.required_channels),
+        &registration.thresholds,
+    );
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&verdict).unwrap());
+    } else {
+        println!(
+            "{}: {}",
+            payload.display(),
+            if verdict.eligible {
+                "ELIGIBLE"
+            } else {
+                "NOT ELIGIBLE"
+            }
+        );
+        println!(
+            "  registered {} ({})",
+            registration.registered_on, registration.schema_id
+        );
+        for r in &verdict.reasons {
+            println!("  - {r}");
+        }
+        println!(
+            "  {} turns, {} with a reading, {} absent",
+            verdict.tally.turns, verdict.tally.turns_with_reading, verdict.tally.turns_absent
+        );
+    }
+    // A verdict either way is a successful query; ineligible is an answer, not
+    // a failure to answer.
+    if verdict.eligible {
+        0
+    } else {
+        3
     }
 }
 
@@ -661,12 +953,139 @@ fn world_model_demo(json: bool, heldout: bool) -> i32 {
 /// The reader runs on its own thread because the dialectic blocks for seconds
 /// at a time in `generate`, and samples arriving during that must still land.
 /// `StreamMonitor` is `Sync` and takes `&self`, so no lock of ours is involved.
+/// The effectful half of `CaptureRecorder`, which is deliberately effect-free:
+/// it returns the exact bytes to append and the manifest to publish, and never
+/// touches a file. This owns the file.
+///
+/// **Appends as frames arrive.** The turn log can afford to be assembled in
+/// memory and written at the end — it is a few KB. A capture is ~24.5 KB/s, so
+/// the same pattern would hold a whole session in RAM and lose all of it if the
+/// process dies. It also means a killed run leaves a payload with no manifest,
+/// which is exactly the `.partial` case `capture.rs` already defines.
+struct CaptureWriter {
+    recorder: CaptureRecorder,
+    recording_id: String,
+    /// `Mutex` because the reader thread appends and the main thread finishes.
+    /// The lock is held only across one `write_all`.
+    file: Mutex<std::fs::File>,
+    /// Set once if a write ever fails, so the failure is reported at the end
+    /// rather than once per frame — 32 identical lines a second would bury the
+    /// conversation the run exists for.
+    write_failed: AtomicBool,
+    /// Counted so the manifest's byte size comes from what was actually
+    /// written, not from what the recorder believes it handed over.
+    bytes_written: AtomicU64,
+    /// Digested as it is written. Re-reading the file at the end would work and
+    /// would also mean reading ~29 MB back to describe bytes we just produced —
+    /// and would digest whatever is on disk *now*, which is not necessarily
+    /// what this process wrote.
+    digest: Mutex<Sha256>,
+}
+
+impl CaptureWriter {
+    fn new(dir: &Path, recording_id: String, build: CaptureBuildIdentity) -> Result<Self, String> {
+        std::fs::create_dir_all(dir).map_err(|e| format!("capture dir: {e}"))?;
+        let path = dir.join(format!("{recording_id}.eeg.jsonl"));
+        let file = std::fs::File::create(&path)
+            .map_err(|e| format!("capture payload {}: {e}", path.display()))?;
+        Ok(Self {
+            recorder: CaptureRecorder::new(recording_id.clone(), build, 0),
+            recording_id,
+            file: Mutex::new(file),
+            write_failed: AtomicBool::new(false),
+            bytes_written: AtomicU64::new(0),
+            digest: Mutex::new(Sha256::new()),
+        })
+    }
+
+    fn recording_id(&self) -> &str {
+        &self.recording_id
+    }
+
+    /// One WebSocket frame, preserved verbatim. `CaptureRecorder` wraps it
+    /// without reinterpreting the payload, so a replay re-decodes the same
+    /// bytes the client saw.
+    fn append(&self, payload: &str, now_ms: u64) {
+        let line = self.recorder.on_message(payload.to_string(), now_ms);
+        let mut file = match self.file.lock() {
+            Ok(f) => f,
+            // A poisoned lock means the writing thread panicked. Record the
+            // failure; do not panic the reader thread as well.
+            Err(_) => {
+                self.write_failed.store(true, Ordering::Relaxed);
+                return;
+            }
+        };
+        let bytes = format!("{line}\n");
+        match file.write_all(bytes.as_bytes()) {
+            Ok(()) => {
+                self.bytes_written
+                    .fetch_add(bytes.len() as u64, Ordering::Relaxed);
+                // Digested only on a successful write, so the manifest
+                // describes the bytes that reached the file rather than the
+                // ones we hoped to put there.
+                if let Ok(mut d) = self.digest.lock() {
+                    d.update(bytes.as_bytes());
+                }
+            }
+            Err(_) => self.write_failed.store(true, Ordering::Relaxed),
+        }
+    }
+
+    /// Publishes the manifest. Returns the path written, or the reason none was.
+    ///
+    /// **A failed write must not produce a manifest.** A manifest asserts that
+    /// a payload of a given size and digest exists; publishing one over a
+    /// truncated file would make the capture claim to verify and then fail
+    /// `verify_capture` with a digest mismatch, which reads as corruption
+    /// rather than as the write error it is.
+    fn finish(&self, dir: &Path, now_ms: u64) -> Result<PathBuf, String> {
+        if self.write_failed.load(Ordering::Relaxed) {
+            return Err(format!(
+                "capture {} had write failures; no manifest written. The payload \
+                 is incomplete and is left as-is rather than described by a \
+                 manifest that would not verify.",
+                self.recording_id
+            ));
+        }
+        if let Ok(mut f) = self.file.lock() {
+            f.flush().map_err(|e| format!("capture flush: {e}"))?;
+        }
+        let size = self.bytes_written.load(Ordering::Relaxed);
+        let digest = self
+            .digest
+            .lock()
+            .map(|d| {
+                d.clone()
+                    .finalize()
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect::<String>()
+            })
+            .map_err(|_| "capture digest lock poisoned".to_string())?;
+        let manifest = self.recorder.finish(now_ms, size, digest);
+        let path = dir.join(format!("{}.eeg.manifest.json", self.recording_id));
+        let json = serde_json::to_string_pretty(&manifest)
+            .map_err(|e| format!("capture manifest encode: {e}"))?;
+        std::fs::write(&path, json).map_err(|e| format!("capture manifest write: {e}"))?;
+        Ok(path)
+    }
+}
+
 struct EegSource {
     monitor: Arc<StreamMonitor>,
     /// Monotonic origin. `StreamMonitor` never reads a clock — every `now_ms`
     /// it sees comes from here, and it must be monotonic or staleness is
     /// nonsense. `Instant`, never `SystemTime`.
     started: Instant,
+    /// Seals the parameters behind every number in a channel record. Built once
+    /// per run: the configuration does not change between turns, and rebuilding
+    /// it per turn would digest the same document four times a minute.
+    method: MethodIdentity,
+    /// The raw-capture writer, when `--log` asked for one. `None` means no
+    /// `.eeg.jsonl` is being written and the window ResourceRefs carry no
+    /// locator.
+    capture: Option<Arc<CaptureWriter>>,
 }
 
 impl EegSource {
@@ -675,7 +1094,11 @@ impl EegSource {
     /// The alternative — connecting on the reader thread — produces a run that
     /// looks healthy and silently logs no channel health at all, which is
     /// indistinguishable from an EEG that is attached but stale.
-    fn connect(url: &str) -> Result<Self, String> {
+    fn connect(
+        url: &str,
+        method: MethodIdentity,
+        capture: Option<Arc<CaptureWriter>>,
+    ) -> Result<Self, String> {
         let monitor = Arc::new(StreamMonitor::new(MonitorConfig::default()));
         let started = Instant::now();
         monitor.on_socket_event(SocketEvent::Connecting, 0);
@@ -692,11 +1115,24 @@ impl EegSource {
         monitor.on_socket_event(SocketEvent::Opened, started.elapsed().as_millis() as u64);
 
         let reader = Arc::clone(&monitor);
+        let writer = capture.clone();
         std::thread::spawn(move || {
             loop {
                 let now = started.elapsed().as_millis() as u64;
                 match socket.read() {
                     Ok(tungstenite::Message::Text(t)) => {
+                        // Appended as it arrives, never buffered. At 256 Hz in
+                        // batches of 8 this is ~24.5 KB/s (766 B/line x 32
+                        // lines/s, measured against the fixture), so a
+                        // 20-minute session is ~29 MB — fine on disk and not
+                        // fine in memory for an unbounded run.
+                        //
+                        // A write failure is reported once and the stream
+                        // continues: losing the corpus is bad, losing the
+                        // conversation the corpus is of is worse.
+                        if let Some(w) = writer.as_ref() {
+                            w.append(t.as_str(), now);
+                        }
                         reader.on_frame(t.as_str().to_string(), now);
                     }
                     // Ping/pong/binary are not the contract; ignore rather than
@@ -714,18 +1150,38 @@ impl EegSource {
             }
         });
 
-        Ok(EegSource { monitor, started })
+        Ok(EegSource {
+            monitor,
+            started,
+            method,
+            capture,
+        })
     }
 
-    /// This turn's reading, or `None` when there is nothing current to report.
-    fn reading(&self) -> Option<EegTurnReading> {
+    /// Milliseconds since this source connected, on the same monotonic axis
+    /// every `now_ms` uses.
+    fn elapsed_ms(&self) -> u64 {
+        self.started.elapsed().as_millis() as u64
+    }
+
+    /// This turn's reading, or the reason there is nothing current to report.
+    fn reading(&self) -> Result<EegTurnReading, EegRefusal> {
         let now = self.started.elapsed().as_millis() as u64;
+        // Taken BEFORE the snapshot so the timestamp can only be older than the
+        // window, never newer. A window labelled with a timestamp from a sample
+        // it does not contain would point a reader at the wrong bytes.
+        let last_source_timestamp = self.monitor.newest_source_timestamp();
         eeg_reading_for_turn(
             self.monitor.phase(now),
             &self.monitor.snapshot().channels,
             SAMPLE_RATE_HZ,
             ChannelHealthThresholds::default(),
             MainsThresholds::default(),
+            EegRecordContext {
+                method: self.method.clone(),
+                recording_id: self.capture.as_ref().map(|c| c.recording_id()),
+                last_source_timestamp,
+            },
         )
     }
 }
@@ -769,22 +1225,6 @@ fn run(args: Args) -> Result<(), String> {
     // read it every turn, and produce no observable whatsoever — a run that
     // looks like it worked and cannot be distinguished from one without the
     // flag. The plan's own stage-3 check specified exactly that combination.
-    let eeg = match (&args.eeg_url, args.mode.profile()) {
-        (Some(url), None) => {
-            return Err(format!(
-                "--eeg-url {url} has no observable in mirror mode: mirror writes \
-                 no turn record, and the turn log is the only place EEG appears.\n\
-                 Use --mode focused|reflective|contemplative, and --log to persist it."
-            ))
-        }
-        (Some(url), Some(_)) => {
-            let src = EegSource::connect(url)?;
-            eprintln!("● eeg: {url}");
-            Some(src)
-        }
-        (None, _) => None,
-    };
-
     let workdir = std::env::temp_dir().join(format!("nc-hypnagogic-{}", std::process::id()));
     std::fs::create_dir_all(&workdir).map_err(|e| format!("workdir: {e}"))?;
 
@@ -815,6 +1255,85 @@ fn run(args: Args) -> Result<(), String> {
         .log
         .then(|| TurnLogRecorder::new(session_id.clone(), args.mode.id()));
     let mut payload = String::new();
+    // `None` in mirror mode, which loads no embedder at all — absent because
+    // there was nothing to read back, not because the read failed.
+    let mut embedder_backend: Option<&'static str> = None;
+
+    // Refused rather than warned: mirror mode writes no turn record at all, and
+    // the turn log is the ONLY place per-turn EEG appears (nothing here biases
+    // the dialectic). So `--mode mirror --eeg-url ...` would connect a headband,
+    // read it every turn, and produce no per-turn observable whatsoever — a run
+    // that looks like it worked and cannot be distinguished from one without the
+    // flag.
+    if let (Some(url), None) = (&args.eeg_url, args.mode.profile()) {
+        return Err(format!(
+            "--eeg-url {url} has no observable in mirror mode: mirror writes \
+             no turn record, and the turn log is the only place EEG appears.\n\
+             Use --mode focused|reflective|contemplative, and --log to persist it."
+        ));
+    }
+
+    // The raw capture. Written only when there is both an EEG to capture and a
+    // `--log` asking for persistence: a corpus nobody asked to keep is 88 MB an
+    // hour of surprise.
+    let capture = match (&args.eeg_url, args.log) {
+        (Some(_), true) => {
+            let w = Arc::new(CaptureWriter::new(
+                &args.log_dir,
+                session_id.clone(),
+                CaptureBuildIdentity {
+                    platform: "linux".to_string(),
+                    os_version: sysfs("/proc/sys/kernel/osrelease")
+                        .unwrap_or_else(|| "unknown".to_string()),
+                    app_version: env!("CARGO_PKG_VERSION").to_string(),
+                    // Empty when the tree was dirty at build time — see build.rs.
+                    // An unpinned build says so rather than naming a commit that
+                    // does not describe it.
+                    git_commit: option_env!("NC_HYPNAGOGIC_COMMIT")
+                        .unwrap_or_default()
+                        .to_string(),
+                    // The bridge and the fixture server both listen on loopback
+                    // or the LAN; no remote endpoint is reachable from here (no
+                    // TLS is linked in, so `wss://` cannot even connect).
+                    bridge_locality: BridgeLocality::LocalNetwork,
+                },
+            )?);
+            eprintln!(
+                "● capture: {}.eeg.jsonl (~24.5 KB/s while live)",
+                session_id
+            );
+            Some(w)
+        }
+        (Some(_), false) => {
+            eprintln!(
+                "● capture: none (pass --log to write the raw EEG; \
+                 channel records will carry a window digest but no locator)"
+            );
+            None
+        }
+        (None, _) => None,
+    };
+
+    // Built once per run: the configuration behind every channel record does
+    // not change between turns, and rebuilding it per turn would digest the
+    // same document once a second while claiming a fresh identity each time.
+    let eeg_method = eeg_method_identity(
+        SAMPLE_RATE_HZ,
+        MonitorConfig::default().keep_samples,
+        ChannelHealthThresholds::default(),
+        MainsThresholds::default(),
+        env!("CARGO_PKG_VERSION"),
+        option_env!("NC_HYPNAGOGIC_COMMIT").map(str::to_string),
+    );
+
+    let eeg = match &args.eeg_url {
+        Some(url) => {
+            let src = EegSource::connect(url, eeg_method.clone(), capture.clone())?;
+            eprintln!("● eeg: {url}");
+            Some(src)
+        }
+        None => None,
+    };
 
     let listener: Box<dyn Listening> = if args.mic {
         eprintln!("● input: microphone via pw-record + whisper-cli");
@@ -895,7 +1414,8 @@ fn run(args: Args) -> Result<(), String> {
             }
         }
         Some(profile) => {
-            let embedder = build_embedder()?;
+            let (embedder, backend) = build_embedder()?;
+            embedder_backend = Some(backend);
             let mut l = DialecticLoop::new(
                 listener,
                 HttpGenerator {
@@ -925,7 +1445,7 @@ fn run(args: Args) -> Result<(), String> {
                         let mut line = t.to_turn_line(args.mode.id(), method.clone());
                         if let Some(src) = eeg.as_ref() {
                             match src.reading() {
-                                Some(r) => {
+                                Ok(r) => {
                                     for note in &r.blocking {
                                         eprintln!("⚡ {note}");
                                     }
@@ -935,13 +1455,16 @@ fn run(args: Args) -> Result<(), String> {
                                     line = line.with_channel_health(r.lines);
                                 }
                                 // Said out loud every turn on purpose: an
-                                // attached-but-not-live EEG writes exactly the
+                                // attached-but-not-live EEG writes almost the
                                 // same record as no EEG at all, so silence here
-                                // would make the two indistinguishable.
-                                None => eprintln!(
-                                    "⚡ eeg: nothing current to report this turn \
-                                     (stream not live, or an incomplete montage)"
-                                ),
+                                // would make the two hard to tell apart. The
+                                // reason now goes on the record too, which is
+                                // what lets eligibility be a query later
+                                // instead of a memory.
+                                Err(why) => {
+                                    eprintln!("⚡ eeg: nothing to report this turn ({})", why.id());
+                                    line = line.with_channel_health_absent(why.id());
+                                }
                             }
                         }
                         if args.json {
@@ -965,8 +1488,61 @@ fn run(args: Args) -> Result<(), String> {
         }
     }
 
+    // Shutdown, in dependency order: the capture manifest describes bytes that
+    // must already be flushed, and the session record names the capture.
+    let capture_ok = match (&capture, &eeg) {
+        (Some(w), Some(src)) => {
+            let now = src.elapsed_ms();
+            match w.finish(&args.log_dir, now) {
+                Ok(p) => {
+                    eprintln!("● capture: {}", p.display());
+                    true
+                }
+                Err(e) => {
+                    // Reported, not swallowed, and not fatal: the turn log and
+                    // the session record are still worth writing.
+                    eprintln!("⚠ capture: {e}");
+                    false
+                }
+            }
+        }
+        _ => false,
+    };
+
     if let Some(r) = recorder {
         write_log(&args.log_dir, &session_id, &payload, &r)?;
+        let session = SessionRecord {
+            schema_id: SESSION_RECORD_SCHEMA.to_string(),
+            session_id: session_id.clone(),
+            mode: args.mode.id().to_string(),
+            // Names the capture only if one was actually completed. A recording
+            // id here for a manifest that was never written would point a later
+            // reader at a file that does not verify.
+            recording_id: capture_ok.then(|| session_id.clone()),
+            eeg_url: args.eeg_url.clone(),
+            embedder_backend_id: embedder_backend.map(str::to_string),
+            power: read_power_state(),
+            hci_adapters: read_hci_adapters(),
+            host_provenance: host_envelope(),
+            // `None` when the operator claimed nothing — which is honest, and
+            // is why neither field defaults to a board this code merely expects
+            // to be there.
+            claimed_source: match (&args.eeg_source, &args.eeg_preset) {
+                (None, None) => None,
+                (board_id, preset) => Some(ClaimedSource {
+                    board_id: board_id.clone(),
+                    preset: preset.clone(),
+                    provenance: claim_envelope(eeg_method.clone()),
+                }),
+            },
+        };
+        let path = args.log_dir.join(format!("{session_id}.session.json"));
+        std::fs::write(
+            &path,
+            serde_json::to_string_pretty(&session).map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| format!("writing the session record: {e}"))?;
+        eprintln!("● session: {}", path.display());
     }
     Ok(())
 }
@@ -997,7 +1573,7 @@ fn kokoro_script() -> Result<PathBuf, String> {
     ))
 }
 
-fn build_embedder() -> Result<CpuEmbedder, String> {
+fn build_embedder() -> Result<(CpuEmbedder, &'static str), String> {
     let model = std::env::var("NC_EMBED_MODEL").map_err(|_| {
         "the dialectical modes need an embedder: set NC_EMBED_MODEL to a \
          bge-small-en-v1.5 GGUF. Mirror mode needs none."
@@ -1014,17 +1590,138 @@ fn build_embedder() -> Result<CpuEmbedder, String> {
                  stub — set LLAMA_CPP_DIR and rebuild)"
             )
         })?;
-    // Self-reporting ceiling: this line is the claim that no Vulkan context is
-    // created by this process, made where it can be read rather than left to a
-    // manual `fuser -v /dev/dri/renderD128`.
-    eprintln!(
-        "● embeddings: {} (CPU backend — this process creates NO Vulkan context)",
-        neuralcompose_llama::BACKEND_ID_CPU
-    );
-    Ok(CpuEmbedder {
-        inner,
-        model_id: model,
-    })
+    // ASSERTED, not announced. This line used to print `BACKEND_ID_CPU` as a
+    // literal in the format string — a constant that said "CPU" whatever the
+    // embedder had actually done, which is a claim about the code rather than
+    // about the run.
+    //
+    // `Embedder::backend_id()` derives the answer from the OUTCOME: it reports
+    // Vulkan only if an accelerator was found AND layers were requested. So
+    // reading it back turns the ceiling from a comment into a startup gate, and
+    // a build that starts offloading fails here instead of quietly taking the
+    // render node out from under llama-server.
+    let backend = inner.backend_id();
+    if backend != neuralcompose_llama::BACKEND_ID_CPU {
+        return Err(format!(
+            "the embedder came up on {backend}, not {}.\n\
+             Exactly one process in this system may hold a Vulkan context and it \
+             is llama-server. Refusing to start rather than contend for the \
+             render node.",
+            neuralcompose_llama::BACKEND_ID_CPU
+        ));
+    }
+    eprintln!("● embeddings: {backend} (read back from the loaded embedder, not assumed)");
+    Ok((
+        CpuEmbedder {
+            inner,
+            model_id: model,
+        },
+        backend,
+    ))
+}
+
+// ───────────────────────────────────────────────────────────── host state ──
+
+/// Trims a `/sys` file to its contents, or `None` if it cannot be read.
+///
+/// `None` covers "no such file", "no permission" and "empty" alike, because
+/// none of them is a value. What must never happen is an unreadable governor
+/// becoming `"unknown"` and later reading as a governor named unknown.
+fn sysfs(path: impl AsRef<Path>) -> Option<String> {
+    let s = std::fs::read_to_string(path).ok()?;
+    let t = s.trim();
+    (!t.is_empty()).then(|| t.to_string())
+}
+
+/// Power, thermal and governor state. Ported from `power_state()` in
+/// `tools/spoken-loop/dialectic-relay/relay.py`, which is the only structured
+/// host-state capture already in this repository.
+fn read_power_state() -> PowerState {
+    let mut power = PowerState::default();
+    if let Ok(entries) = std::fs::read_dir("/sys/class/power_supply") {
+        for e in entries.flatten() {
+            let p = e.path();
+            match sysfs(p.join("type")).as_deref() {
+                Some("Mains") => {
+                    // Only an explicit 1/0 is an answer. Anything else is a
+                    // file we could not interpret, which is not "off mains".
+                    power.on_ac = match sysfs(p.join("online")).as_deref() {
+                        Some("1") => Some(true),
+                        Some("0") => Some(false),
+                        _ => power.on_ac,
+                    };
+                }
+                Some("Battery") => {
+                    power.battery_status = sysfs(p.join("status")).or(power.battery_status);
+                    power.battery_capacity = sysfs(p.join("capacity"))
+                        .and_then(|c| c.parse().ok())
+                        .or(power.battery_capacity);
+                }
+                _ => {}
+            }
+        }
+    }
+    let cpufreq = Path::new("/sys/devices/system/cpu/cpu0/cpufreq");
+    power.scaling_governor = sysfs(cpufreq.join("scaling_governor"));
+    power.scaling_driver = sysfs(cpufreq.join("scaling_driver"));
+    power.platform_profile = sysfs("/sys/firmware/acpi/platform_profile");
+    power
+}
+
+/// Every Bluetooth adapter this machine has, and whether it is blocked.
+///
+/// All of them, not just the one the bridge probably used: this process cannot
+/// know which adapter another process bound, and recording one as though it
+/// were the one in play would be a guess wearing an observation's clothes.
+fn read_hci_adapters() -> Vec<HciAdapter> {
+    let Ok(entries) = std::fs::read_dir("/sys/class/bluetooth") else {
+        return Vec::new();
+    };
+    let mut out: Vec<HciAdapter> = entries
+        .flatten()
+        .filter_map(|e| {
+            let name = e.file_name().to_string_lossy().to_string();
+            // `hci0`, not `hci1:256`. The colon-suffixed entries are open
+            // connections on an adapter, not adapters — listing them made a
+            // two-radio machine report three, with the phantom's rfkill state
+            // null because a connection has no rfkill node.
+            let is_adapter = name
+                .strip_prefix("hci")
+                .is_some_and(|rest| !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit()));
+            if !is_adapter {
+                return None;
+            }
+            let p = e.path();
+            let rfkill = std::fs::read_dir(&p).ok().and_then(|inner| {
+                inner.flatten().map(|d| d.path()).find(|d| {
+                    d.file_name()
+                        .map(|f| f.to_string_lossy().starts_with("rfkill"))
+                        .unwrap_or(false)
+                })
+            });
+            let flag = |file: &str| {
+                rfkill
+                    .as_ref()
+                    .and_then(|r| match sysfs(r.join(file)).as_deref() {
+                        Some("1") => Some(true),
+                        Some("0") => Some(false),
+                        _ => None,
+                    })
+            };
+            Some(HciAdapter {
+                device_path: std::fs::canonicalize(p.join("device"))
+                    .ok()
+                    .map(|d| d.display().to_string()),
+                soft_blocked: flag("soft"),
+                hard_blocked: flag("hard"),
+                name,
+            })
+        })
+        .collect();
+    // Sorted so two runs on the same machine produce the same document, and a
+    // diff between sessions shows a real change rather than readdir order.
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    out
 }
 
 /// Writes the payload first, then the manifest — never the reverse. A manifest
