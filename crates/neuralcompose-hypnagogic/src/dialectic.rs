@@ -153,6 +153,22 @@ pub struct DialecticConfig {
     /// See [`crate::loops::MirrorConfig::chunk_replies`]. Set false for a
     /// neural voice, which owns its own sentence-level prosody.
     pub chunk_replies: bool,
+    /// Speak **both** positions, each in its own role voice, before the turn
+    /// resolves.
+    ///
+    /// Off by default, because it changes what a turn sounds like and the
+    /// conformance story is about what a turn *decides*.
+    ///
+    /// With it off, the competition is inaudible: two candidates are generated,
+    /// scored, and one is spoken — so a listener hears a reply, not a dialectic.
+    /// The disagreement that the whole engine exists to stage happens silently
+    /// and is only visible afterwards in the turn log.
+    ///
+    /// With it on, each pole says its piece in its own fixed voice, and only
+    /// then does the turn resolve. A synthesis is spoken afterwards because its
+    /// text is neither candidate's; a plain win is not repeated, because it was
+    /// already said as one of the positions.
+    pub voice_both: bool,
     /// Stamped into every turn record's provenance envelope (ADR-004).
     ///
     /// Supplied by the shell rather than read here, because a pure library
@@ -174,6 +190,7 @@ impl Default for DialecticConfig {
                 .collect(),
             history_window: 16,
             chunk_replies: true,
+            voice_both: false,
             software_version: env!("CARGO_PKG_VERSION").to_string(),
             git_commit: None,
         }
@@ -466,6 +483,28 @@ where
             }
         }
 
+        // 5.5 Voice the positions, when asked.
+        //
+        // Deliberately AFTER the competition resolves, so
+        // `nothing_is_spoken_before_the_competition_resolves` still holds: the
+        // turn is decided before anything is heard, and what changes is only how
+        // much of the decision is audible.
+        //
+        // Each pole gets its OWN voice, unblended. The blend below carries how
+        // close the competition was, which is a property of the resolution; a
+        // position is just itself, and blending it would smear the one signal
+        // fixed voices exist to carry.
+        let mut positions_voiced = false;
+        if self.config.voice_both {
+            for s in &scored {
+                let voice = self.role_prosody(&s.candidate.role_id);
+                for ch in self.split(&s.candidate.text) {
+                    self.speaker.speak(&ch, voice)?;
+                }
+            }
+            positions_voiced = true;
+        }
+
         // 6. Voice the outcome.
         let mut spoken = None;
         let mut chunks = Vec::new();
@@ -495,8 +534,16 @@ where
                 // meet: a listener tracks which position speaks BY VOICE.
                 turn_prosody.voice = self.role_prosody(&c.role_id).voice;
                 chunks = self.split(&c.text);
-                for ch in &chunks {
-                    self.speaker.speak(ch, turn_prosody)?;
+                // A plain win was already said, as one of the positions. Saying
+                // it again would make every turn end in an echo. A SYNTHESIS is
+                // different: its text is neither candidate's, so it has not been
+                // heard yet and must be.
+                let already_said =
+                    positions_voiced && matches!(resolution.outcome, DialecticalOutcome::Spoke(_));
+                if !already_said {
+                    for ch in &chunks {
+                        self.speaker.speak(ch, turn_prosody)?;
+                    }
                 }
                 spoken = Some(c.text.clone());
             }
@@ -686,6 +733,95 @@ mod tests {
             };
             Ok(Embedding::new(v, "t"))
         }
+    }
+
+    /// One utterance: what was said, and the voice it was said in.
+    type Utterance = (String, Option<&'static str>);
+    type Transcript = std::rc::Rc<std::cell::RefCell<Vec<Utterance>>>;
+
+    /// Records what was said and in whose voice, so a test can assert on the
+    /// audible shape of a turn rather than only on its decision.
+    #[derive(Default)]
+    struct Heard(Transcript);
+    impl Speaking for Heard {
+        fn speak(&mut self, t: &str, p: Prosody) -> SeamResult<()> {
+            self.0.borrow_mut().push((t.to_string(), p.voice));
+            Ok(())
+        }
+    }
+
+    type SpyLoop = DialecticLoop<L, G, Heard, E, ScriptedDraws>;
+
+    fn loop_with(voice_both: bool, heard: &Heard) -> SpyLoop {
+        DialecticLoop::new(
+            L,
+            G(0),
+            Heard(std::rc::Rc::clone(&heard.0)),
+            E(0),
+            ScriptedDraws::new(vec![0.999]),
+            crate::role::waking_roles().to_vec(),
+            ContextProfile::Focused,
+            DialecticConfig {
+                voice_both,
+                chunk_replies: false,
+                ..DialecticConfig::default()
+            },
+        )
+    }
+
+    /// The default: the competition is inaudible. One utterance per turn, and a
+    /// listener hears a reply rather than a disagreement.
+    #[test]
+    fn without_voice_both_only_the_resolution_is_spoken() {
+        let heard = Heard::default();
+        let turn = loop_with(false, &heard).turn().unwrap().unwrap();
+        let said = heard.0.borrow();
+        assert_eq!(said.len(), 1, "expected one utterance, got {said:?}");
+        assert_eq!(said[0].0, turn.spoken.clone().unwrap());
+    }
+
+    /// With it on, BOTH candidates are spoken, each in its own fixed voice —
+    /// which is the whole point: a listener tracks which position is speaking by
+    /// voice, and two positions in one voice is not a dialectic.
+    #[test]
+    fn voice_both_speaks_each_pole_in_its_own_voice() {
+        let heard = Heard::default();
+        let turn = loop_with(true, &heard).turn().unwrap().unwrap();
+        let said = heard.0.borrow();
+
+        assert_eq!(said.len(), 2, "expected both positions, got {said:?}");
+        let texts: Vec<&str> = said.iter().map(|(t, _)| t.as_str()).collect();
+        for s in &turn.scored {
+            assert!(
+                texts.contains(&s.candidate.text.as_str()),
+                "{} was never spoken: {texts:?}",
+                s.candidate.text
+            );
+        }
+        let voices: Vec<Option<&'static str>> = said.iter().map(|(_, v)| *v).collect();
+        assert_ne!(
+            voices[0], voices[1],
+            "both poles spoke in the same voice, so the dialectic is inaudible"
+        );
+    }
+
+    /// A plain win was already said as one of the positions. Repeating it would
+    /// end every turn in an echo.
+    #[test]
+    fn voice_both_does_not_repeat_a_winner_it_already_spoke() {
+        let heard = Heard::default();
+        let turn = loop_with(true, &heard).turn().unwrap().unwrap();
+        assert!(
+            matches!(turn.resolution.outcome, DialecticalOutcome::Spoke(_)),
+            "this fixture must resolve to a plain win to discriminate"
+        );
+        let said = heard.0.borrow();
+        let winner = turn.spoken.clone().unwrap();
+        assert_eq!(
+            said.iter().filter(|(t, _)| *t == winner).count(),
+            1,
+            "the winner was spoken twice: {said:?}"
+        );
     }
 
     /// The spoken turn must carry the voice of the pole that ACTUALLY SPOKE,
