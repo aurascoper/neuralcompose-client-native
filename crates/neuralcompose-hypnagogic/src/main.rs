@@ -101,7 +101,8 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
   --verify-capture <eeg.jsonl>    replay a raw capture against its manifest
 
 Standalone modes run BEFORE the loop and exit; when more than one is given the
-precedence is --verify-log, then --world-model-demo. Neither needs llama-server.
+precedence is --verify-log, --verify-capture, --eligibility, --world-model-demo.
+None of them needs llama-server, a model, a microphone or a headband.
 ";
 
 fn parse_args() -> Result<Args, String> {
