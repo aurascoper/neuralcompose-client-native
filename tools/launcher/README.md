@@ -82,7 +82,7 @@ key can also be set as an environment variable for a one-off run.
 
 | Key | Default | Notes |
 | --- | --- | --- |
-| `MODEL` | `~/.cache/llama.cpp/Qwen_Qwen3-8B-GGUF_Qwen3-8B-Q6_K.gguf` | generation |
+| `MODEL` | `~/models/Qwen3-1.7B-Q8_0.gguf` | generation — see below |
 | `EMBED_MODEL` | `~/models/bge-small-en-v1.5-f32.gguf` | in-process, CPU |
 | `LLAMA_SERVER` | prefers `build-vulkan`, else PATH | |
 | `SERVER_URL` | `http://127.0.0.1:8080` | |
@@ -149,6 +149,54 @@ $ ldd target/release/neuralcompose-hypnagogic | grep -c llama
 
 Mirror mode needs no embedder and runs fine on a stub, so the check is skipped
 for `MODE=mirror` rather than blocking a mode that works.
+
+## Model size is a latency decision, not a quality one
+
+A **reflective** turn makes three generate calls — both poles plus the Witness —
+so generation cost is tripled before you hear anything. With `VOICE_BOTH=1` the
+speech cost doubles too. That compounds into a wait that changes what the app
+*is*: a loop that answers 20 s after you stop speaking is a different experience
+from one that answers in 10, whatever the prose quality.
+
+Measured on this machine, Vulkan on the 890M, 60 max_tokens, thinking off:
+
+| Model | Load | Per generate | Turn (3 gen + ~6 s speech/STT) |
+| --- | --- | --- | --- |
+| Qwen3-0.6B Q8 (0.64 GB) | 2.6 s | **0.41 s** | **~7 s** |
+| Qwen3-1.7B Q8 (1.83 GB) | 6.1 s | **1.39 s** | **~10 s** ← default |
+| Qwen3-8B Q6 (6.73 GB) | 6.5 s | **4.35 s** | **~19 s** |
+
+Both poles stay distinguishable at every size. Same prompt, "the room is quiet
+and I am drifting":
+
+- **0.6B** — coherence: *"the room is quiet, and I am drifting toward the
+  sounds."* · displacement: *"I feel like I'm drifting into something new, just
+  as the room itself feels a space waiting to be…"*
+- **1.7B** — coherence: *"I see you're feeling the silence, and it's easy to
+  drift when the world feels still."* · displacement: *"The silence feels like a
+  canvas, waiting to be painted with unspoken emotions. Maybe it's not empty—"*
+
+1.7B is the default because it roughly halves the turn against the 8B while
+still writing in sentences. 0.6B is thinner but coherent and the poles still
+differ, so it is a real option if you want the loop to feel immediate.
+
+Three other levers, in order of how much they buy:
+
+- `MODE=focused` — drops the Witness, so two generate calls instead of three.
+  About a third off the generation cost and it does not touch either pole.
+- `VOICE_BOTH=0` — one utterance spoken per turn instead of two. Halves the TTS,
+  at the cost of the thing that makes the dialectic audible.
+- `TTS=espeak` — near-instant against Kokoro's ~2.25 s per utterance, and it
+  sounds like it.
+
+Fetched with:
+
+```sh
+curl -L -o ~/models/Qwen3-1.7B-Q8_0.gguf \
+  https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf
+```
+
+That repo publishes **only** `Q8_0` for 1.7B — a `Q4_K_M` URL 404s.
 
 ## Order of operations
 

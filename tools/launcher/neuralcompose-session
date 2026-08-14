@@ -29,7 +29,18 @@ CONF="${XDG_CONFIG_HOME:-$HOME/.config}/neuralcompose/launcher.conf"
 
 # Defaults. Every one is overridable by the conf file, and then by an env var of
 # the same name — so a one-off run needs no file edit.
-MODEL_DEFAULT="$HOME/.cache/llama.cpp/Qwen_Qwen3-8B-GGUF_Qwen3-8B-Q6_K.gguf"
+# Sized for LATENCY, not for benchmark scores. A reflective turn makes three
+# generate calls, so generation cost is tripled before you hear anything, and a
+# hypnagogic loop that answers 20 s later is a different (worse) experience than
+# one that answers in 10. Measured on the 890M via Vulkan, 60 max_tokens:
+#
+#   Qwen3-0.6B Q8   0.41 s/generate   turn ~7 s
+#   Qwen3-1.7B Q8   1.39 s/generate   turn ~10 s   <- default
+#   Qwen3-8B  Q6    4.35 s/generate   turn ~19 s
+#
+# Both poles stay distinguishable at 1.7B. Set MODEL to the 8B if you want its
+# prose and will wait for it.
+MODEL_DEFAULT="$HOME/models/Qwen3-1.7B-Q8_0.gguf"
 EMBED_MODEL_DEFAULT="$HOME/models/bge-small-en-v1.5-f32.gguf"
 
 # shellcheck source=/dev/null
