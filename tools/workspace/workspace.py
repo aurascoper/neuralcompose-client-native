@@ -271,28 +271,32 @@ def _panel_spectrogram(pl, pv, spec, spec_meta):
     lo, hi = float(power.min()), float(power.max())
     span = float(f[-1] - f[0]) or 1.0
     zscale = 0.25 * span / max(hi - lo, 1e-12)
-    tg, fg = np.meshgrid(t, f)
+    # Scale the DATA, not the actors: pv.set_scale made the grid axes label
+    # scaled coordinates as if they were seconds (a 5.7 s capture read as
+    # 604 s). The factor is stated on the axis title instead.
+    tspan = float(t[-1] - t[0]) or 1.0
+    xf = (span * 4 * 1.2) / tspan * 0.8
+    tg, fg = np.meshgrid((t - t[0]) * xf, f)
     for i, name in enumerate(CHANNELS):
         yoff = i * span * 1.2
         grid = pv.StructuredGrid(tg, fg + yoff, (power[i] - lo) * zscale)
         grid["log10 power"] = power[i].ravel(order="F")
         pl.add_mesh(grid, scalars="log10 power", cmap="viridis", clim=(lo, hi),
                     show_scalar_bar=False)
-        pl.add_point_labels([(float(t[0]), float(f[-1]) + yoff, (hi - lo) * zscale)], [name],
+        pl.add_point_labels([(0.0, float(f[-1]) + yoff, (hi - lo) * zscale)], [name],
                             font_size=10, shape=None, always_visible=True, show_points=False)
         for v in spec_meta["verdicts"]:
             if v["channel"] != name or v["t"] is None:
                 continue
             color = "green" if v["status"] == "healthy" else "red"
-            pl.add_mesh(pv.Line((v["t"], f[0] + yoff, (hi - lo) * zscale),
-                                (v["t"], f[-1] + yoff, (hi - lo) * zscale)),
+            vx = (v["t"] - float(t[0])) * xf
+            pl.add_mesh(pv.Line((vx, f[0] + yoff, (hi - lo) * zscale),
+                                (vx, f[-1] + yoff, (hi - lo) * zscale)),
                         color=color, line_width=3)
-    pl.add_text("EEG  time x freq x power (exported grid)", font_size=10)
-    # display scale only (axis labels stay in data units): keep the time span
-    # readable against 4 stacked frequency ranges, whatever the session length
-    tspan = float(t[-1] - t[0]) or 1.0
-    pl.set_scale(xscale=(span * 4 * 1.2) / tspan * 0.8)
-    pl.show_grid(xtitle="time (s)", ytitle="freq (Hz, stacked/channel)", ztitle="", font_size=8)
+    pl.add_text(f"EEG  time x freq x power (exported grid)  "
+                f"wire t {t[0]:.1f}-{t[-1]:.1f} s", font_size=10)
+    pl.show_grid(xtitle=f"time (display-scaled x{xf:.3g}; true range above)",
+                 ytitle="freq (Hz, stacked/channel)", ztitle="", font_size=8)
 
 
 def _panel_latents(pl, lat):
