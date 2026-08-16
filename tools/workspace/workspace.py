@@ -66,10 +66,17 @@ def sha256_of(path):
 
 
 def run(cmd, cwd):
+    """Run an exporter. Failure returns the reason instead of exiting: an
+    artifact that cannot be produced is an ABSENCE for its panel (degrade,
+    with the reason on the figure), not a reason to refuse the whole view."""
     print(f"+ {' '.join(map(str, cmd))}  (cwd {cwd})", file=sys.stderr)
     r = subprocess.run(list(map(str, cmd)), cwd=cwd, capture_output=True, text=True)
-    if r.returncode != 0:
-        sys.exit(f"export failed ({r.returncode}):\n{r.stdout}\n{r.stderr}")
+    if r.returncode == 0:
+        return None
+    tail = (r.stderr.strip() or r.stdout.strip()).splitlines()[-1:]
+    reason = f"export failed: {tail[0] if tail else f'exit {r.returncode}'}"
+    print(f"  {reason}", file=sys.stderr)
+    return reason
 
 
 def transcribe_csv(eeg_path, csv_path):
@@ -138,13 +145,16 @@ def ensure_artifacts(session_id, base_dir, repos, refresh):
             paths[panel] = None
             continue
         if panel == "spectrogram":
-            run(["uv", "run", "tools/eeg-viz/workspace3d.py", eeg,
-                 "--export", paths[panel], "--session-id", session_id],
-                repos["client_native"])
+            err = run(["uv", "run", "tools/eeg-viz/workspace3d.py", eeg,
+                       "--export", paths[panel], "--session-id", session_id],
+                      repos["client_native"])
         else:
             transcribe_csv(eeg, csv)
-            run(["uv", "run", "scripts/latent3d.py", "export", csv,
-                 "--session-id", session_id, "-o", paths[panel]], repos["lejepa"])
+            err = run(["uv", "run", "scripts/latent3d.py", "export", csv,
+                       "--session-id", session_id, "-o", paths[panel]], repos["lejepa"])
+        if err:
+            absent[panel] = err
+            paths[panel] = None
 
     anchor = utc_anchor(base_dir, session_id)
     if refresh or not paths["graph"].exists():
@@ -152,7 +162,10 @@ def ensure_artifacts(session_id, base_dir, repos, refresh):
                "--session-id", session_id]
         if anchor:
             cmd += ["--utc-start", anchor[0], "--utc-end", anchor[1]]
-        run(cmd, repos["memory_server"])
+        err = run(cmd, repos["memory_server"])
+        if err:
+            absent["graph"] = err
+            paths["graph"] = None
     if not anchor:
         unverified.append("graph time-range vs session (no capture manifest anchor; "
                           "locator match only)")
