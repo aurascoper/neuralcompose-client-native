@@ -334,8 +334,20 @@ case "$EEG" in
   See tools/README.md."
         "$BR/.venv/bin/python" "$BR/bridge.py" >"$EEG_LOG" 2>&1 &
         EEG_PID=$!
-        sleep 2
-        kill -0 "$EEG_PID" 2>/dev/null || { cat "$EEG_LOG" >&2; die "muse bridge failed to start"; }
+        # The bridge opens :8788 only AFTER BrainFlow connects to the headband,
+        # and a BLE scan+connect takes 10-20s — far longer than llama-server's
+        # warm start. A fixed sleep is a race the binary loses at preflight, so
+        # wait for the port itself (the fixture has the sibling hazard the
+        # other way round: something else already holding it).
+        say "eeg: muse bridge searching for the headband (up to ~100s — press the button if it dozes)…"
+        for _ in $(seq 100); do
+            kill -0 "$EEG_PID" 2>/dev/null || { cat "$EEG_LOG" >&2; die "muse bridge failed to start"; }
+            ss -ltn 2>/dev/null | grep -q ':8788' && break
+            sleep 1
+        done
+        ss -ltn 2>/dev/null | grep -q ':8788' || { cat "$EEG_LOG" >&2
+            die "the Muse bridge never opened :8788 — headband not found in time.
+  Is it powered on, charged, and unpaired from other apps?"; }
         say "eeg: muse-ble-bridge on :8788"
         EEG_ARGS=(--eeg-url "$EEG_URL" --eeg-source muse-s-board-39)
         ;;
