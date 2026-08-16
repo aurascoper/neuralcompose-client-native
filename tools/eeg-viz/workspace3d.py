@@ -60,10 +60,21 @@ def read_turn_health(path):
 
 
 def actual_rate_hz(times):
-    """Median of small timestamp diffs, gaps > 5x nominal excluded."""
+    """Samples over elapsed span, gaps > 1 s excluded.
+
+    NOT a median of per-sample diffs: the muse bridge stamps a drained batch
+    with one clock read, so intra-batch diffs are microseconds and a median
+    lands on the burst cluster (measured: 292 kHz from a real capture whose
+    true rate was 256 Hz). The span survives burst timestamps; only real
+    stream outages are excluded. Sibling trap recorded in lejepa's
+    compute_actual_sample_rate (2026-08-07), which hit the inverse case."""
+    if len(times) < 2:
+        return NOMINAL_HZ
     d = np.diff(times)
-    d = d[(d > 0) & (d < 5.0 / NOMINAL_HZ)]
-    return float(1.0 / np.median(d)) if len(d) else NOMINAL_HZ
+    gap = d > 1.0
+    span = float(times[-1] - times[0] - d[gap].sum())
+    n = len(times) - 1 - int(gap.sum())
+    return n / span if span > 0 else NOMINAL_HZ
 
 
 def spectrograms(times, data, fs):
@@ -234,6 +245,13 @@ def self_check():
         times, data, health, rate, stamp = load(eeg, turns)
         assert data.shape == (n, 4), data.shape
         assert abs(rate - fs) / fs < 0.001, rate
+        # burst-stamped timestamps (the muse bridge's pattern: a drained batch
+        # shares one clock read) must still estimate the true rate from span
+        burst = ts.copy()
+        for i in range(0, n, 8):
+            burst[i:i + 8] = ts[i]  # whole batch collapses onto one stamp
+        burst_rate = actual_rate_hz(burst)
+        assert abs(burst_rate - fs) / fs < 0.05, f"burst rate {burst_rate}"
         assert len(health) == 2 and health[1][3]["annotation"]["mainsLineHz"] == 60.0
         assert "sha256" in stamp and sha256_of(eeg) in stamp
         f, t, logs = spectrograms(times, data, rate)
