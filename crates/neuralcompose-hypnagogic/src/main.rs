@@ -1918,6 +1918,25 @@ fn run(args: Args) -> Result<(), String> {
         _ => false,
     };
 
+    // Three states, so absence stays informative: a capture gets the command
+    // that opens it; EEG configured without a capture says so (absent and
+    // failed must not read the same); no EEG prints nothing at all. Print,
+    // not spawn — a session's exit status must not depend on a display tool.
+    match (&eeg, &capture, capture_ok) {
+        (Some(_), Some(_), true) => eprintln!(
+            "● workspace: uv run tools/workspace/workspace.py {} --dir {}  (from the repo root)",
+            session_id,
+            args.log_dir.display()
+        ),
+        (Some(_), Some(_), false) => {
+            eprintln!("● workspace: none — the capture failed to finish (see ⚠ above)");
+        }
+        (Some(_), None, _) => {
+            eprintln!("● workspace: none — EEG was attached but no capture was written (--log)");
+        }
+        (None, _, _) => {}
+    }
+
     if let Some(r) = recorder {
         write_log(&args.log_dir, &session_id, turn_file.take(), &r)?;
         let session = SessionRecord {
