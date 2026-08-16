@@ -10,6 +10,11 @@ no visible ridge at its mainsLineHz, one of the two has a bug.
 
 Usage:  uv run workspace3d.py SESSION.eeg.jsonl [SESSION.turns.jsonl]
                               [--screenshot out.png | --self-check]
+        uv run workspace3d.py SESSION.eeg.jsonl --export OUT.npz [--session-id ID]
+        uv run workspace3d.py --view OUT.npz [--screenshot out.png]
+
+Export writes the spectrogram grid + recorded verdicts as a neutral npz
+artifact; --view renders such an artifact and computes nothing.
 """
 
 import argparse
@@ -75,10 +80,52 @@ def sha256_of(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def render(times, data, health, fs, stamp, screenshot=None):
+def health_records(health):
+    """Flatten recorded turn-health tuples into plain dicts (for the npz artifact)."""
+    return [
+        {"turn": turn_idx, "channel": channel, "t": ts,
+         "status": rec["annotation"]["status"], "verdict": rec["annotation"]["verdict"],
+         "mainsLineHz": rec["annotation"].get("mainsLineHz")}
+        for turn_idx, channel, ts, rec in health
+    ]
+
+
+def export_npz(times, data, health, fs, sources, session_id, out_path):
+    """Serialize the spectrogram grid + recorded verdicts as a neutral artifact."""
+    f, t, logs = spectrograms(times, data, fs)
+    meta = {
+        "session_id": session_id,
+        "time_range": [float(times[0]), float(times[-1])],
+        "channels": CHANNELS,
+        "nominal_hz": NOMINAL_HZ,
+        "actual_hz": fs,
+        "sources": sources,
+        "verdicts": health_records(health),
+        "tool": "workspace3d.py export v1",
+    }
+    np.savez(out_path, power=np.array(logs, dtype=np.float32),
+             freqs=f, times=t, meta_json=json.dumps(meta))
+    print(f"wrote {out_path}: power {np.array(logs).shape}, session_id={session_id}")
+
+
+def load_npz(npz_path):
+    """(f, t, logs, health-tuples, stamp, meta) from an exported artifact; no computation."""
+    d = np.load(npz_path)
+    meta = json.loads(str(d["meta_json"]))
+    logs = [d["power"][i] for i in range(d["power"].shape[0])]
+    health = [
+        (v["turn"], v["channel"], v["t"],
+         {"annotation": {"status": v["status"], "verdict": v["verdict"],
+                         "mainsLineHz": v.get("mainsLineHz")}})
+        for v in meta["verdicts"]
+    ]
+    stamp = f"artifact sha256 {sha256_of(npz_path)}\nsession {meta['session_id']}"
+    return d["freqs"], d["times"], logs, health, stamp, meta
+
+
+def render_grids(f, t, logs, health, stamp, screenshot=None):
     import pyvista as pv
 
-    f, t, logs = spectrograms(times, data, fs)
     lo = min(lp.min() for lp in logs)
     hi = max(lp.max() for lp in logs)
     zspan = 0.25 * max(t[-1] - t[0], f[-1] - f[0])  # so the warp reads at any duration
@@ -128,6 +175,11 @@ def render(times, data, health, fs, stamp, screenshot=None):
         pl.close()
         return screenshot
     pl.show()
+
+
+def render(times, data, health, fs, stamp, screenshot=None):
+    f, t, logs = spectrograms(times, data, fs)
+    return render_grids(f, t, logs, health, stamp, screenshot=screenshot)
 
 
 def load(eeg_path, turns_path):
@@ -191,6 +243,19 @@ def self_check():
         out = Path(d) / "out.png"
         render(times, data, health, rate, stamp, screenshot=str(out))
         assert out.stat().st_size > 0
+        # export -> view round trip: view must render from the artifact alone
+        npz = Path(d) / "s.spectrogram.npz"
+        export_npz(times, data, health, rate,
+                   {"eeg_sha256": sha256_of(eeg), "turns_sha256": sha256_of(turns)},
+                   "self-check-session", npz)
+        f2, t2, logs2, health2, stamp2, meta = load_npz(npz)
+        assert meta["session_id"] == "self-check-session"
+        assert meta["time_range"] == [float(times[0]), float(times[-1])]
+        assert len(health2) == 2 and health2[1][3]["annotation"]["mainsLineHz"] == 60.0
+        np.testing.assert_allclose(logs2[0], logs[0], rtol=1e-6)  # float32 round trip
+        out2 = Path(d) / "out2.png"
+        render_grids(f2, t2, logs2, health2, stamp2, screenshot=str(out2))
+        assert out2.stat().st_size > 0
     print("self-check ok")
 
 
@@ -200,16 +265,32 @@ def main():
     ap.add_argument("turns", nargs="?", help="<sid>.turns.jsonl (default: sibling of eeg)")
     ap.add_argument("--screenshot", metavar="OUT.png", help="render off-screen to file")
     ap.add_argument("--self-check", action="store_true")
+    ap.add_argument("--export", metavar="OUT.npz", help="write the neutral artifact, no render")
+    ap.add_argument("--session-id", help="session id stamped into the export (default: eeg stem)")
+    ap.add_argument("--view", metavar="IN.npz", help="render a previously exported artifact")
     args = ap.parse_args()
     if args.self_check:
         self_check()
         return
+    if args.view:
+        f, t, logs, health, stamp, _meta = load_npz(Path(args.view))
+        out = render_grids(f, t, logs, health, stamp, screenshot=args.screenshot)
+        if out:
+            print(out)
+        return
     if not args.eeg:
-        ap.error("eeg path required (or --self-check)")
+        ap.error("eeg path required (or --self-check / --view)")
     eeg = Path(args.eeg)
     turns = Path(args.turns) if args.turns else eeg.with_name(
         eeg.name.replace(".eeg.jsonl", ".turns.jsonl")
     )
+    if args.export:
+        times, data, health, fs, _stamp = load(eeg, turns)
+        sources = {"eeg_sha256": sha256_of(eeg),
+                   "turns_sha256": sha256_of(turns) if turns.exists() else None}
+        session_id = args.session_id or eeg.name.replace(".eeg.jsonl", "")
+        export_npz(times, data, health, fs, sources, session_id, args.export)
+        return
     out = render(*load(eeg, turns), screenshot=args.screenshot)
     if out:
         print(out)
