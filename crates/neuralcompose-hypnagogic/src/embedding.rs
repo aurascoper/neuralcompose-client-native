@@ -11,7 +11,7 @@
 //! divergences**, both on error paths only:
 //!
 //! 1. **Comparability is enforced, not documented.** `docs/architecture/embedding_contract.md`
-//!    §2.7/§3.3 and ADR-010 both state that two embeddings with different
+//!    §2.7/§3.3 and macOS repo ADR-010 both state that two embeddings with different
 //!    `modelID`s are not comparable even when their dimensions match — but the
 //!    Swift `cosineSimilarity(to:)` checks only `values.count`, so the rule is
 //!    carried by a doc comment and nothing else. Here it is a type-level fact:
@@ -134,7 +134,7 @@ mod tests {
     }
 
     /// Same numbers, same dimension, different space. A similarity here would
-    /// be a fabricated comparison — the rule ADR-010 states and the Swift
+    /// be a fabricated comparison — the rule macOS repo ADR-010 states and the Swift
     /// enforces nowhere.
     #[test]
     fn different_model_ids_are_not_comparable() {
