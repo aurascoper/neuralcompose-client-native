@@ -542,9 +542,12 @@ where
         // the Swift, as their doc comment requires.
         let drifted = matches!((drift, self.config.drift_ceiling),
             (Some(d), ceiling) if ceiling > 0.0 && d > ceiling);
-        let framed = match (&self.anchor, drifted) {
-            (Some((seed, _)), true) => format!("{heard}\n\n(this exchange began with: {seed})"),
-            _ => heard.clone(),
+        // The seed handed to the roles as *instruction*, or `None`. It is
+        // deliberately NOT spliced into `heard`: see
+        // [`DialecticalRole::anchored_prompt`] for what that cost, measured.
+        let frame: Option<String> = match (&self.anchor, drifted) {
+            (Some((seed, _)), true) => Some(seed.clone()),
+            _ => None,
         };
 
         // 1. One generator per role, each shaped by the standing tension.
@@ -554,11 +557,13 @@ where
                 temperature: role.temperature,
                 max_tokens: self.config.max_tokens,
             };
-            let raw = self.generator.generate(
-                role_system(role),
-                &role.prompt(&framed, self.standing_tension),
-                params,
-            )?;
+            let prompt = match &frame {
+                Some(seed) => role.anchored_prompt(&heard, self.standing_tension, seed),
+                None => role.prompt(&heard, self.standing_tension),
+            };
+            let raw = self
+                .generator
+                .generate(role_system(role), &prompt, params)?;
             let text = crate::loops::strip_for_speech(&raw);
             if !text.is_empty() {
                 candidates.push((role.id.to_string(), text));

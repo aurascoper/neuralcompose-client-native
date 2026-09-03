@@ -71,6 +71,10 @@ struct Args {
     push_to_talk: bool,
     voice_both: bool,
     mic_gate: Option<f64>,
+    /// Override `DialecticConfig::drift_ceiling`. `0.0` disables re-anchoring.
+    drift_ceiling: Option<f32>,
+    /// Override `DialecticConfig::repetition_floor`. `0.0` disables the guard.
+    repetition_floor: Option<f32>,
     speak: bool,
     tts: String,
     eeg_url: Option<String>,
@@ -142,6 +146,8 @@ fn parse_args() -> Result<Args, String> {
         push_to_talk: false,
         voice_both: false,
         mic_gate: None,
+        drift_ceiling: None,
+        repetition_floor: None,
         speak: false,
         tts: "kokoro".into(),
         eeg_url: None,
@@ -217,6 +223,26 @@ fn parse_args() -> Result<Args, String> {
             }
             "--world-model-demo" => a.world_model_demo = true,
             "--heldout" => a.heldout = true,
+            // The ceiling is a property of the EMBEDDER, not of the loop — the
+            // default is measured against bge-small and is wrong for any other
+            // model, and nothing here can derive one from the other. An
+            // operator who changes NC_EMBED_MODEL has to change this with it.
+            "--drift-ceiling" => {
+                a.drift_ceiling = Some(
+                    need(i)?
+                        .parse()
+                        .map_err(|_| "--drift-ceiling needs a number".to_string())?,
+                );
+                i += 1;
+            }
+            "--repetition-floor" => {
+                a.repetition_floor = Some(
+                    need(i)?
+                        .parse()
+                        .map_err(|_| "--repetition-floor needs a number".to_string())?,
+                );
+                i += 1;
+            }
             "--mic" => a.mic = true,
             "--voice-both" => a.voice_both = true,
             "--push-to-talk" => {
@@ -1812,6 +1838,12 @@ fn run(args: Args) -> Result<(), String> {
                 DialecticConfig {
                     chunk_replies,
                     voice_both: args.voice_both,
+                    drift_ceiling: args
+                        .drift_ceiling
+                        .unwrap_or(DialecticConfig::default().drift_ceiling),
+                    repetition_floor: args
+                        .repetition_floor
+                        .unwrap_or(DialecticConfig::default().repetition_floor),
                     // `None` whenever the tree was dirty at build time — see
                     // build.rs. An unpinned build says so rather than naming a
                     // commit that does not describe it.

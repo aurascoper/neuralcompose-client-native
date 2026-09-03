@@ -87,8 +87,19 @@
 //!    began. Every centroid in `dialectic` is computed over a *bounded* ring, so
 //!    all of them drift along with the conversation; a walk away from the
 //!    subject is invisible to each one. The transcript itself is never
-//!    rewritten — only the prompt is framed — so the drifted text survives in
-//!    the log as the evidence.
+//!    rewritten — the seed goes in through
+//!    [`role::DialecticalRole::anchored_prompt`], appended after the shaper's
+//!    own text as instruction — so the drifted text survives in the log as the
+//!    evidence. The shapers stay verbatim from the Swift.
+//!
+//!    **Measured, because the first version of it did nothing.** Spliced into
+//!    `heard` it landed inside the shaper's quoted utterance and closed 3.2% of
+//!    the available gap; appended as instruction it closes 43.8% and puts the
+//!    subject into 35 of 50 drifted replies against 0 for the control. Both
+//!    rounds, the pre-registered criteria and the per-reply scores are in
+//!    `tools/reanchor-efficacy/`. This mechanism only steers the *replies*: the
+//!    ASR-driven drift that motivated it lives in `heard`, which nothing here
+//!    touches.
 //! 2. **A repetition floor.** A rate, not a streak, over
 //!    [`loops::similarity`], forcing a silent turn when the replies stop moving.
 //!    The obvious implementation was to promote `self_similarity`, which this

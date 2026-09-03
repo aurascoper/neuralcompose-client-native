@@ -71,6 +71,43 @@ impl DialecticalRole {
         (self.prompt_shaper)(heard, tension)
     }
 
+    /// The shaper's prompt with the session's opening utterance appended as
+    /// **instruction**, for a turn that has drifted past the ceiling.
+    ///
+    /// The placement is the whole point, and getting it wrong is measurable.
+    /// The first version of this feature spliced the anchor into `heard`, which
+    /// every shaper interpolates *inside* a quoted utterance:
+    ///
+    /// ```text
+    /// the other person just said: "the kettle is whistling
+    ///
+    /// (this exchange began with: what do you know about radiotropic biofilms?)"
+    ///
+    /// ...find the strongest, clearest thread in what they said and carry it
+    /// forward faithfully. Do not drift away from it.
+    /// ```
+    ///
+    /// So the anchor arrived as something the *person had said*, and the
+    /// coherence pole was then instructed to find the strongest thread in that
+    /// utterance and not drift from it — which, in a sentence about a kettle, is
+    /// the kettle. The instruction actively fought the anchor. Measured across
+    /// fifty drifted turns it closed 3.2% of the available gap and put the
+    /// subject into 1 reply out of 50.
+    ///
+    /// Appending after the shaper's own text puts the anchor outside the quotes,
+    /// unambiguously as direction rather than as transcript, and last — so it is
+    /// not competing with a "do not drift away from it" that refers to something
+    /// else. The shapers themselves stay verbatim from the Swift, which is what
+    /// their doc comment requires.
+    pub fn anchored_prompt(&self, heard: &str, tension: f32, anchor: &str) -> String {
+        format!(
+            "{}\n\nImportant context: this exchange began with: \"{anchor}\". What \
+             was just said has drifted away from that subject. Steer your reply \
+             back toward it.",
+            self.prompt(heard, tension)
+        )
+    }
+
     pub fn fulfillment(&self, energy: &DialecticalEnergy) -> f32 {
         (self.objective)(energy)
     }
@@ -237,6 +274,45 @@ mod tests {
                     role.id
                 );
             }
+        }
+    }
+
+    /// The anchor must land OUTSIDE the quoted utterance.
+    ///
+    /// This is the regression guard for a bug that had no test and cost a whole
+    /// measurement round to find. The anchor used to be spliced into `heard`
+    /// before the shaper ran, so it ended up inside `just said: "…"` — the model
+    /// read it as part of the transcript, and the pole's own "find the strongest
+    /// thread in what they said, do not drift away from it" then pointed at the
+    /// drifted text. Every unit test passed, because they all only asked whether
+    /// the seed text was *present somewhere*.
+    ///
+    /// Presence is not placement. This asserts placement: the quoted utterance
+    /// must still be exactly `"{heard}"`, unpolluted, and the anchor must appear
+    /// after it.
+    #[test]
+    fn the_anchor_is_direction_not_transcript() {
+        let heard = "the kettle in the next room has started whistling again";
+        let anchor = "what do you know about radiotropic biofilms";
+        for role in waking_roles().iter().chain(sleep_roles().iter()) {
+            let p = role.anchored_prompt(heard, 0.5, anchor);
+            assert!(
+                p.contains(&format!("\"{heard}\"")),
+                "{}: the quoted utterance was polluted — the anchor is inside the \
+                 quotes, where it reads as something the person said",
+                role.id
+            );
+            let quoted_end = p.find(&format!("\"{heard}\"")).expect("quoted utterance")
+                + heard.len()
+                + 2;
+            assert!(
+                p.find(anchor).expect("anchor present") > quoted_end,
+                "{}: the anchor appears before the utterance ends",
+                role.id
+            );
+            // And it must still be there at all — placement without presence is
+            // the opposite failure.
+            assert!(p.contains(anchor), "{}: the anchor vanished", role.id);
         }
     }
 
