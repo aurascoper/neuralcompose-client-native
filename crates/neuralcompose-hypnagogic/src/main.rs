@@ -22,7 +22,7 @@ use neuralcompose_hypnagogic::eligibility::{evaluate, tally, Registration};
 use neuralcompose_hypnagogic::embedding::Embedding;
 use neuralcompose_hypnagogic::http;
 use neuralcompose_hypnagogic::loops::{
-    is_stop_phrase, strip_for_speech, MirrorConfig, MirrorLoop, STOP_PHRASES,
+    is_non_speech, is_stop_phrase, strip_for_speech, MirrorConfig, MirrorLoop, STOP_PHRASES,
 };
 use neuralcompose_hypnagogic::profile::HypnagogicMode;
 use neuralcompose_hypnagogic::role::waking_roles;
@@ -463,7 +463,15 @@ fn transcribe(whisper: &Path, model: &Path, wav: &Path) -> SeamResult<Option<Str
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ");
-    Ok(if text.is_empty() { None } else { Some(text) })
+    // Both listeners route through here, so the non-speech guard sits here too
+    // rather than in each of them. `Ok(None)` is already the "only silence was
+    // heard" contract, and both loops answer it with a silence cue and no model
+    // call — which is exactly the right response to a fan.
+    Ok(if text.is_empty() || is_non_speech(&text) {
+        None
+    } else {
+        Some(text)
+    })
 }
 
 /// Spawns `pw-record`, waits for Enter, then transcribes with whisper-cli.

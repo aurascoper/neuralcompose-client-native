@@ -277,6 +277,47 @@ pub fn is_stop_phrase(text: &str) -> bool {
     STOP_PHRASES.contains(&normalized.as_str())
 }
 
+/// Whether a transcript is only whisper's non-speech annotations.
+///
+/// Whisper labels what it hears but cannot transcribe: `[BLANK_AUDIO]`,
+/// `(machine whirring)`, `(buzzing)`, `(engine revving)`. Those are silence
+/// wearing a transcript's clothes — non-empty, so the emptiness check in
+/// `transcribe` passes them straight through, and every one then drives a full
+/// two- or three-generate-call turn against room noise.
+///
+/// Restored from `tools/spoken-loop/converse.py:404`, the Python loop this port
+/// derives from, which drops them and takes the next turn. The Rust port lost
+/// the guard. Session `1788413094` is what that costs: twelve real utterances,
+/// then an unbroken run of turns answering a fan, still going when the log was
+/// read. The counts live in `tests/fixtures/nonspeech_v1.json` rather than in
+/// this comment, because the session was open-ended and they are still moving.
+///
+/// **An unterminated span is content, not silence.** Python's regex requires a
+/// closing delimiter, so `(unterminated` survives there — and it must survive
+/// here too, because discarding it would throw away a real utterance on the
+/// strength of one stray bracket. This is the opposite call from
+/// [`strip_for_speech`]'s unterminated `<think>`, where the leftover would have
+/// been *spoken aloud*; here the leftover is only listened to.
+pub fn is_non_speech(text: &str) -> bool {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest.find(['[', '(']) {
+        out.push_str(&rest[..start]);
+        match rest[start..].find([']', ')']) {
+            // Both delimiters are ASCII, so one byte past the match is a char
+            // boundary.
+            Some(end) => rest = &rest[start + end + 1..],
+            None => {
+                out.push_str(&rest[start..]);
+                rest = "";
+                break;
+            }
+        }
+    }
+    out.push_str(rest);
+    out.trim().is_empty()
+}
+
 /// pure and tested, instead of in the generator shell, because it is the same
 /// cleanup for every backend.
 pub fn strip_for_speech(text: &str) -> String {
