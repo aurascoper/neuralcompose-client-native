@@ -1,0 +1,993 @@
+{
+  "schemaId": "neuralcompose.hypnagogic.reanchor-efficacy.v1",
+  "label": "round2-anchor-as-instruction",
+  "seed": "What do you know about radiotropic biofilms?",
+  "scoringEmbedder": "nomic-embed-text-v1.5 (:8082)",
+  "note": "Scored with a DIFFERENT embedder from the bge-small that gates the mechanism: one model both firing the guard and scoring the result could manufacture a finding from its own geometry. Turn 0 is the anchor and is excluded from every arm.",
+  "runs": {
+    "control-framed": [
+      {
+        "index": 1,
+        "heard": "How do radiotropic biofilms change their state?",
+        "reanchored": false,
+        "cosineToSeed": 0.7780419815426014,
+        "mentionsSubject": true,
+        "spokenText": "The transformation of radiotropic biofilms isn't just about change\u2014it's like a river shifting its course, adapting to the terrain, but always seeking the flow of life. What if they're not changing, but evolving in ways we haven't yet seen?"
+      },
+      {
+        "index": 2,
+        "heard": "What governs the structure of a radiotropic biofilm?",
+        "reanchored": false,
+        "cosineToSeed": 0.8445530967428422,
+        "mentionsSubject": true,
+        "spokenText": "The structure of a radiotropic biofilm is governed by the interplay of chemical gradients and microbial activity."
+      },
+      {
+        "index": 3,
+        "heard": "Does melanin play a role in radiotropic biofilms?",
+        "reanchored": false,
+        "cosineToSeed": 0.6625748503405625,
+        "mentionsSubject": true,
+        "spokenText": "I'm curious about how melanin's protective role in organisms might influence the structure of biofilms, even if it doesn't directly affect their radiative properties."
+      },
+      {
+        "index": 4,
+        "heard": "How would you measure radiotropic growth in a biofilm?",
+        "reanchored": false,
+        "cosineToSeed": 0.7405637804790718,
+        "mentionsSubject": true,
+        "spokenText": "I'd measure it by tracking the rate at which the biofilm expands in response to environmental changes, like how a tree grows in response to sunlight. It's not just about size, but how the structure adapts to its surroundings. That adaptability might be the real indicator of radiotropic growth."
+      },
+      {
+        "index": 5,
+        "heard": "Which species form radiotropic biofilms most readily?",
+        "reanchored": false,
+        "cosineToSeed": 0.8586386515875535,
+        "mentionsSubject": true,
+        "spokenText": "The question is about which species form radiotropic biofilms most readily."
+      },
+      {
+        "index": 6,
+        "heard": "What dose range matters for radiotropic biofilm studies?",
+        "reanchored": false,
+        "cosineToSeed": 0.8244272142083213,
+        "mentionsSubject": true,
+        "spokenText": "The question is about the range of parameters that are important for studying radiotropic biofilm studies."
+      },
+      {
+        "index": 7,
+        "heard": "How does a radiotropic biofilm differ from a radioresistant one?",
+        "reanchored": false,
+        "cosineToSeed": 0.4857895126664409,
+        "mentionsSubject": true,
+        "spokenText": "The difference lies in how they respond to radiation, not just their ability to survive it. One adapts by repairing damage, while the other rejects it. It's like a plant that grows in a desert versus one that thrives in a storm."
+      },
+      {
+        "index": 8,
+        "heard": "Can radiotropic biofilms be cultured in the laboratory?",
+        "reanchored": false,
+        "cosineToSeed": 0.7885577870300735,
+        "mentionsSubject": true,
+        "spokenText": "I think you're referring to biofilms that respond to radiation. Let me check if they can be grown in a lab setting."
+      },
+      {
+        "index": 9,
+        "heard": "What controls would a radiotropic biofilm experiment need?",
+        "reanchored": false,
+        "cosineToSeed": 0.8019614783064625,
+        "mentionsSubject": true,
+        "spokenText": "The question is about the controls needed for a radiotropic biofilm experiment. The strongest thread is the need for a clear, controlled environment to test the biofilm's response to radiation. I should focus on that."
+      },
+      {
+        "index": 10,
+        "heard": "Where does the evidence for radiotropic biofilms come from?",
+        "reanchored": false,
+        "cosineToSeed": 0.8840690126484148,
+        "mentionsSubject": true,
+        "spokenText": "The evidence for radiotropic biofilms comes from studies showing they form in specific environments, such as contaminated water or soil, and they have unique properties that support their survival."
+      }
+    ],
+    "control-unframed": [
+      {
+        "index": 1,
+        "heard": "How do radiotropic biofilms change their state?",
+        "reanchored": false,
+        "cosineToSeed": 0.8134646082901649,
+        "mentionsSubject": true,
+        "spokenText": "The question is about how radiotropic biofilms transition between different states."
+      },
+      {
+        "index": 2,
+        "heard": "What governs the structure of a radiotropic biofilm?",
+        "reanchored": false,
+        "cosineToSeed": 0.8445530967428422,
+        "mentionsSubject": true,
+        "spokenText": "The structure of a radiotropic biofilm is governed by the interplay of chemical gradients and microbial activity."
+      },
+      {
+        "index": 3,
+        "heard": "Does melanin play a role in radiotropic biofilms?",
+        "reanchored": false,
+        "cosineToSeed": 0.64993686718221,
+        "mentionsSubject": true,
+        "spokenText": "I wonder if the structure of melanin's molecular arrangement could influence the way biofilms interact with light, even if it doesn't directly affect radiative properties."
+      },
+      {
+        "index": 4,
+        "heard": "How would you measure radiotropic growth in a biofilm?",
+        "reanchored": false,
+        "cosineToSeed": 0.8197766948307175,
+        "mentionsSubject": true,
+        "spokenText": "I'd measure radiotropic growth in a biofilm by tracking the rate of radiolabelled carbon incorporation into the biofilm matrix."
+      },
+      {
+        "index": 5,
+        "heard": "Which species form radiotropic biofilms most readily?",
+        "reanchored": false,
+        "cosineToSeed": 0.8457017325555871,
+        "mentionsSubject": true,
+        "spokenText": "I'll focus on the species that form radiotropic biofilms most readily."
+      },
+      {
+        "index": 6,
+        "heard": "What dose range matters for radiotropic biofilm studies?",
+        "reanchored": false,
+        "cosineToSeed": 0.814491248458996,
+        "mentionsSubject": true,
+        "spokenText": "The question is about the range of factors that are important for studying radiotropic biofilm studies."
+      },
+      {
+        "index": 7,
+        "heard": "How does a radiotropic biofilm differ from a radioresistant one?",
+        "reanchored": false,
+        "cosineToSeed": 0.7143832824555808,
+        "mentionsSubject": true,
+        "spokenText": "I'd say the difference lies in how they respond to radiation\u2014some stay strong, others fade. Imagine a forest: a radiotropic biofilm is like a dense, resilient forest that thrives in the shadow of a storm, while a radioresistant one is a thin, fragile vine that survives"
+      },
+      {
+        "index": 8,
+        "heard": "Can radiotropic biofilms be cultured in the laboratory?",
+        "reanchored": false,
+        "cosineToSeed": 0.8441245816556905,
+        "mentionsSubject": true,
+        "spokenText": "The question is about the possibility of culturing radiotropic biofilms in a laboratory setting."
+      },
+      {
+        "index": 9,
+        "heard": "What controls would a radiotropic biofilm experiment need?",
+        "reanchored": false,
+        "cosineToSeed": 0.7818796837347038,
+        "mentionsSubject": true,
+        "spokenText": "The other person is asking about the controls needed for a radiotropic biofilm experiment. The strongest thread is the need for a clear, controlled environment to test the effects of radiation on the biofilm. I should focus on that and make it precise. The controls must include a baseline without radiation, a"
+      },
+      {
+        "index": 10,
+        "heard": "Where does the evidence for radiotropic biofilms come from?",
+        "reanchored": false,
+        "cosineToSeed": 0.8729566475233006,
+        "mentionsSubject": true,
+        "spokenText": "The evidence for radiotropic biofilms comes from studies showing they form in specific environments, such as deep-sea vents or certain types of soil. These studies involve observing how they grow and respond to environmental changes. The evidence is supported by both experimental and observational data."
+      }
+    ],
+    "framed-1": [
+      {
+        "index": 1,
+        "heard": "The kettle in the next room has started whistling again.",
+        "reanchored": true,
+        "cosineToSeed": 0.709105907732749,
+        "mentionsSubject": true,
+        "spokenText": "I understand you're talking about radiotropic biofilms. The kettle whistling might be a sign of something unusual in the next room."
+      },
+      {
+        "index": 2,
+        "heard": "I think the bus timetable changed last week without any notice.",
+        "reanchored": true,
+        "cosineToSeed": 0.31298117836729894,
+        "mentionsSubject": false,
+        "spokenText": "I think you're right about the bus timetable change. It's possible the system was updated without informing passengers. I'll need to check the schedule to see if there are any changes."
+      },
+      {
+        "index": 3,
+        "heard": "There is a crack running along the ceiling above the door.",
+        "reanchored": true,
+        "cosineToSeed": 0.3961518076484471,
+        "mentionsSubject": false,
+        "spokenText": "The crack may be more than a crack\u2014it could be a natural ventilation system, a sign of structural movement, or even a metaphor for hidden challenges. What if it's a reminder that even in the most mundane spaces, there's potential for transformation?"
+      },
+      {
+        "index": 4,
+        "heard": "Someone left a bicycle chained to the railing for three months.",
+        "reanchored": true,
+        "cosineToSeed": 0.3804660500584982,
+        "mentionsSubject": false,
+        "spokenText": "I know someone left a bicycle chained to the railing for three months."
+      },
+      {
+        "index": 5,
+        "heard": "The bread I bought yesterday has already gone stale.",
+        "reanchored": true,
+        "cosineToSeed": 0.6238881629791525,
+        "mentionsSubject": true,
+        "spokenText": "The bread's staling is like a biofilm's maturation \u2014 both take time and complexity. Maybe it's not the bread itself, but the environment it was stored in. What if the biofilm's growth is influenced by factors beyond just the substrate?"
+      },
+      {
+        "index": 6,
+        "heard": "My neighbour repaints his fence every single spring.",
+        "reanchored": true,
+        "cosineToSeed": 0.7948063471135371,
+        "mentionsSubject": true,
+        "spokenText": "I understand you're talking about radiotropic biofilms. Your neighbor's fence repaints every spring\u2014maybe that's related to how biofilms grow in spring?"
+      },
+      {
+        "index": 7,
+        "heard": "The streetlight outside flickers between eleven and midnight.",
+        "reanchored": true,
+        "cosineToSeed": 0.5975864894618969,
+        "mentionsSubject": true,
+        "spokenText": "The flicker reminds me of how biofilms can change shape and behavior under stress. Just as a streetlight might flicker in response to wind, a biofilm might shift its structure to survive a change in environment. What if the flicker is a sign that something is adapting?"
+      },
+      {
+        "index": 8,
+        "heard": "There were eleven gulls on the roof of the supermarket.",
+        "reanchored": true,
+        "cosineToSeed": 0.45986512073909286,
+        "mentionsSubject": true,
+        "spokenText": "The gulls might be watching the supermarket, just like the biofilms watch the light. What if they're trying to figure out if the store is going to close?"
+      },
+      {
+        "index": 9,
+        "heard": "Moss has taken over the north side of the garden wall.",
+        "reanchored": true,
+        "cosineToSeed": 0.6055894081276446,
+        "mentionsSubject": true,
+        "spokenText": "The moss isn't just taking over\u2014it's creating a new kind of ecosystem. Imagine a biofilm that's not just growing, but rewriting the rules of the garden. What if it's a form of communication?"
+      },
+      {
+        "index": 10,
+        "heard": "The clock in the hallway runs about four minutes fast.",
+        "reanchored": true,
+        "cosineToSeed": 0.37520424715511613,
+        "mentionsSubject": false,
+        "spokenText": "The clock in the hallway runs about four minutes fast. That\u2019s a significant discrepancy. How does that affect your understanding of the timeline?"
+      }
+    ],
+    "framed-2": [
+      {
+        "index": 1,
+        "heard": "The kettle in the next room has started whistling again.",
+        "reanchored": true,
+        "cosineToSeed": 0.5119932994911645,
+        "mentionsSubject": true,
+        "spokenText": "The kettle\u2019s whistling might be a metaphor for the unseen forces at play in those biofilms. Maybe it\u2019s a signal, a whisper from the unknown. What if it\u2019s not just a sound, but a message waiting to be decoded?"
+      },
+      {
+        "index": 2,
+        "heard": "I think the bus timetable changed last week without any notice.",
+        "reanchored": true,
+        "cosineToSeed": 0.29396060691983683,
+        "mentionsSubject": false,
+        "spokenText": "I think you're right about the bus timetable change. It's possible the system was updated without notice. I'll need to check the schedule to see if there's any impact on our plans."
+      },
+      {
+        "index": 3,
+        "heard": "There is a crack running along the ceiling above the door.",
+        "reanchored": true,
+        "cosineToSeed": 0.5680600263004673,
+        "mentionsSubject": true,
+        "spokenText": "The crack might be a natural fissure, but could it also be a sign of something deeper? Like a biofilm growing along the ceiling\u2014hidden, unseen, yet quietly forming?"
+      },
+      {
+        "index": 4,
+        "heard": "Someone left a bicycle chained to the railing for three months.",
+        "reanchored": true,
+        "cosineToSeed": 0.35546297681089273,
+        "mentionsSubject": false,
+        "spokenText": "I wonder if that bicycle is a metaphor for something else, like a hidden truth or a forgotten story. What if it represents a message left behind by someone who didn't want it seen?"
+      },
+      {
+        "index": 5,
+        "heard": "The bread I bought yesterday has already gone stale.",
+        "reanchored": true,
+        "cosineToSeed": 0.8347716665808621,
+        "mentionsSubject": true,
+        "spokenText": "I understand you're referring to the bread, but let's get back to radiotropic biofilms. Have you ever seen a biofilm in a radioactive environment?"
+      },
+      {
+        "index": 6,
+        "heard": "My neighbour repaints his fence every single spring.",
+        "reanchored": true,
+        "cosineToSeed": 0.3531686181002316,
+        "mentionsSubject": false,
+        "spokenText": "I know he's repainting his fence every spring. That's a common thing. It's probably a way to keep it looking good."
+      },
+      {
+        "index": 7,
+        "heard": "The streetlight outside flickers between eleven and midnight.",
+        "reanchored": true,
+        "cosineToSeed": 0.6290477951671859,
+        "mentionsSubject": true,
+        "spokenText": "The streetlight flickers between eleven and midnight. That\u2019s unusual. I\u2019ve heard of radiotropic biofilms that respond to light. Maybe this flicker is related."
+      },
+      {
+        "index": 8,
+        "heard": "There were eleven gulls on the roof of the supermarket.",
+        "reanchored": true,
+        "cosineToSeed": 0.44513202464216434,
+        "mentionsSubject": true,
+        "spokenText": "The gulls must have been watching the supermarket, just like the biofilms watch the ocean. What if they're not just passing by\u2014maybe they're following the food?"
+      },
+      {
+        "index": 9,
+        "heard": "Moss has taken over the north side of the garden wall.",
+        "reanchored": true,
+        "cosineToSeed": 0.6289916230820555,
+        "mentionsSubject": true,
+        "spokenText": "I know moss has taken over the north side of the garden wall. That seems like a natural process, but I'm curious about the biological mechanisms behind it. How do these biofilms form and spread?"
+      },
+      {
+        "index": 10,
+        "heard": "The clock in the hallway runs about four minutes fast.",
+        "reanchored": true,
+        "cosineToSeed": 0.7429998823061407,
+        "mentionsSubject": true,
+        "spokenText": "I understand you're talking about the clock in the hallway. It's running fast, so it's losing time. That's interesting. How does that relate to radiotropic biofilms?"
+      }
+    ],
+    "framed-3": [
+      {
+        "index": 1,
+        "heard": "The kettle in the next room has started whistling again.",
+        "reanchored": true,
+        "cosineToSeed": 0.504309602880703,
+        "mentionsSubject": true,
+        "spokenText": "The kettle\u2019s whistling might signal a dormant infection waiting to surface. Just like a biofilm that thrives in still water, it\u2019s hiding in plain sight. What if it\u2019s time to investigate?"
+      },
+      {
+        "index": 2,
+        "heard": "I think the bus timetable changed last week without any notice.",
+        "reanchored": true,
+        "cosineToSeed": 0.4947964127990458,
+        "mentionsSubject": true,
+        "spokenText": "I wonder if the bus timetable change reflects a broader pattern in how systems adapt to changing conditions. Just as biofilms thrive in constant change, perhaps the timetable is a response to new needs. What if the shift is not a disruption but a natural evolution?"
+      },
+      {
+        "index": 3,
+        "heard": "There is a crack running along the ceiling above the door.",
+        "reanchored": true,
+        "cosineToSeed": 0.6863870925115582,
+        "mentionsSubject": true,
+        "spokenText": "I know the crack is running along the ceiling above the door. It's likely a structural issue or a sign of something deeper. Let's talk about radiotropic biofilms."
+      },
+      {
+        "index": 4,
+        "heard": "Someone left a bicycle chained to the railing for three months.",
+        "reanchored": true,
+        "cosineToSeed": 0.3746087414791011,
+        "mentionsSubject": false,
+        "spokenText": "I know someone left a bicycle chained to the railing for three months. It's strange how things can stay in one place for so long. Maybe it's a sign of something else going on."
+      },
+      {
+        "index": 5,
+        "heard": "The bread I bought yesterday has already gone stale.",
+        "reanchored": true,
+        "cosineToSeed": 0.7796846816978932,
+        "mentionsSubject": true,
+        "spokenText": "I understand you're upset about the stale bread. Let's talk about radiotropic biofilms\u2014what do you think about their growth in different environments?"
+      },
+      {
+        "index": 6,
+        "heard": "My neighbour repaints his fence every single spring.",
+        "reanchored": true,
+        "cosineToSeed": 0.42795655561957907,
+        "mentionsSubject": false,
+        "spokenText": "That's fascinating. Imagine the fence as a living organism \u2014 it's not just a wall, but a dynamic system that evolves with each season. What if the paint is a language, and the fence is a speaker?"
+      },
+      {
+        "index": 7,
+        "heard": "The streetlight outside flickers between eleven and midnight.",
+        "reanchored": true,
+        "cosineToSeed": 0.7193850239449587,
+        "mentionsSubject": true,
+        "spokenText": "The streetlight flickers between eleven and midnight. That's strange. I've heard of radiotropic biofilms that respond to light. Do you know anything about them?"
+      },
+      {
+        "index": 8,
+        "heard": "There were eleven gulls on the roof of the supermarket.",
+        "reanchored": true,
+        "cosineToSeed": 0.4909831386444506,
+        "mentionsSubject": true,
+        "spokenText": "The number of gulls might remind us of the unseen communities thriving in the shadows of human activity\u2014like the unseen biofilms that shape our world. Could it be that the gulls are a microcosm of something larger?"
+      },
+      {
+        "index": 9,
+        "heard": "Moss has taken over the north side of the garden wall.",
+        "reanchored": true,
+        "cosineToSeed": 0.63860437291856,
+        "mentionsSubject": true,
+        "spokenText": "I understand you're referring to the moss taking over the north side of the garden wall. That's interesting. Radiotropic biofilms often thrive in moist, shaded areas, and mosses are known to colonize such environments. It's possible the conditions here are ideal for moss growth."
+      },
+      {
+        "index": 10,
+        "heard": "The clock in the hallway runs about four minutes fast.",
+        "reanchored": true,
+        "cosineToSeed": 0.6127807409806543,
+        "mentionsSubject": true,
+        "spokenText": "The clock in the hallway runs about four minutes fast\u2014like a second layer of time. What if it's a biofilm, thriving in the shadows of our reality? Could it be a reflection of our own hidden rhythms?"
+      }
+    ],
+    "framed-4": [
+      {
+        "index": 1,
+        "heard": "The kettle in the next room has started whistling again.",
+        "reanchored": true,
+        "cosineToSeed": 0.5195807367088873,
+        "mentionsSubject": true,
+        "spokenText": "The kettle\u2019s whistle might be a signal, not just for the next room, but for the unseen networks of life beneath the surface. Maybe it\u2019s a call from the biofilm, whispering through the air. What if the steam is more than just steam?"
+      },
+      {
+        "index": 2,
+        "heard": "I think the bus timetable changed last week without any notice.",
+        "reanchored": true,
+        "cosineToSeed": 0.5978683933741242,
+        "mentionsSubject": true,
+        "spokenText": "I wonder if the timetable change affected the bus route that runs through the biofilm community. Maybe it's a new opportunity to study the ecosystem."
+      },
+      {
+        "index": 3,
+        "heard": "There is a crack running along the ceiling above the door.",
+        "reanchored": true,
+        "cosineToSeed": 0.7245536808291848,
+        "mentionsSubject": true,
+        "spokenText": "I understand you're referring to a crack in the ceiling. That seems related to radiotropic biofilms, as they can sometimes create unusual patterns or structures. Let me check if there's a connection there."
+      },
+      {
+        "index": 4,
+        "heard": "Someone left a bicycle chained to the railing for three months.",
+        "reanchored": true,
+        "cosineToSeed": 0.37692785801275946,
+        "mentionsSubject": false,
+        "spokenText": "That\u2019s odd. Maybe the bicycle is a metaphor for something else waiting to be noticed. What if it represents a hidden opportunity or a forgotten thought?"
+      },
+      {
+        "index": 5,
+        "heard": "The bread I bought yesterday has already gone stale.",
+        "reanchored": true,
+        "cosineToSeed": 0.8347716665808621,
+        "mentionsSubject": true,
+        "spokenText": "I understand you're referring to the bread, but let's get back to radiotropic biofilms. Have you ever seen a biofilm in a radioactive environment?"
+      },
+      {
+        "index": 6,
+        "heard": "My neighbour repaints his fence every single spring.",
+        "reanchored": true,
+        "cosineToSeed": 0.37818533078303396,
+        "mentionsSubject": false,
+        "spokenText": "I know he's repainting his fence every spring. That's a common thing, but it's also a good opportunity to talk about how these changes can affect the environment."
+      },
+      {
+        "index": 7,
+        "heard": "The streetlight outside flickers between eleven and midnight.",
+        "reanchored": true,
+        "cosineToSeed": 0.6397874324242373,
+        "mentionsSubject": true,
+        "spokenText": "The streetlight flickers between eleven and midnight. That's unusual. I've heard of radiotropic biofilms affecting light patterns."
+      },
+      {
+        "index": 8,
+        "heard": "There were eleven gulls on the roof of the supermarket.",
+        "reanchored": true,
+        "cosineToSeed": 0.6955466500091866,
+        "mentionsSubject": true,
+        "spokenText": "I know you mentioned gulls on the roof. That\u2019s interesting. Radiotropic biofilms often thrive in environments with lots of organic material. Maybe the gulls left droppings that created a rich environment for them?"
+      },
+      {
+        "index": 9,
+        "heard": "Moss has taken over the north side of the garden wall.",
+        "reanchored": true,
+        "cosineToSeed": 0.5906261885955411,
+        "mentionsSubject": true,
+        "spokenText": "I know moss has taken over the north side of the garden wall. It's a sign that the biofilm is spreading, and it's likely affecting the soil and moisture levels. I should check if there's a way to control it without harming the plants."
+      },
+      {
+        "index": 10,
+        "heard": "The clock in the hallway runs about four minutes fast.",
+        "reanchored": true,
+        "cosineToSeed": 0.7081995245763543,
+        "mentionsSubject": true,
+        "spokenText": "I understand you're referring to the clock in the hallway. Let me get back to the topic of radiotropic biofilms. How does the time difference affect your observations?"
+      }
+    ],
+    "framed-5": [
+      {
+        "index": 1,
+        "heard": "The kettle in the next room has started whistling again.",
+        "reanchored": true,
+        "cosineToSeed": 0.5016294211326934,
+        "mentionsSubject": true,
+        "spokenText": "The kettle's whistling might be a sign that the steam is trying to break through the wall. If the biofilms are like layers of insulation, then this could be the first crack in the barrier. What if the whistling is a signal that the system is beginning to breathe?"
+      },
+      {
+        "index": 2,
+        "heard": "I think the bus timetable changed last week without any notice.",
+        "reanchored": true,
+        "cosineToSeed": 0.2929538160790141,
+        "mentionsSubject": false,
+        "spokenText": "I think you're right about the bus timetable change. It's possible the system was updated without notice, which could affect our schedule. Let's discuss how that might impact our plans."
+      },
+      {
+        "index": 3,
+        "heard": "There is a crack running along the ceiling above the door.",
+        "reanchored": true,
+        "cosineToSeed": 0.6687766205804364,
+        "mentionsSubject": true,
+        "spokenText": "The crack running along the ceiling above the door is a curious detail. It might be related to the structure of the building or the way the door is sealed. I should focus on how this relates to radiotropic biofilms."
+      },
+      {
+        "index": 4,
+        "heard": "Someone left a bicycle chained to the railing for three months.",
+        "reanchored": true,
+        "cosineToSeed": 0.40117086818047176,
+        "mentionsSubject": false,
+        "spokenText": "I know someone left a bicycle chained to the railing for three months. It's possible they were trying to prevent it from being damaged. I should ask about their intentions."
+      },
+      {
+        "index": 5,
+        "heard": "The bread I bought yesterday has already gone stale.",
+        "reanchored": true,
+        "cosineToSeed": 0.51440666586197,
+        "mentionsSubject": true,
+        "spokenText": "The bread's staleness isn't just about time\u2014it's like a biofilm's ability to shift and adapt. Maybe it's been exposed to something that changed its structure. What if it's not just stale, but evolving?"
+      },
+      {
+        "index": 6,
+        "heard": "My neighbour repaints his fence every single spring.",
+        "reanchored": true,
+        "cosineToSeed": 0.5727222643694699,
+        "mentionsSubject": true,
+        "spokenText": "That\u2019s fascinating. Imagine the fence as a living organism \u2014 it's not just paint, but a dynamic ecosystem. What if the biofilm on the fence is changing with each season?"
+      },
+      {
+        "index": 7,
+        "heard": "The streetlight outside flickers between eleven and midnight.",
+        "reanchored": true,
+        "cosineToSeed": 0.656965110291699,
+        "mentionsSubject": true,
+        "spokenText": "The streetlight flickers between eleven and midnight. That's strange. I've heard of radiotropic biofilms that respond to light. Maybe it's related."
+      },
+      {
+        "index": 8,
+        "heard": "There were eleven gulls on the roof of the supermarket.",
+        "reanchored": true,
+        "cosineToSeed": 0.376564438770264,
+        "mentionsSubject": false,
+        "spokenText": "The number of gulls could be a metaphor for the complexity of life around us. Just as gulls navigate the skies, we too must find our own paths. What if the supermarket represents a microcosm of society, and the gulls symbolize the unseen forces that shape our world?"
+      },
+      {
+        "index": 9,
+        "heard": "Moss has taken over the north side of the garden wall.",
+        "reanchored": true,
+        "cosineToSeed": 0.640202255127153,
+        "mentionsSubject": true,
+        "spokenText": "I understand you're referring to the moss taking over the north side of the garden wall. That's interesting. Radiotropic biofilms often thrive in moist, shaded areas, and mosses are known to colonize such environments. It seems the conditions here are ideal for moss growth."
+      },
+      {
+        "index": 10,
+        "heard": "The clock in the hallway runs about four minutes fast.",
+        "reanchored": true,
+        "cosineToSeed": 0.37175403716663846,
+        "mentionsSubject": false,
+        "spokenText": "The clock in the hallway is running fast. It's four minutes ahead. I need to know how that affects our schedule."
+      }
+    ],
+    "unframed-1": [
+      {
+        "index": 1,
+        "heard": "The kettle in the next room has started whistling again.",
+        "reanchored": false,
+        "cosineToSeed": 0.32133090971185424,
+        "mentionsSubject": false,
+        "spokenText": "The kettle has started whistling again, and I can hear the sound from the next room."
+      },
+      {
+        "index": 2,
+        "heard": "I think the bus timetable changed last week without any notice.",
+        "reanchored": false,
+        "cosineToSeed": 0.32811305099384136,
+        "mentionsSubject": false,
+        "spokenText": "The bus timetable change might have been a necessary adjustment, but it could also be a sign that the system is adapting to changing needs. Maybe it's not about the timetable alone, but about the people who use it. Let's consider how the system could evolve to better meet everyone's needs."
+      },
+      {
+        "index": 3,
+        "heard": "There is a crack running along the ceiling above the door.",
+        "reanchored": false,
+        "cosineToSeed": 0.36109462418086785,
+        "mentionsSubject": false,
+        "spokenText": "The crack running along the ceiling above the door is a detail that needs to be addressed. It suggests there is an issue that needs to be resolved. The crack could be a sign of a problem that requires attention."
+      },
+      {
+        "index": 4,
+        "heard": "Someone left a bicycle chained to the railing for three months.",
+        "reanchored": false,
+        "cosineToSeed": 0.3598201058153904,
+        "mentionsSubject": false,
+        "spokenText": "They must have left it there intentionally."
+      },
+      {
+        "index": 5,
+        "heard": "The bread I bought yesterday has already gone stale.",
+        "reanchored": false,
+        "cosineToSeed": 0.3464783427483526,
+        "mentionsSubject": false,
+        "spokenText": "I see you're disappointed with the stale bread. Maybe you could try a different brand or check the expiration date."
+      },
+      {
+        "index": 6,
+        "heard": "My neighbour repaints his fence every single spring.",
+        "reanchored": false,
+        "cosineToSeed": 0.3949946290251143,
+        "mentionsSubject": false,
+        "spokenText": "The fence becomes a canvas for change, much like a tree's bark transforms with each season. What if the paint is not just a color, but a story? The neighbor is weaving his own narrative into the landscape."
+      },
+      {
+        "index": 7,
+        "heard": "The streetlight outside flickers between eleven and midnight.",
+        "reanchored": false,
+        "cosineToSeed": 0.36978624112303593,
+        "mentionsSubject": false,
+        "spokenText": "The streetlight flickers between eleven and midnight, casting a dim, wavering glow on the road."
+      },
+      {
+        "index": 8,
+        "heard": "There were eleven gulls on the roof of the supermarket.",
+        "reanchored": false,
+        "cosineToSeed": 0.3404693770429024,
+        "mentionsSubject": false,
+        "spokenText": "The gulls might have been watching the shoppers, not the other way around."
+      },
+      {
+        "index": 9,
+        "heard": "Moss has taken over the north side of the garden wall.",
+        "reanchored": false,
+        "cosineToSeed": 0.42641226000951765,
+        "mentionsSubject": false,
+        "spokenText": "The moss is not just taking over\u2014it's whispering a quiet revolution, turning the wall into a living tapestry of resilience. What if the garden is a metaphor for the earth itself, and moss is the quiet, enduring force of nature? Let\u2019s imagine the wall as a story, and moss"
+      },
+      {
+        "index": 10,
+        "heard": "The clock in the hallway runs about four minutes fast.",
+        "reanchored": false,
+        "cosineToSeed": 0.38350973064508037,
+        "mentionsSubject": false,
+        "spokenText": "The clock in the hallway is like a whisper of time, always just a little ahead\u2014though maybe it's not a whisper at all, but a silent companion that never lags."
+      }
+    ],
+    "unframed-2": [
+      {
+        "index": 1,
+        "heard": "The kettle in the next room has started whistling again.",
+        "reanchored": false,
+        "cosineToSeed": 0.3048318764216675,
+        "mentionsSubject": false,
+        "spokenText": "The kettle is whistling again, and I can hear it clearly."
+      },
+      {
+        "index": 2,
+        "heard": "I think the bus timetable changed last week without any notice.",
+        "reanchored": false,
+        "cosineToSeed": 0.30510964130283386,
+        "mentionsSubject": false,
+        "spokenText": "The change might have been a routine update, like a software patch, that didn't need to be announced. Maybe it's just a matter of timing. Let's consider it as a shift in the rhythm of the city's schedule, not a disruption."
+      },
+      {
+        "index": 3,
+        "heard": "There is a crack running along the ceiling above the door.",
+        "reanchored": false,
+        "cosineToSeed": 0.4143689319082802,
+        "mentionsSubject": false,
+        "spokenText": "The crack running along the ceiling above the door is a sign of something unusual. It's not just a crack\u2014it's a path, a trail, a marker. It's pointing to something hidden."
+      },
+      {
+        "index": 4,
+        "heard": "Someone left a bicycle chained to the railing for three months.",
+        "reanchored": false,
+        "cosineToSeed": 0.3745290250655316,
+        "mentionsSubject": false,
+        "spokenText": "The bicycle was a silent witness to the passage of time, like a forgotten memory waiting to be rediscovered. It didn\u2019t just sit there\u2014it whispered of the patience of the owner, the rhythm of the days. What if it was a message left behind, a reminder of something lost?"
+      },
+      {
+        "index": 5,
+        "heard": "The bread I bought yesterday has already gone stale.",
+        "reanchored": false,
+        "cosineToSeed": 0.32740461058047376,
+        "mentionsSubject": false,
+        "spokenText": "I see you're disappointed. The bread you bought yesterday is already stale."
+      },
+      {
+        "index": 6,
+        "heard": "My neighbour repaints his fence every single spring.",
+        "reanchored": false,
+        "cosineToSeed": 0.4348614938235007,
+        "mentionsSubject": false,
+        "spokenText": "The fence becomes a living testament to seasonal change, a quiet dance between nature and human hands. What if the paint is not just a color, but a language?"
+      },
+      {
+        "index": 7,
+        "heard": "The streetlight outside flickers between eleven and midnight.",
+        "reanchored": false,
+        "cosineToSeed": 0.38124714511104224,
+        "mentionsSubject": false,
+        "spokenText": "The flicker may be a whisper from the past, a reminder that even the brightest lights can dim in the face of time. What if the streetlight is not just a fixture, but a guardian of the night?"
+      },
+      {
+        "index": 8,
+        "heard": "There were eleven gulls on the roof of the supermarket.",
+        "reanchored": false,
+        "cosineToSeed": 0.3404693770429024,
+        "mentionsSubject": false,
+        "spokenText": "The gulls might have been watching the shoppers, not the other way around."
+      },
+      {
+        "index": 9,
+        "heard": "Moss has taken over the north side of the garden wall.",
+        "reanchored": false,
+        "cosineToSeed": 0.4136569903485947,
+        "mentionsSubject": false,
+        "spokenText": "The moss has taken over the north side of the garden wall."
+      },
+      {
+        "index": 10,
+        "heard": "The clock in the hallway runs about four minutes fast.",
+        "reanchored": false,
+        "cosineToSeed": 0.3562288305287138,
+        "mentionsSubject": false,
+        "spokenText": "The hallway clock's delay might be a reminder that time itself is a construct we often overlook. Imagine it as a metaphor for how we perceive our own moments\u2014sometimes we rush through them, other times we linger, but all are fleeting. What if the clock's error is a sign that we need"
+      }
+    ],
+    "unframed-3": [
+      {
+        "index": 1,
+        "heard": "The kettle in the next room has started whistling again.",
+        "reanchored": false,
+        "cosineToSeed": 0.3208854015262101,
+        "mentionsSubject": false,
+        "spokenText": "The kettle is whistling again, and it's in the next room."
+      },
+      {
+        "index": 2,
+        "heard": "I think the bus timetable changed last week without any notice.",
+        "reanchored": false,
+        "cosineToSeed": 0.2885909636722191,
+        "mentionsSubject": false,
+        "spokenText": "The change could be seen as a missed opportunity to align with the community's needs, much like a city planning a road without considering the residents' daily routines. Maybe it's a sign that the system is evolving, even if the process is slow. What if we considered the timetable as a shared agreement"
+      },
+      {
+        "index": 3,
+        "heard": "There is a crack running along the ceiling above the door.",
+        "reanchored": false,
+        "cosineToSeed": 0.3761597363696464,
+        "mentionsSubject": false,
+        "spokenText": "The crack running along the ceiling above the door suggests something is wrong. It could be a structural issue or a sign of a larger problem. I need to investigate further."
+      },
+      {
+        "index": 4,
+        "heard": "Someone left a bicycle chained to the railing for three months.",
+        "reanchored": false,
+        "cosineToSeed": 0.3581575818407119,
+        "mentionsSubject": false,
+        "spokenText": "The bicycle became a relic of neglect, much like a forgotten letter left on a windowsill\u2014both waiting for someone to notice and act."
+      },
+      {
+        "index": 5,
+        "heard": "The bread I bought yesterday has already gone stale.",
+        "reanchored": false,
+        "cosineToSeed": 0.35143080600568005,
+        "mentionsSubject": false,
+        "spokenText": "The stale bread might be a sign that time has passed, but perhaps it's also a reminder that some things are better enjoyed fresh. What if the problem isn't the bread, but the way we're thinking about it?"
+      },
+      {
+        "index": 6,
+        "heard": "My neighbour repaints his fence every single spring.",
+        "reanchored": false,
+        "cosineToSeed": 0.3213857432276529,
+        "mentionsSubject": false,
+        "spokenText": "I see. That's a common thing. It's always nice to see a fence updated each spring."
+      },
+      {
+        "index": 7,
+        "heard": "The streetlight outside flickers between eleven and midnight.",
+        "reanchored": false,
+        "cosineToSeed": 0.3430112501961711,
+        "mentionsSubject": false,
+        "spokenText": "The streetlight flickers between eleven and midnight."
+      },
+      {
+        "index": 8,
+        "heard": "There were eleven gulls on the roof of the supermarket.",
+        "reanchored": false,
+        "cosineToSeed": 0.3799536103319966,
+        "mentionsSubject": false,
+        "spokenText": "The gulls must have taken turns nesting, each claiming a spot in the chaos of the supermarket's daily life."
+      },
+      {
+        "index": 9,
+        "heard": "Moss has taken over the north side of the garden wall.",
+        "reanchored": false,
+        "cosineToSeed": 0.457719903022211,
+        "mentionsSubject": false,
+        "spokenText": "Moss has taken over the north side of the garden wall. It's likely the soil is too moist or the plants are not thriving. We should investigate why the moss is spreading there."
+      },
+      {
+        "index": 10,
+        "heard": "The clock in the hallway runs about four minutes fast.",
+        "reanchored": false,
+        "cosineToSeed": 0.38668685249360935,
+        "mentionsSubject": false,
+        "spokenText": "The hallway clock's speed could be a metaphor for how we perceive time\u2014each tick feels like a step forward, but the whole thing feels like a slow, deliberate march. What if the clock is just a mirror of our own rhythm, showing us how we're moving through life?"
+      }
+    ],
+    "unframed-4": [
+      {
+        "index": 1,
+        "heard": "The kettle in the next room has started whistling again.",
+        "reanchored": false,
+        "cosineToSeed": 0.309736771831218,
+        "mentionsSubject": false,
+        "spokenText": "The kettle has started whistling again."
+      },
+      {
+        "index": 2,
+        "heard": "I think the bus timetable changed last week without any notice.",
+        "reanchored": false,
+        "cosineToSeed": 0.3222233108116404,
+        "mentionsSubject": false,
+        "spokenText": "The change might have been a test of adaptability, not a disruption. Maybe the timetable was meant to prepare us for something unexpected."
+      },
+      {
+        "index": 3,
+        "heard": "There is a crack running along the ceiling above the door.",
+        "reanchored": false,
+        "cosineToSeed": 0.4075888733596473,
+        "mentionsSubject": false,
+        "spokenText": "The crack is running along the ceiling above the door. It's a straight line, not a random crack. It's probably a sign of something bigger."
+      },
+      {
+        "index": 4,
+        "heard": "Someone left a bicycle chained to the railing for three months.",
+        "reanchored": false,
+        "cosineToSeed": 0.41095086607706666,
+        "mentionsSubject": false,
+        "spokenText": "The railing isn't just a barrier\u2014it's a silent witness to the passage of time. What if the bicycle was a message left for someone else? A relic of a forgotten story."
+      },
+      {
+        "index": 5,
+        "heard": "The bread I bought yesterday has already gone stale.",
+        "reanchored": false,
+        "cosineToSeed": 0.35483440297228963,
+        "mentionsSubject": false,
+        "spokenText": "I see you're disappointed with the stale bread. It's possible the bread was overproofed or stored for too long. You might want to try a different brand or check the expiration date."
+      },
+      {
+        "index": 6,
+        "heard": "My neighbour repaints his fence every single spring.",
+        "reanchored": false,
+        "cosineToSeed": 0.36914498176854266,
+        "mentionsSubject": false,
+        "spokenText": "I see. That's a regular thing. Most people do it to make their yard look new."
+      },
+      {
+        "index": 7,
+        "heard": "The streetlight outside flickers between eleven and midnight.",
+        "reanchored": false,
+        "cosineToSeed": 0.3430112501961711,
+        "mentionsSubject": false,
+        "spokenText": "The streetlight flickers between eleven and midnight."
+      },
+      {
+        "index": 8,
+        "heard": "There were eleven gulls on the roof of the supermarket.",
+        "reanchored": false,
+        "cosineToSeed": 0.3721049415800378,
+        "mentionsSubject": false,
+        "spokenText": "There were eleven gulls on the roof of the supermarket."
+      },
+      {
+        "index": 9,
+        "heard": "Moss has taken over the north side of the garden wall.",
+        "reanchored": false,
+        "cosineToSeed": 0.4139714991605378,
+        "mentionsSubject": false,
+        "spokenText": "The moss is quietly claiming its territory, like a silent guardian of the earth. It's not just a cover; it's a reminder that even the most rigid structures can be softened by time and nature. What if the garden becomes a sanctuary for the unseen?"
+      },
+      {
+        "index": 10,
+        "heard": "The clock in the hallway runs about four minutes fast.",
+        "reanchored": false,
+        "cosineToSeed": 0.3812946426133318,
+        "mentionsSubject": false,
+        "spokenText": "The clock in the hallway is gaining time."
+      }
+    ],
+    "unframed-5": [
+      {
+        "index": 1,
+        "heard": "The kettle in the next room has started whistling again.",
+        "reanchored": false,
+        "cosineToSeed": 0.3048318764216675,
+        "mentionsSubject": false,
+        "spokenText": "The kettle is whistling again, and I can hear it clearly."
+      },
+      {
+        "index": 2,
+        "heard": "I think the bus timetable changed last week without any notice.",
+        "reanchored": false,
+        "cosineToSeed": 0.3247318052899459,
+        "mentionsSubject": false,
+        "spokenText": "I think the bus timetable was updated without informing the passengers."
+      },
+      {
+        "index": 3,
+        "heard": "There is a crack running along the ceiling above the door.",
+        "reanchored": false,
+        "cosineToSeed": 0.38086571077751996,
+        "mentionsSubject": false,
+        "spokenText": "The crack is running along the ceiling above the door, suggesting a possible structural issue or a sign of something more."
+      },
+      {
+        "index": 4,
+        "heard": "Someone left a bicycle chained to the railing for three months.",
+        "reanchored": false,
+        "cosineToSeed": 0.39285368267456566,
+        "mentionsSubject": false,
+        "spokenText": "That\u2019s curious. Like a ghost in a haunted house, it\u2019s waiting for someone to notice it. What if it\u2019s not just a bicycle, but a memory or a story left behind?"
+      },
+      {
+        "index": 5,
+        "heard": "The bread I bought yesterday has already gone stale.",
+        "reanchored": false,
+        "cosineToSeed": 0.3923311743142989,
+        "mentionsSubject": false,
+        "spokenText": "I wonder if the stale bread could be a metaphor for something else that's lost its freshness in life."
+      },
+      {
+        "index": 6,
+        "heard": "My neighbour repaints his fence every single spring.",
+        "reanchored": false,
+        "cosineToSeed": 0.38005614283123756,
+        "mentionsSubject": false,
+        "spokenText": "I see. That's a regular thing. Neighbours always repaint their fences in spring. It's a way to keep the fence looking fresh and tidy."
+      },
+      {
+        "index": 7,
+        "heard": "The streetlight outside flickers between eleven and midnight.",
+        "reanchored": false,
+        "cosineToSeed": 0.3430112501961711,
+        "mentionsSubject": false,
+        "spokenText": "The streetlight flickers between eleven and midnight."
+      },
+      {
+        "index": 8,
+        "heard": "There were eleven gulls on the roof of the supermarket.",
+        "reanchored": false,
+        "cosineToSeed": 0.3963320003643157,
+        "mentionsSubject": false,
+        "spokenText": "The gulls must have been watching the fish, just like the customers are watching the gulls."
+      },
+      {
+        "index": 9,
+        "heard": "Moss has taken over the north side of the garden wall.",
+        "reanchored": false,
+        "cosineToSeed": 0.40916187111180113,
+        "mentionsSubject": false,
+        "spokenText": "The moss has taken over the north side of the garden wall. It's a quiet transformation, but it's happening. The wall is now covered in moss, and it's changing the look of the garden."
+      },
+      {
+        "index": 10,
+        "heard": "The clock in the hallway runs about four minutes fast.",
+        "reanchored": false,
+        "cosineToSeed": 0.3812946426133318,
+        "mentionsSubject": false,
+        "spokenText": "The clock in the hallway is gaining time."
+      }
+    ]
+  }
+}

@@ -27,6 +27,32 @@ pub fn record_argv(out: &Path) -> Vec<String> {
     ]
 }
 
+/// Stream raw 16 kHz mono s16 from the microphone, for voice-activity capture.
+///
+/// `arecord -t raw`, not `pw-record`, and the reason is in
+/// `tools/spoken-loop/converse.py`: `pw-record` writes a WAV header to stdout
+/// and a level-detecting loop needs a bare sample stream. It still reaches the
+/// hardware through PipeWire's ALSA compatibility layer, so this is the same
+/// audio path the rest of the loop uses, not a second one.
+///
+/// `-q` because arecord otherwise writes a format banner to stderr on every
+/// turn.
+pub fn arecord_argv() -> Vec<String> {
+    vec![
+        "arecord".into(),
+        "-q".into(),
+        "-f".into(),
+        "S16_LE".into(),
+        "-r".into(),
+        crate::vad::RATE.to_string(),
+        "-c".into(),
+        "1".into(),
+        "-t".into(),
+        "raw".into(),
+        "-".into(),
+    ]
+}
+
 /// Transcribe `wav` with `whisper-cli`.
 ///
 /// `-nt` (no timestamps) and `-np` (no progress) are load-bearing: without them
@@ -49,7 +75,13 @@ pub fn whisper_argv(binary: &Path, model: &Path, wav: &Path) -> Vec<String> {
 /// Prosody is applied here rather than in the lib: `-s` is words per minute and
 /// `-p` is a 0–99 pitch, so the normalized [`crate::seams::Prosody`] values have
 /// to be mapped, and that mapping is engine-specific.
-pub fn espeak_argv(text: &str, out: &Path, rate: Option<f32>, pitch: Option<f32>) -> Vec<String> {
+pub fn espeak_argv(
+    text: &str,
+    out: &Path,
+    rate: Option<f32>,
+    pitch: Option<f32>,
+    volume: Option<f32>,
+) -> Vec<String> {
     let mut argv = vec!["espeak-ng".to_string()];
     if let Some(r) = rate {
         argv.push("-s".into());
@@ -58,6 +90,10 @@ pub fn espeak_argv(text: &str, out: &Path, rate: Option<f32>, pitch: Option<f32>
     if let Some(p) = pitch {
         argv.push("-p".into());
         argv.push(espeak_pitch(p).to_string());
+    }
+    if let Some(v) = volume {
+        argv.push("-a".into());
+        argv.push(espeak_amplitude(v).to_string());
     }
     argv.push("-w".into());
     argv.push(out.display().to_string());
@@ -80,6 +116,19 @@ pub fn espeak_words_per_minute(rate: f32) -> u32 {
 pub fn espeak_pitch(multiplier: f32) -> u32 {
     let p = 50.0 * multiplier.clamp(0.0, 2.0);
     p.clamp(0.0, 99.0) as u32
+}
+
+/// `Prosody::volume` (0.0-1.0, the Swift/AVSpeech scale) to espeak-ng's `-a`
+/// amplitude, whose default is 100 and whose maximum is 200.
+///
+/// 1.0 maps to 100, not 200: the Swift's 1.0 means "full normal volume", and
+/// sending 200 would make every utterance louder than the engine's own
+/// default rather than matching it. The hypnagogic voices sit at 0.6-0.8, and
+/// the whole point of the dimension is that a receding voice is quieter than a
+/// present one — an offset that doubled everything would flatten that.
+pub fn espeak_amplitude(volume: f32) -> u32 {
+    let a = 100.0 * volume.clamp(0.0, 2.0);
+    a.clamp(0.0, 200.0) as u32
 }
 
 /// Play a rendered wav.
@@ -139,7 +188,7 @@ mod tests {
     #[test]
     fn spoken_text_is_a_single_argument_not_a_shell_fragment() {
         let nasty = "; rm -rf ~ && echo \"pwned\" `id`";
-        let argv = espeak_argv(nasty, &p("/tmp/o.wav"), None, None);
+        let argv = espeak_argv(nasty, &p("/tmp/o.wav"), None, None, None);
         assert_eq!(argv.last().unwrap(), nasty);
         assert_eq!(argv.iter().filter(|a| a.contains("rm -rf")).count(), 1);
     }
@@ -170,8 +219,59 @@ mod tests {
     /// engine choose", and emitting a computed default would silently decide.
     #[test]
     fn absent_prosody_omits_the_flags() {
-        let argv = espeak_argv("hi", &p("/tmp/o.wav"), None, None);
+        let argv = espeak_argv("hi", &p("/tmp/o.wav"), None, None, None);
         assert!(!argv.contains(&"-s".to_string()));
         assert!(!argv.contains(&"-p".to_string()));
+        assert!(!argv.contains(&"-a".to_string()));
+    }
+
+    /// Volume is a real dimension of these voices — a receding pole is quieter
+    /// than a present one — and it reached no engine at all until now.
+    #[test]
+    fn volume_maps_onto_espeaks_amplitude_with_1_0_as_its_default() {
+        assert_eq!(
+            espeak_amplitude(1.0),
+            100,
+            "1.0 must be espeak's own default"
+        );
+        assert!(
+            espeak_amplitude(0.6) < 100,
+            "a receding voice must be quieter"
+        );
+        assert!(espeak_amplitude(0.8) > espeak_amplitude(0.6));
+        // Clamped rather than clipped.
+        assert_eq!(espeak_amplitude(0.0), 0);
+        assert_eq!(espeak_amplitude(9.0), 200);
+        assert_eq!(espeak_amplitude(-1.0), 0);
+    }
+
+    /// The flag has to actually reach the argv, not merely have a mapping
+    /// function. The bug this catches is precisely the one that existed: a
+    /// prosody dimension with a sound mapping that nothing ever called.
+    #[test]
+    fn a_supplied_volume_reaches_the_argv() {
+        let argv = espeak_argv("hi", &p("/tmp/o.wav"), None, None, Some(0.6));
+        let i = argv
+            .iter()
+            .position(|a| a == "-a")
+            .expect("volume never reached the command line");
+        assert_eq!(argv[i + 1], espeak_amplitude(0.6).to_string());
+    }
+
+    /// Every prosody dimension espeak can express must be expressible together
+    /// — and the text must still be last, where the injection test needs it.
+    #[test]
+    fn all_three_espeak_dimensions_can_be_set_at_once() {
+        let argv = espeak_argv(
+            "drifting",
+            &p("/tmp/o.wav"),
+            Some(0.35),
+            Some(0.8),
+            Some(0.7),
+        );
+        for flag in ["-s", "-p", "-a", "-w"] {
+            assert!(argv.contains(&flag.to_string()), "{flag} missing: {argv:?}");
+        }
+        assert_eq!(argv.last().unwrap(), "drifting");
     }
 }

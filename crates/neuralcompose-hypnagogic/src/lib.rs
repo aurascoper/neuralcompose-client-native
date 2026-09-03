@@ -73,6 +73,56 @@
 //! loop — so this divergence cannot surface as a conformance failure that looks
 //! like a port error.
 //!
+//! ## Additions beyond the Swift
+//!
+//! Separate from the divergences above, and the separation matters: those three
+//! are the same defect class, all on error paths, and the sentence asserting
+//! that stays true only if these are not filed alongside them. These are new
+//! **behaviour** on the happy path, and the Swift has no counterpart to any of
+//! them.
+//!
+//! 1. **A session anchor and prompt re-framing.** [`dialectic::DialecticLoop`]
+//!    keeps the first utterance of a session and, when what is heard drifts past
+//!    `DialecticConfig::drift_ceiling`, shows the poles where the exchange
+//!    began. Every centroid in `dialectic` is computed over a *bounded* ring, so
+//!    all of them drift along with the conversation; a walk away from the
+//!    subject is invisible to each one. The transcript itself is never
+//!    rewritten — the seed goes in through
+//!    [`role::DialecticalRole::anchored_prompt`], appended after the shaper's
+//!    own text as instruction — so the drifted text survives in the log as the
+//!    evidence. The shapers stay verbatim from the Swift.
+//!
+//!    **Measured, because the first version of it did nothing.** Spliced into
+//!    `heard` it landed inside the shaper's quoted utterance and closed 3.2% of
+//!    the available gap; appended as instruction it closes 43.8% and puts the
+//!    subject into 35 of 50 drifted replies against 0 for the control. Both
+//!    rounds, the pre-registered criteria and the per-reply scores are in
+//!    `tools/reanchor-efficacy/`. This mechanism only steers the *replies*: the
+//!    ASR-driven drift that motivated it lives in `heard`, which nothing here
+//!    touches.
+//! 2. **A repetition floor.** A rate, not a streak, over
+//!    [`loops::similarity`], forcing a silent turn when the replies stop moving.
+//!    The obvious implementation was to promote `self_similarity`, which this
+//!    file's loop already computes and logs every turn; measured against 68
+//!    recorded turns it does not separate a stuck run from a coherent one, and
+//!    `tests/repetition_floor.rs` asserts that rejection rather than asserting
+//!    the floor. **The competition's own outcome is left intact** when the guard
+//!    fires: the record says the poles chose to speak and that the guard
+//!    overrode them, because a rewritten outcome would hide the override behind
+//!    an ordinary-looking silence.
+//! 3. **The Witness is also asked about coherence.** One clause added to
+//!    [`dialectic::WITNESS_SYSTEM`], which is otherwise a verbatim port of
+//!    `ClaudeCLIGenerator.witnessSystemPrompt`. It is a second opinion; the
+//!    embedding distance is the detector.
+//!
+//! Two smaller ones, recorded so they are not mistaken for port errors:
+//! `main.rs`'s `transcribe` drops whisper's non-speech tags (restoring
+//! `tools/spoken-loop/converse.py:404`, which the port had lost — the Swift has
+//! no equivalent because AVFoundation does not emit them), and
+//! [`dialectic::asks_for_clarification`] flags a voice that says it does not
+//! recognise the subject. **Nothing reads that flag yet**, and it says so at its
+//! definition; it is retrospective, and labelling it unread is the point.
+//!
 //! ## Conformance status
 //!
 //! [`dynamics`] is **verified against the Swift**, not merely self-consistent:
@@ -95,14 +145,19 @@
 //! Swift dialectic is the mechanism that keeps this honest; the harness is
 //! committed for exactly that reason.
 
+pub mod claude_cli;
 pub mod command;
 pub mod dialectic;
 pub mod dynamics;
 pub mod eeg;
+pub mod eligibility;
 pub mod embedding;
 pub mod http;
 pub mod loops;
 pub mod profile;
 pub mod role;
 pub mod seams;
+pub mod session;
 pub mod turn_log;
+pub mod vad;
+pub mod worldmodel;

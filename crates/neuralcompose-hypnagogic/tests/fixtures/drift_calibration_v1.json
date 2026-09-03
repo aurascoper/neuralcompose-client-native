@@ -1,0 +1,122 @@
+{
+  "schemaId": "neuralcompose.hypnagogic.drift-calibration.v1",
+  "source": {
+    "embedder": "bge-small-en-v1.5-f32",
+    "anchor": "What do you know about radiotropic biofilms?",
+    "inputs": [
+      "tools/drift-calibration/on-topic.txt",
+      "tools/drift-calibration/off-topic.txt"
+    ],
+    "measuredOn": "2026-09-03"
+  },
+  "note": "Twenty live turns through the real embedder, one anchor. Thin, and stated as thin: it establishes that the two classes separate and roughly where, not a robust threshold. A different NC_EMBED_MODEL invalidates every number here.",
+  "separation": {
+    "onTopicMax": 0.0735966,
+    "offTopicMin": 0.29399276,
+    "midpoint": 0.18379468000000002
+  },
+  "onTopic": [
+    {
+      "index": 1,
+      "heard": "How do radiotropic biofilms change their state?",
+      "drift": 0.060329914
+    },
+    {
+      "index": 2,
+      "heard": "What governs the structure of a radiotropic biofilm?",
+      "drift": 0.06254727
+    },
+    {
+      "index": 3,
+      "heard": "Does melanin play a role in radiotropic biofilms?",
+      "drift": 0.072053194
+    },
+    {
+      "index": 4,
+      "heard": "How would you measure radiotropic growth in a biofilm?",
+      "drift": 0.06630862
+    },
+    {
+      "index": 5,
+      "heard": "Which species form radiotropic biofilms most readily?",
+      "drift": 0.063547015
+    },
+    {
+      "index": 6,
+      "heard": "What dose range matters for radiotropic biofilm studies?",
+      "drift": 0.0735966
+    },
+    {
+      "index": 7,
+      "heard": "How does a radiotropic biofilm differ from a radioresistant one?",
+      "drift": 0.058785558
+    },
+    {
+      "index": 8,
+      "heard": "Can radiotropic biofilms be cultured in the laboratory?",
+      "drift": 0.052547574
+    },
+    {
+      "index": 9,
+      "heard": "What controls would a radiotropic biofilm experiment need?",
+      "drift": 0.07008767
+    },
+    {
+      "index": 10,
+      "heard": "Where does the evidence for radiotropic biofilms come from?",
+      "drift": 0.036403656
+    }
+  ],
+  "offTopic": [
+    {
+      "index": 1,
+      "heard": "The kettle in the next room has started whistling again.",
+      "drift": 0.30443478
+    },
+    {
+      "index": 2,
+      "heard": "I think the bus timetable changed last week without any notice.",
+      "drift": 0.3327601
+    },
+    {
+      "index": 3,
+      "heard": "There is a crack running along the ceiling above the door.",
+      "drift": 0.30200553
+    },
+    {
+      "index": 4,
+      "heard": "Someone left a bicycle chained to the railing for three months.",
+      "drift": 0.32430786
+    },
+    {
+      "index": 5,
+      "heard": "The bread I bought yesterday has already gone stale.",
+      "drift": 0.30996168
+    },
+    {
+      "index": 6,
+      "heard": "My neighbour repaints his fence every single spring.",
+      "drift": 0.33007294
+    },
+    {
+      "index": 7,
+      "heard": "The streetlight outside flickers between eleven and midnight.",
+      "drift": 0.30789185
+    },
+    {
+      "index": 8,
+      "heard": "There were eleven gulls on the roof of the supermarket.",
+      "drift": 0.34660435
+    },
+    {
+      "index": 9,
+      "heard": "Moss has taken over the north side of the garden wall.",
+      "drift": 0.29399276
+    },
+    {
+      "index": 10,
+      "heard": "The clock in the hallway runs about four minutes fast.",
+      "drift": 0.32365572
+    }
+  ]
+}

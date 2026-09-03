@@ -1,0 +1,391 @@
+#!/usr/bin/env bash
+# Bring up a hypnagogic session and take it down again.
+#
+# This is the ONLY component in this repository that starts another one. Every
+# other consumer of llama-server — turn.sh:55, preflight() in the hypnagogic
+# binary, the EEG connect — deliberately checks and refuses with "start it
+# first". That discipline is why no launcher existed; this inverts it in exactly
+# one place rather than spreading process management through the codebase.
+#
+# WHAT IT DOES NOT DO. It is not packaging. `ReleaseSupported` in
+# docs/support-matrix.md means signed packaging, install, upgrade, removal and
+# acceptance gates; this is a shell script and a .desktop entry, and it promotes
+# no row. `attained_support_status()` returns exactly what it returned before.
+#
+# ADOPTION. A healthy llama-server already on the port is adopted and left
+# running. Only processes this script started are killed. That rule exists so
+# clicking the icon never kills a server you were using.
+#
+# THE BACKEND IS REPORTED AS ATTAINED, NEVER AS REQUESTED. Same rule as
+# `Embedder::backend_id()`: asking for -ngl 99 and silently getting CPU is the
+# defect this launcher exists to surface, not to hide.
+
+set -euo pipefail
+
+# ── where things are ────────────────────────────────────────────────────────
+
+REPO="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}/neuralcompose/launcher.conf"
+
+# Defaults. Every one is overridable by the conf file, and then by an env var of
+# the same name — so a one-off run needs no file edit.
+# Sized for LATENCY, not for benchmark scores. A reflective turn makes three
+# generate calls, so generation cost is tripled before you hear anything, and a
+# hypnagogic loop that answers 20 s later is a different (worse) experience than
+# one that answers in 10. Measured on the 890M via Vulkan, 60 max_tokens:
+#
+#   Qwen3-0.6B Q8   0.41 s/generate   turn ~7 s
+#   Qwen3-1.7B Q8   1.39 s/generate   turn ~10 s   <- default
+#   Qwen3-8B  Q6    4.35 s/generate   turn ~19 s
+#
+# Both poles stay distinguishable at 1.7B. Set MODEL to the 8B if you want its
+# prose and will wait for it.
+MODEL_DEFAULT="$HOME/models/Qwen3-1.7B-Q8_0.gguf"
+EMBED_MODEL_DEFAULT="$HOME/models/bge-small-en-v1.5-f32.gguf"
+
+# shellcheck source=/dev/null
+[ -f "$CONF" ] && . "$CONF"
+
+MODEL="${MODEL:-$MODEL_DEFAULT}"
+EMBED_MODEL="${EMBED_MODEL:-$EMBED_MODEL_DEFAULT}"
+LLAMA_SERVER="${LLAMA_SERVER:-}"
+SERVER_URL="${SERVER_URL:-http://127.0.0.1:8080}"
+NGL="${NGL:-99}"
+CTX="${CTX:-4096}"
+MODE="${MODE:-reflective}"
+TURNS="${TURNS:-0}"            # 0 = open-ended, ended by voice
+EEG="${EEG:-none}"            # none | fixture | muse
+EEG_URL="${EEG_URL:-ws://127.0.0.1:8788/api/eeg/stream}"
+FIXTURE_SECONDS="${FIXTURE_SECONDS:-3600}"
+SPEAK="${SPEAK:-1}"
+TTS="${TTS:-kokoro}"
+MIC="${MIC:-1}"                # hands-free; MIC=0 to type instead
+PUSH_TO_TALK="${PUSH_TO_TALK:-0}"
+MIC_GATE="${MIC_GATE:-}"       # empty = calibrate against the room
+# OFF by default, and the reason is the application rather than the feature.
+# This is a hypnagogic loop: you use it drifting toward sleep. Two voices taking
+# opposing positions at you is ACTIVATING — it invites you to follow an argument,
+# which is close to the opposite of sleep onset. The Swift competes internally
+# and speaks once, and that shape had a reason. VOICE_BOTH=1 when you want to
+# hear the argument; the default should not decide that for every session.
+VOICE_BOTH="${VOICE_BOTH:-0}"
+# GENERATOR=claude sends your transcripts OFF THIS MACHINE through the `claude`
+# CLI, on your own subscription. Opt-in and never a default: it is the only
+# thing this launcher can start that talks to anything but 127.0.0.1. With it
+# set, no llama-server is started or needed — the embedder still runs locally,
+# so EMBED_MODEL is still required for the dialectical modes.
+GENERATOR="${GENERATOR:-llama}"   # llama (local) | claude (off-device)
+CLAUDE_MODEL="${CLAUDE_MODEL:-claude-sonnet-5}"
+LOG="${LOG:-1}"
+LOG_DIR="${LOG_DIR:-}"         # empty = the binary's own default
+WHISPER_MODEL="${WHISPER_MODEL:-$HOME/src/whisper.cpp/models/ggml-base.en.bin}"
+
+RUNDIR="$(mktemp -d -t nc-session-XXXXXX)"
+SERVER_LOG="$RUNDIR/llama-server.log"
+EEG_LOG="$RUNDIR/eeg.log"
+
+# PIDs of things WE started. Empty means we started nothing, which is what makes
+# cleanup safe to run unconditionally.
+SERVER_PID=""
+EEG_PID=""
+CLEANED=0
+
+say()  { printf '  \033[1m●\033[0m %s\n' "$*"; }
+warn() { printf '  \033[33m▲ %s\033[0m\n' "$*" >&2; }
+die()  { printf '\n  \033[31m✗ %s\033[0m\n\n' "$*" >&2; exit 1; }
+
+# ── teardown ────────────────────────────────────────────────────────────────
+
+# Kill one PID politely, then not. Tolerates an already-dead process, because
+# the trap can fire more than once and a session that ends normally has already
+# reaped some of these.
+reap() {
+    local pid="$1" name="$2"
+    [ -n "$pid" ] || return 0
+    kill -0 "$pid" 2>/dev/null || return 0
+    kill -TERM "$pid" 2>/dev/null || true
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        kill -0 "$pid" 2>/dev/null || { say "stopped $name"; return 0; }
+        sleep 0.3
+    done
+    kill -KILL "$pid" 2>/dev/null || true
+    say "killed $name (did not stop politely)"
+}
+
+cleanup() {
+    [ "$CLEANED" = 1 ] && return 0
+    CLEANED=1
+    printf '\n'
+    reap "$EEG_PID" "eeg source"
+    reap "$SERVER_PID" "llama-server"
+    # Say it explicitly. A user who clicked the icon and saw nothing about the
+    # server has no way to tell "left it alone" from "forgot to stop it".
+    [ "${ADOPTED:-0}" = 1 ] && say "left the adopted llama-server running"
+    rm -rf "$RUNDIR"
+    return 0
+}
+trap cleanup EXIT INT TERM HUP
+
+# ── preflight: everything is checked BEFORE anything is started ─────────────
+#
+# Ordering matters. A missing model discovered after llama-server is up leaves an
+# orphan behind, and the user closed a window that reported an error rather than
+# one that started something.
+
+APP="$REPO/target/release/neuralcompose-hypnagogic"
+[ -x "$APP" ] || APP="$REPO/target/debug/neuralcompose-hypnagogic"
+[ -x "$APP" ] || die "no neuralcompose-hypnagogic binary. Build it first:
+    cd $REPO
+    LLAMA_CPP_DIR=\$HOME/src/llama.cpp cargo build --release -p neuralcompose-hypnagogic"
+
+# A STUB BUILD IS THE EASY MISTAKE, and it fails late and confusingly.
+#
+# `cargo build`/`cargo test` without LLAMA_CPP_DIR compiles neuralcompose-llama
+# to a stub whose every call returns Unavailable — deliberately, so CI on four
+# platforms needs no C++ toolchain. But the resulting binary looks identical,
+# starts fine, brings the whole stack up, and only dies at the embedder several
+# minutes in. The documented `cargo test --workspace` produces exactly this.
+#
+# A stub links no libllama at all, so ldd tells them apart with no guessing.
+if [ "$MODE" != mirror ] && ! ldd "$APP" 2>/dev/null | grep -qi libllama; then
+    die "$APP was built WITHOUT llama.cpp (the stub build).
+
+  Its embedder returns Unavailable, so the dialectical modes cannot run. This is
+  what a plain 'cargo build' or 'cargo test' produces. Rebuild with:
+
+    cd $REPO
+    LLAMA_CPP_DIR=\$HOME/src/llama.cpp cargo build --release -p neuralcompose-hypnagogic
+
+  Mirror mode needs no embedder and works with the stub — set MODE=mirror."
+fi
+
+case "$GENERATOR" in
+    llama)
+        [ -f "$MODEL" ] || die "generation model not found: $MODEL
+  Set MODEL in $CONF, or export MODEL=/path/to/model.gguf"
+        ;;
+    claude)
+        command -v claude >/dev/null || die "GENERATOR=claude needs the \`claude\` CLI on PATH.
+  Install it and sign in, or unset GENERATOR to stay local."
+        ;;
+    *) die "unknown GENERATOR=$GENERATOR; expected llama or claude" ;;
+esac
+
+[ -f "$EMBED_MODEL" ] || die "embedding model not found: $EMBED_MODEL
+  The dialectical modes need one. Set EMBED_MODEL in $CONF.
+  Mirror mode needs none — set MODE=mirror to run without it."
+
+if [ "$SPEAK" = 1 ] && [ "$TTS" = kokoro ]; then
+    KOK="$REPO/tools/spoken-loop"
+    [ -x "$KOK/.venv/bin/python" ] || die "kokoro needs the venv at $KOK/.venv
+  See tools/spoken-loop/README.md, or set TTS=espeak."
+    for f in kokoro-v1.0.onnx voices-v1.0.bin; do
+        [ -f "$KOK/models/$f" ] || die "kokoro is missing $KOK/models/$f
+  See tools/spoken-loop/README.md, or set TTS=espeak."
+    done
+fi
+
+if [ "$MIC" = 1 ]; then
+    # Hands-free capture reads a raw stream from arecord; push-to-talk writes a
+    # WAV with pw-record. Different tools, so each is checked for what it uses.
+    if [ "$PUSH_TO_TALK" = 1 ]; then
+        command -v pw-record >/dev/null || die "--push-to-talk needs pw-record (pipewire)"
+    else
+        command -v arecord >/dev/null || die "hands-free capture needs arecord (alsa-utils).
+  Install it, or set PUSH_TO_TALK=1 to use pw-record and press Enter each turn."
+    fi
+    [ -f "$WHISPER_MODEL" ] || die "whisper model not found: $WHISPER_MODEL
+  Set WHISPER_MODEL in $CONF, or set MIC=0 to type instead."
+fi
+
+# ── choose the llama-server binary ──────────────────────────────────────────
+#
+# The PATH one is a trap on this machine: /usr/local/bin/llama-server is
+# rpath-linked to llama.cpp/build-cpu/bin, so it can only ever dlopen
+# libggml-cpu.so and reports "no usable GPU found" however you invoke it. The
+# vulkan build sitting next to it works. Preferring it by default, and saying
+# which was chosen, is most of what this launcher is for.
+
+pick_server() {
+    if [ -n "$LLAMA_SERVER" ]; then
+        [ -x "$LLAMA_SERVER" ] || die "LLAMA_SERVER is not executable: $LLAMA_SERVER"
+        printf '%s' "$LLAMA_SERVER"; return
+    fi
+    local vk="$HOME/src/llama.cpp/build-vulkan/bin/llama-server"
+    if [ -x "$vk" ]; then printf '%s' "$vk"; return; fi
+    local p; p="$(command -v llama-server 2>/dev/null || true)"
+    [ -n "$p" ] || die "no llama-server found. Build one, or set LLAMA_SERVER."
+    printf '%s' "$p"
+}
+
+# ── bring it up ─────────────────────────────────────────────────────────────
+
+printf '\n  \033[1mNeuralCompose — hypnagogic session\033[0m\n\n'
+
+if [ "$GENERATOR" = claude ]; then
+    # Nothing to start and nothing to adopt: the CLI is the generator, and a
+    # llama-server would only sit idle holding the GPU. The backend report
+    # below is skipped for the same reason — there is no backend of ours.
+    ADOPTED=0
+    # Short here on purpose: the binary prints the full caveat list a few
+    # seconds later, right before the session. This is the early warning for
+    # someone who set GENERATOR by accident and is watching the launcher.
+    warn "generation: $CLAUDE_MODEL via the \`claude\` CLI — transcripts LEAVE THIS MACHINE.
+      Full caveats below. Ctrl-C now if that is a surprise."
+    NO_SERVER=1
+elif curl -sf --max-time 2 "$SERVER_URL/health" >/dev/null 2>&1; then
+    say "llama-server: adopted the one already at $SERVER_URL"
+    say "  its backend is not inspected — we did not start it, and its log is not ours"
+    ADOPTED=1
+else
+    ADOPTED=0
+    SERVER_BIN="$(pick_server)"
+    case "$SERVER_BIN" in
+        */build-vulkan/*) say "llama-server: $SERVER_BIN" ;;
+        *) warn "llama-server: $SERVER_BIN
+      This may be the CPU-only build. If it reports no GPU below, see
+      tools/launcher/README.md." ;;
+    esac
+
+    "$SERVER_BIN" -m "$MODEL" --host 127.0.0.1 --port "${SERVER_URL##*:}" \
+        -ngl "$NGL" -c "$CTX" >"$SERVER_LOG" 2>&1 &
+    SERVER_PID=$!
+
+    printf '  ● loading %s ' "$(basename "$MODEL")"
+    ready=0
+    for _ in $(seq 1 240); do
+        if curl -sf --max-time 2 "$SERVER_URL/health" >/dev/null 2>&1; then
+            ready=1; break
+        fi
+        # A server that died is not a server that is still loading.
+        kill -0 "$SERVER_PID" 2>/dev/null || break
+        printf '.'; sleep 0.5
+    done
+    printf '\n'
+
+    if [ "$ready" != 1 ]; then
+        printf '\n  --- last lines of %s ---\n' "$SERVER_LOG" >&2
+        tail -n 20 "$SERVER_LOG" >&2 || true
+        die "llama-server never became healthy. Its own output is above."
+    fi
+    say "llama-server: ready"
+fi
+
+# ── report the backend ACTUALLY attained ────────────────────────────────────
+
+if [ "${NO_SERVER:-0}" = 1 ]; then
+    say "gpu: not applicable — no llama-server this session (GENERATOR=claude)"
+elif [ "$ADOPTED" = 1 ]; then
+    :
+elif [ "$NGL" = 0 ]; then
+    say "gpu: none by request (NGL=0) — not a failure"
+elif grep -q "no usable GPU found" "$SERVER_LOG" 2>/dev/null; then
+    warn "gpu: REQUESTED -ngl $NGL AND DID NOT GET IT — this session is on CPU.
+      llama-server found no usable GPU. The usual cause on this machine is a
+      binary rpath-linked to llama.cpp/build-cpu/bin, which cannot load the
+      Vulkan backend however it is invoked. Check with:
+        ldd $SERVER_BIN | grep ggml
+      and set LLAMA_SERVER to the build-vulkan one."
+elif fuser -v /dev/dri/renderD128 2>&1 | grep -q llama-server; then
+    # The repo's own check (tools/spoken-loop/README.md:63), automated.
+    #
+    # This is a DIRECT OBSERVATION, deliberately not a log parse. Build 10188's
+    # llama-server prints nothing about its backend at default verbosity —
+    # llama-bench prints the `ggml_vulkan: 0 = ...` device line but the server
+    # does not — so an earlier version of this check grepped for a string that
+    # is never written and reported CPU for a working Vulkan session. Holding
+    # the render node is the thing we actually care about, and it is visible.
+    dev="$(vulkaninfo --summary 2>/dev/null \
+           | grep -m1 'deviceName' | sed 's/.*= //' || true)"
+    say "gpu: ${dev:-Vulkan device} — llama-server confirmed on the render node"
+else
+    # Neither signal fired: no "no usable GPU" in the log, but not on the render
+    # node either. Unproven, which is not the same as disproven, and saying so
+    # is the whole discipline this repository runs on.
+    warn "gpu: UNPROVEN. llama-server did not report a missing GPU, but it is
+      not holding /dev/dri/renderD128 either, so nothing here establishes
+      which backend it is using."
+fi
+
+# ── EEG source ──────────────────────────────────────────────────────────────
+
+EEG_ARGS=()
+case "$EEG" in
+    none) say "eeg: none (set EEG=fixture or EEG=muse)" ;;
+    fixture)
+        # The recorded hazard: the fixture silently fails to bind if something
+        # else holds 8788, and the client then connects to whatever IS there and
+        # confirms a vacuous pass. See linux-headless-runtime.md:189-193.
+        if ss -ltn 2>/dev/null | grep -q ':8788'; then
+            die "port 8788 is already held, so the fixture cannot bind.
+  Refusing rather than running a session against whatever is on that port."
+        fi
+        python3 "$REPO/tools/fixture-eeg-server/server.py" \
+            --seconds "$FIXTURE_SECONDS" --port 8788 >"$EEG_LOG" 2>&1 &
+        EEG_PID=$!
+        sleep 0.5
+        kill -0 "$EEG_PID" 2>/dev/null || { cat "$EEG_LOG" >&2; die "fixture failed to start"; }
+        say "eeg: fixture on :8788 (synthetic — carries no physiology)"
+        EEG_ARGS=(--eeg-url "$EEG_URL")
+        ;;
+    muse)
+        BR="$REPO/tools/muse-ble-bridge"
+        [ -x "$BR/.venv/bin/python" ] || die "the Muse bridge needs its venv at $BR/.venv
+  See tools/README.md."
+        "$BR/.venv/bin/python" "$BR/bridge.py" >"$EEG_LOG" 2>&1 &
+        EEG_PID=$!
+        # The bridge opens :8788 only AFTER BrainFlow connects to the headband,
+        # and a BLE scan+connect takes 10-20s — far longer than llama-server's
+        # warm start. A fixed sleep is a race the binary loses at preflight, so
+        # wait for the port itself (the fixture has the sibling hazard the
+        # other way round: something else already holding it).
+        say "eeg: muse bridge searching for the headband (up to ~100s — press the button if it dozes)…"
+        for _ in $(seq 100); do
+            kill -0 "$EEG_PID" 2>/dev/null || { cat "$EEG_LOG" >&2; die "muse bridge failed to start"; }
+            ss -ltn 2>/dev/null | grep -q ':8788' && break
+            sleep 1
+        done
+        ss -ltn 2>/dev/null | grep -q ':8788' || { cat "$EEG_LOG" >&2
+            die "the Muse bridge never opened :8788 — headband not found in time.
+  Is it powered on, charged, and unpaired from other apps?"; }
+        say "eeg: muse-ble-bridge on :8788"
+        EEG_ARGS=(--eeg-url "$EEG_URL" --eeg-source muse-s-board-39)
+        ;;
+    *) die "EEG must be none, fixture or muse (got: $EEG)" ;;
+esac
+
+# --eeg-url has no observable in mirror mode and the binary refuses it. Drop it
+# here with a word, rather than letting the run die after everything is up.
+if [ "$MODE" = mirror ] && [ ${#EEG_ARGS[@]} -gt 0 ]; then
+    warn "mirror mode writes no turn record, so EEG has nowhere to appear — not attaching it"
+    EEG_ARGS=()
+fi
+
+# ── run the session ─────────────────────────────────────────────────────────
+
+ARGS=(--mode "$MODE" --turns "$TURNS")
+[ "$GENERATOR" = claude ] && ARGS+=(--generator claude --claude-model "$CLAUDE_MODEL")
+[ "$LOG" = 1 ]   && ARGS+=(--log)
+[ -n "$LOG_DIR" ] && ARGS+=(--log-dir "$LOG_DIR")
+[ "$SPEAK" = 1 ] && ARGS+=(--speak --tts "$TTS")
+[ "$MIC" = 1 ]   && ARGS+=(--mic --whisper-model "$WHISPER_MODEL")
+[ "$PUSH_TO_TALK" = 1 ] && ARGS+=(--push-to-talk)
+[ -n "$MIC_GATE" ] && ARGS+=(--mic-gate "$MIC_GATE")
+# Only dialectical modes have two poles to voice; mirror would reject it.
+[ "$VOICE_BOTH" = 1 ] && [ "$MODE" != mirror ] && ARGS+=(--voice-both)
+ARGS+=("${EEG_ARGS[@]+"${EEG_ARGS[@]}"}")
+
+printf '\n'
+if [ "$TURNS" = 0 ]; then
+    say "session: $MODE, open-ended — say \"stop\" to finish"
+else
+    say "session: $MODE, $TURNS turns"
+fi
+printf '\n  ─────────────────────────────────────────────\n\n'
+
+# `|| true` so a non-zero exit from the session still runs teardown through the
+# trap and prints the closing line, rather than looking like the launcher crashed.
+NC_EMBED_MODEL="$EMBED_MODEL" "$APP" "${ARGS[@]}" || true
+
+printf '\n  ─────────────────────────────────────────────\n'
+say "session ended"

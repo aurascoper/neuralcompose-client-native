@@ -47,6 +47,15 @@ impl SampleBuffer {
         out
     }
 
+    /// Source timestamp of the newest sample — seconds since stream start, the
+    /// wire axis, never wall clock. `None` when the buffer is empty.
+    ///
+    /// This is the newest sample of the same window [`Self::channel_arrays`]
+    /// returns, so together they locate that window in a recorded capture.
+    pub fn newest_source_timestamp(&self) -> Option<f64> {
+        self.samples.last().map(|s| s.timestamp)
+    }
+
     pub fn len(&self) -> usize {
         self.samples.len()
     }

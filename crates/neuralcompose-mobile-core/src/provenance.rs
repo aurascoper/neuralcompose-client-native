@@ -39,7 +39,11 @@ pub const PROVENANCE_ENVELOPE_SCHEMA: &str = "neuralcompose.provenance-envelope.
 ///
 /// Found by `every_required_field_is_rejected_when_missing`, which is the only
 /// reason it is not still here.
-fn present_option<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
+///
+/// Public because the rule is not local to this module: any record that has to
+/// tell "recorded as absent" from "not recorded" needs the same deserializer,
+/// and `neuralcompose-hypnagogic`'s EEG channel records do.
+pub fn present_option<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
 where
     D: serde::Deserializer<'de>,
     T: Deserialize<'de>,

@@ -1,7 +1,11 @@
 //! The dialectic loop — a persistent dynamical competition, one turn at a time.
 //!
 //! Port of `Sources/BCICore/Composition/HypnagogicDialecticLoop.swift` (460
-//! lines). Where [`crate::loops::MirrorLoop`] collapses each turn into one
+//! lines), **plus behaviour the Swift does not have** — the session anchor, the
+//! prompt re-framing and the repetition floor. All three are listed under
+//! *Additions beyond the Swift* in `lib.rs`; none is a port artifact.
+//!
+//! Where [`crate::loops::MirrorLoop`] collapses each turn into one
 //! reply, this runs every [`DialecticalRole`] against the same utterance, scores
 //! the candidates on shared semantic axes, and resolves the turn by a
 //! tension-sharpened sample into *speaking* a basin or falling *silent* on a
@@ -58,8 +62,39 @@ use neuralcompose_mobile_core::provenance::MethodIdentity;
 pub const WITNESS_SYSTEM: &str =
     "You are a silent observer of a conversation between two voices. You are \
      never quoted and never speak to the participants. Name, in one short \
-     sentence, what both voices avoided noticing. Do not take a side, do not \
-     summarize, and do not offer advice. Output only the observation.";
+     sentence, what both voices avoided noticing — and if the exchange has \
+     stopped being about its own subject, say that instead. Do not take a \
+     side, do not summarize, and do not offer advice. Output only the \
+     observation.";
+
+/// Phrases a voice uses when it does not recognise what it was asked about.
+///
+/// Matched as substrings, unlike [`crate::loops::STOP_PHRASES`], because these
+/// appear inside a reply rather than being the whole of one. That makes the
+/// check brittle in the way a phrase list always is, and it is accepted here
+/// because the flag is recorded rather than acted on — a false positive costs a
+/// wrong field in a log line, not a wrong turn.
+const CLARIFICATION_PHRASES: [&str; 6] = [
+    "could you clarify",
+    "can you clarify",
+    "not a standard",
+    "what do you mean by",
+    "i'm not sure what",
+    "unfamiliar with",
+];
+
+/// Whether a candidate is asking what it was just asked about.
+///
+/// **Recorded, never acted on, and nothing reads it yet.** Its value is
+/// retrospective: grepping past sessions to ask whether a voice objected before
+/// the drift alarm did. There is no such consumer today, and saying so here is
+/// the point — a field written and never queried is precisely the
+/// `witness_distance` situation this module's other changes exist to fix, so it
+/// is labelled unread rather than left to look like coverage.
+pub fn asks_for_clarification(text: &str) -> bool {
+    let lower = text.to_lowercase();
+    CLARIFICATION_PHRASES.iter().any(|p| lower.contains(p))
+}
 
 /// The Witness's user prompt: what was heard plus both poles' candidates, so it
 /// can name what the pair avoided.
@@ -85,6 +120,7 @@ pub fn witness_prompt(heard: &str, candidates: &[String]) -> String {
 pub struct DialecticalMemory {
     heard: Vec<Embedding>,
     replies: Vec<Embedding>,
+    reply_texts: Vec<String>,
     history_window: usize,
     tension_ceiling: f32,
     low_tension_streak: u32,
@@ -95,6 +131,7 @@ impl DialecticalMemory {
         Self {
             heard: Vec::new(),
             replies: Vec::new(),
+            reply_texts: Vec::new(),
             history_window: history_window.max(1),
             tension_ceiling,
             low_tension_streak: 0,
@@ -132,6 +169,45 @@ impl DialecticalMemory {
             self.low_tension_streak = 0;
         }
     }
+
+    /// The reply TEXTS, kept alongside the embeddings for the repetition check.
+    ///
+    /// Separate from the embedding ring on purpose: that one exists to be
+    /// averaged into a centroid, and this one must not be, because the centroid
+    /// is exactly the measure that fails to separate a stuck run from a
+    /// coherent one. See [`crate::loops::similarity`].
+    pub fn record_reply_text(&mut self, text: String, window: usize) {
+        self.reply_texts.push(text);
+        if self.reply_texts.len() > window {
+            let excess = self.reply_texts.len() - window;
+            self.reply_texts.drain(0..excess);
+        }
+    }
+
+    /// Drops the retained reply texts. Called when the repetition guard fires,
+    /// so the guard tests the turns that come after the intervention rather
+    /// than latching on the ones that triggered it.
+    pub fn clear_reply_texts(&mut self) {
+        self.reply_texts.clear();
+    }
+
+    /// How many of the retained replies sit at or above `floor` in overlap with
+    /// some *earlier* retained reply.
+    ///
+    /// A rate over the window rather than a consecutive run: the fixed point
+    /// this exists to catch alternates between two attractors, so a streak
+    /// requirement never fires on it.
+    pub fn repetition_hits(&self, floor: f32) -> usize {
+        self.reply_texts
+            .iter()
+            .enumerate()
+            .filter(|(i, t)| {
+                self.reply_texts[..*i]
+                    .iter()
+                    .any(|prev| crate::loops::similarity(prev, t) >= floor)
+            })
+            .count()
+    }
 }
 
 fn push_bounded(ring: &mut Vec<Embedding>, value: Embedding, window: usize) {
@@ -153,6 +229,69 @@ pub struct DialecticConfig {
     /// See [`crate::loops::MirrorConfig::chunk_replies`]. Set false for a
     /// neural voice, which owns its own sentence-level prosody.
     pub chunk_replies: bool,
+    /// Speak **both** positions, each in its own role voice, before the turn
+    /// resolves.
+    ///
+    /// Off by default, because it changes what a turn sounds like and the
+    /// conformance story is about what a turn *decides*.
+    ///
+    /// With it off, the competition is inaudible: two candidates are generated,
+    /// scored, and one is spoken — so a listener hears a reply, not a dialectic.
+    /// The disagreement that the whole engine exists to stage happens silently
+    /// and is only visible afterwards in the turn log.
+    ///
+    /// With it on, each pole says its piece in its own fixed voice, and only
+    /// then does the turn resolve. A synthesis is spoken afterwards because its
+    /// text is neither candidate's; a plain win is not repeated, because it was
+    /// already said as one of the positions.
+    pub voice_both: bool,
+    /// Distance from the session's anchor past which the poles' prompts are
+    /// re-framed with the opening utterance. `0.0` disables.
+    ///
+    /// Lives on the config rather than on [`Tuning`] because `Tuning` is pinned
+    /// constant-for-constant against the Swift and this knob has no Swift
+    /// counterpart — see the *Additions beyond the Swift* section in `lib.rs`.
+    ///
+    /// **Calibrated against `bge-small-en-v1.5-f32`, and only that.** Twenty
+    /// live turns through the real embedder, anchored on "What do you know
+    /// about radiotropic biofilms?":
+    ///
+    /// | | n | min | median | max |
+    /// |---|---|---|---|---|
+    /// | on-topic follow-ups | 10 | 0.036 | 0.064 | **0.074** |
+    /// | unrelated utterances | 10 | **0.294** | 0.324 | 0.347 |
+    ///
+    /// The default sits at the midpoint of that gap. An earlier draft shipped
+    /// **0.45**, chosen from the theoretical `0.0..=1.0` range and from a test
+    /// embedder whose vectors were orthogonal — which real sentence embeddings
+    /// never are. Nothing reached it: `0.45` fired on 0 of those 20 turns,
+    /// including the ten about kettles and gulls. A bound nothing can reach
+    /// looks exactly like a guard that is satisfied.
+    ///
+    /// ponytail: embedder-specific. Change `NC_EMBED_MODEL` and this number is
+    /// wrong — a different model has a different cone. Twenty turns on one
+    /// anchor is also a thin calibration. `tests/drift_calibration.rs` pins the
+    /// measurement so a re-fit is a visible edit rather than a silent drift.
+    pub drift_ceiling: f32,
+    /// Token-overlap similarity at or above which a reply counts as a
+    /// near-repeat of a recent one. `0.0` disables the repetition check.
+    ///
+    /// ponytail: floor calibrated on ONE session (1788413094), and its
+    /// "healthy" reference turns were themselves drifting — 0.226 is the
+    /// ceiling of a degrading region, not a clean one. 0.30 is deliberately
+    /// permissive: it misses marginal repetition rather than firing on healthy
+    /// variety. Re-fit against a second session before trusting it, and before
+    /// promoting the response from a forced silent turn to ending the session.
+    pub repetition_floor: f32,
+    /// How many of the last [`Self::repetition_window`] replies must sit at or
+    /// above the floor before the turn is forced silent.
+    ///
+    /// A **rate**, not a streak, and that is the whole design. The observed
+    /// fixed point oscillates between two attractors (0.968 at turn 43, 0.840
+    /// at turn 44 of session 1788413094), so any consecutive-run requirement
+    /// never fires on the very transcript that motivated the check.
+    pub repetition_hits: usize,
+    pub repetition_window: usize,
     /// Stamped into every turn record's provenance envelope (ADR-004).
     ///
     /// Supplied by the shell rather than read here, because a pure library
@@ -161,6 +300,12 @@ pub struct DialecticConfig {
     /// checkout, and that is never treated as a pinned build.
     pub software_version: String,
     pub git_commit: Option<String>,
+    /// Which sampler wrote the candidates, for the turn record's method
+    /// identity — see [`crate::turn_log::dialectic_method_identity`]. Supplied
+    /// by the shell for the same reason as `software_version`: the library
+    /// holds a `TextGenerating`, and a trait object cannot say where its text
+    /// came from.
+    pub generator: String,
 }
 
 impl Default for DialecticConfig {
@@ -174,8 +319,16 @@ impl Default for DialecticConfig {
                 .collect(),
             history_window: 16,
             chunk_replies: true,
+            voice_both: false,
+            drift_ceiling: 0.18,
+            repetition_floor: 0.30,
+            repetition_hits: 3,
+            repetition_window: 8,
             software_version: env!("CARGO_PKG_VERSION").to_string(),
             git_commit: None,
+            // The local path is the default everywhere, including in tests, so
+            // a record that says anything else was an explicit choice.
+            generator: "llama-server".to_string(),
         }
     }
 }
@@ -196,6 +349,19 @@ pub struct DialecticTurn {
     pub witness_finding: Option<String>,
     pub witness_distance: Option<f32>,
     pub self_similarity: Option<f32>,
+    /// Cosine distance of this turn's `heard` from the session's anchor.
+    /// `None` on the anchoring turn itself, and on an incomparable pair.
+    pub topic_drift: Option<f32>,
+    /// Whether the poles' prompts carried the opening utterance this turn.
+    pub reanchored: bool,
+    /// How many retained replies were near-repeats when this turn resolved.
+    pub repetition_hits: usize,
+    /// The competition chose to speak and the repetition guard overrode it.
+    /// `resolution` still carries what the competition decided.
+    pub repetition_forced_silence: bool,
+    /// A voice said it did not recognise the subject. Recorded only; see
+    /// [`asks_for_clarification`].
+    pub clarification_requested: bool,
     pub consecutive_silence: u32,
     /// Set when the Witness ran and failed. The turn still succeeds — a witness
     /// failure must not break it — but it must not be silent either, or a
@@ -209,7 +375,7 @@ impl DialecticTurn {
     /// `method` is passed in rather than derived here because a turn does not
     /// know which build ran it — [`DialecticLoop::method_identity`] is where the
     /// profile's tuning and the shell's version meet.
-    pub fn to_turn_line(&self, mode: &str, method: MethodIdentity) -> TurnLine {
+    pub fn to_turn_line(&self, mode: &str, method: MethodIdentity, generator: &str) -> TurnLine {
         let mut line = TurnLine::new(
             self.index,
             mode,
@@ -217,11 +383,19 @@ impl DialecticTurn {
             &self.scored,
             &self.resolution,
             method,
+            generator,
         )
         .with_witness(
             self.witness_attempted,
             self.witness_finding.clone(),
             self.witness_distance,
+        )
+        .with_drift(
+            self.topic_drift,
+            self.reanchored,
+            self.repetition_hits,
+            self.repetition_forced_silence,
+            self.clarification_requested,
         );
         if let Some(s) = self.self_similarity {
             line = line.with_self_similarity(s);
@@ -243,6 +417,14 @@ pub struct DialecticLoop<L, G, S, E, R> {
     config: DialecticConfig,
     memory: DialecticalMemory,
     method: MethodIdentity,
+    /// The session's opening utterance and its embedding, set on the first turn
+    /// that actually proceeds and never updated afterwards.
+    ///
+    /// Never updated is the entire point. `DialecticalMemory`'s rings are
+    /// bounded, so every centroid in this file drifts along with the
+    /// conversation — measure against one of those and a slow walk away from
+    /// the subject reads as no movement at all.
+    anchor: Option<(String, Embedding)>,
     standing_tension: f32,
     consecutive_silence: u32,
     silence_index: usize,
@@ -279,6 +461,7 @@ where
         // fixed for the life of the loop, so the digest cannot drift mid-session.
         let method = crate::turn_log::dialectic_method_identity(
             profile,
+            config.generator.clone(),
             config.software_version.clone(),
             config.git_commit.clone(),
         );
@@ -294,6 +477,7 @@ where
             config,
             memory,
             method,
+            anchor: None,
             standing_tension: 0.0,
             consecutive_silence: 0,
             silence_index: 0,
@@ -330,6 +514,44 @@ where
             }
         };
 
+        // 0. Embed what was heard BEFORE generating, so the drift from the
+        // session's anchor is known while the prompts are still being built.
+        // The Swift embeds this in the batch at step 2; moving it earlier costs
+        // nothing (the same single call, just sooner) and is what lets step 1
+        // react to drift at all.
+        let heard_emb = self.embedder.embed(&heard)?;
+
+        // Distance from the anchor — the FIRST utterance of the session, set
+        // once and never updated. Measuring against `history_centroid` instead
+        // would be useless here: that ring is bounded, so it drifts along with
+        // the conversation and a walk away from the subject never registers.
+        //
+        // `None` from `cosine_similarity` means the two are incomparable, and
+        // it stays `None` rather than becoming a number. Same rule as
+        // divergence #1 in `lib.rs`: an absent value must not impersonate a
+        // real one, and here a `0.0` sentinel would read as "no drift at all".
+        let drift: Option<f32> = self.anchor.as_ref().and_then(|(_, a)| {
+            heard_emb
+                .cosine_similarity(a)
+                .map(|c| 1.0 - dynamics::normalized(c))
+        });
+
+        // When the exchange has wandered past the ceiling, the poles are shown
+        // where it started. `heard` ITSELF is never rewritten — it still logs,
+        // still embeds, still feeds `record_heard` exactly as transcribed,
+        // because the drifted text is the evidence. Only the generation prompt
+        // is framed, which also keeps `role.rs`'s prompt shapers verbatim from
+        // the Swift, as their doc comment requires.
+        let drifted = matches!((drift, self.config.drift_ceiling),
+            (Some(d), ceiling) if ceiling > 0.0 && d > ceiling);
+        // The seed handed to the roles as *instruction*, or `None`. It is
+        // deliberately NOT spliced into `heard`: see
+        // [`DialecticalRole::anchored_prompt`] for what that cost, measured.
+        let frame: Option<String> = match (&self.anchor, drifted) {
+            (Some((seed, _)), true) => Some(seed.clone()),
+            _ => None,
+        };
+
         // 1. One generator per role, each shaped by the standing tension.
         let mut candidates: Vec<(String, String)> = Vec::new();
         for role in &self.roles {
@@ -337,11 +559,13 @@ where
                 temperature: role.temperature,
                 max_tokens: self.config.max_tokens,
             };
-            let raw = self.generator.generate(
-                role_system(role),
-                &role.prompt(&heard, self.standing_tension),
-                params,
-            )?;
+            let prompt = match &frame {
+                Some(seed) => role.anchored_prompt(&heard, self.standing_tension, seed),
+                None => role.prompt(&heard, self.standing_tension),
+            };
+            let raw = self
+                .generator
+                .generate(role_system(role), &prompt, params)?;
             let text = crate::loops::strip_for_speech(&raw);
             if !text.is_empty() {
                 candidates.push((role.id.to_string(), text));
@@ -352,15 +576,11 @@ where
             return Ok(None);
         }
 
-        // 2. Embed heard + every candidate.
-        let mut texts: Vec<&str> = vec![heard.as_str()];
-        texts.extend(candidates.iter().map(|(_, t)| t.as_str()));
-        let mut embeddings = Vec::with_capacity(texts.len());
-        for t in &texts {
-            embeddings.push(self.embedder.embed(t)?);
+        // 2. Embed every candidate. `heard` was embedded at step 0.
+        let mut candidate_embs: Vec<Embedding> = Vec::with_capacity(candidates.len());
+        for (_, t) in &candidates {
+            candidate_embs.push(self.embedder.embed(t)?);
         }
-        let heard_emb = embeddings[0].clone();
-        let candidate_embs: Vec<Embedding> = embeddings[1..].to_vec();
 
         // 3. Score against the accumulated trajectory.
         let history_centroid = self.memory.history_centroid();
@@ -407,6 +627,14 @@ where
         let resolution = dynamics::compete(&scored, tension, draw, &self.tuning, None, false);
 
         // 4. Record and act.
+        //
+        // The anchor is set HERE, not at step 0, because a turn that reaches
+        // step 0 can still be skipped — every generator returning empty text
+        // changes no state, and an anchor set on such a turn would be state
+        // changed by a turn that officially did nothing.
+        if self.anchor.is_none() {
+            self.anchor = Some((heard.clone(), heard_emb.clone()));
+        }
         self.memory.record_heard(heard_emb);
         self.memory.observe(tension);
         self.standing_tension = tension;
@@ -466,14 +694,77 @@ where
             }
         }
 
+        // 5.5 Voice the positions, when asked.
+        //
+        // Deliberately AFTER the competition resolves, so
+        // `nothing_is_spoken_before_the_competition_resolves` still holds: the
+        // turn is decided before anything is heard, and what changes is only how
+        // much of the decision is audible.
+        //
+        // Each pole gets its OWN voice, unblended. The blend below carries how
+        // close the competition was, which is a property of the resolution; a
+        // position is just itself, and blending it would smear the one signal
+        // fixed voices exist to carry.
+        let mut positions_voiced = false;
+        if self.config.voice_both {
+            for s in &scored {
+                let voice = self.role_prosody(&s.candidate.role_id);
+                for ch in self.split(&s.candidate.text) {
+                    self.speaker.speak(&ch, voice)?;
+                }
+            }
+            positions_voiced = true;
+        }
+
+        // 5.75 The repetition floor.
+        //
+        // The anchor at step 0 detects moving AWAY from the subject. It cannot
+        // detect being stuck ON one: once the subject is `machine whirring`,
+        // drift from the anchor is stable and small, which is the same
+        // zero-by-construction blind spot a stably wrong seed has. A fixed
+        // point needs its own check.
+        //
+        // Deliberately NOT `self_similarity`, which is right here, already
+        // computed, already logged, and does not work — see
+        // [`crate::loops::similarity`] for the two tables. Coherent and stuck
+        // are not distinguishable by an embedding cosine against the recent
+        // centroid, because both of them are coherent.
+        let repetition_hits = if self.config.repetition_floor > 0.0 {
+            self.memory.repetition_hits(self.config.repetition_floor)
+        } else {
+            0
+        };
+        let repetition_forced =
+            self.config.repetition_floor > 0.0 && repetition_hits >= self.config.repetition_hits;
+
         // 6. Voice the outcome.
         let mut spoken = None;
         let mut chunks = Vec::new();
         let mut turn_prosody = self.config.prosody;
         match &resolution.outcome {
+            // The competition's own decision is left INTACT in `resolution` and
+            // in the turn record. It decided to speak; the guard overrode it,
+            // and both of those are facts the log should keep. Rewriting the
+            // outcome would hide the override behind a turn that merely looks
+            // like an ordinary silence.
+            DialecticalOutcome::Spoke(_) | DialecticalOutcome::Synthesized(_)
+                if repetition_forced =>
+            {
+                self.consecutive_silence += 1;
+                // Clear the window that fired. The intervention exists to break
+                // the fixed point, and evidence kept across it would re-fire on
+                // the next turn no matter what the loop did differently — the
+                // guard would latch rather than test. A loop that is still stuck
+                // refills the window with repeats and fires again, which is the
+                // correct behaviour and is what the silence-run bound below is
+                // there to terminate.
+                self.memory.clear_reply_texts();
+            }
             DialecticalOutcome::Spoke(c) | DialecticalOutcome::Synthesized(c) => {
                 self.consecutive_silence += 0;
                 self.memory.record_reply(c.embedding.clone());
+                self.memory
+                    .record_reply_text(c.text.clone(), self.config.repetition_window);
                 // Blend the role voices by how the competition actually went, so
                 // a close call carries the losing pole's colour.
                 let potentials: Vec<f32> = scored.iter().map(|s| s.potential).collect();
@@ -495,8 +786,16 @@ where
                 // meet: a listener tracks which position speaks BY VOICE.
                 turn_prosody.voice = self.role_prosody(&c.role_id).voice;
                 chunks = self.split(&c.text);
-                for ch in &chunks {
-                    self.speaker.speak(ch, turn_prosody)?;
+                // A plain win was already said, as one of the positions. Saying
+                // it again would make every turn end in an echo. A SYNTHESIS is
+                // different: its text is neither candidate's, so it has not been
+                // heard yet and must be.
+                let already_said =
+                    positions_voiced && matches!(resolution.outcome, DialecticalOutcome::Spoke(_));
+                if !already_said {
+                    for ch in &chunks {
+                        self.speaker.speak(ch, turn_prosody)?;
+                    }
                 }
                 spoken = Some(c.text.clone());
             }
@@ -530,6 +829,11 @@ where
             witness_finding,
             witness_distance,
             self_similarity,
+            topic_drift: drift,
+            reanchored: drifted,
+            repetition_hits,
+            repetition_forced_silence: repetition_forced,
+            clarification_requested: candidates.iter().any(|(_, t)| asks_for_clarification(t)),
             consecutive_silence: self.consecutive_silence,
             witness_error,
         }))
@@ -575,6 +879,95 @@ fn role_system(_role: &DialecticalRole) -> &'static str {
     "Your reply is spoken aloud by a text-to-speech engine. Plain conversational \
      prose only: no markdown, no asterisks, no headings, no lists, no stage \
      directions, no emoji."
+}
+
+#[cfg(test)]
+mod clarification_tests {
+    use super::asks_for_clarification;
+
+    #[test]
+    fn a_voice_objecting_to_the_term_is_flagged() {
+        // Both from session 1788413094, verbatim.
+        assert!(asks_for_clarification(
+            "The key term here is \"radio traffic biofilms,\" which is not a \
+             standard biological term."
+        ));
+        assert!(asks_for_clarification(
+            "Could you clarify what you mean by \"radio trophic vial films\"?"
+        ));
+    }
+
+    #[test]
+    fn an_ordinary_reply_is_not_flagged() {
+        assert!(!asks_for_clarification(
+            "The transition between states is like a river shifting its course."
+        ));
+        // The phrase list is matched case-insensitively, so a capitalised
+        // opening must still hit rather than slip past.
+        assert!(asks_for_clarification("Can you clarify that?"));
+    }
+}
+
+#[cfg(test)]
+mod repetition_tests {
+    use super::DialecticalMemory;
+
+    #[test]
+    fn a_varied_window_does_not_register_and_a_repeating_one_does() {
+        let mut m = DialecticalMemory::new(16, 0.5);
+        for t in [
+            "the river shifts its course slowly",
+            "biofilms rearrange their identity",
+            "what if evolution runs on resonance",
+        ] {
+            m.record_reply_text(t.to_string(), 8);
+        }
+        assert_eq!(m.repetition_hits(0.30), 0, "varied replies registered");
+
+        for _ in 0..3 {
+            m.record_reply_text(
+                "the machine whirring is a sound that suggests a mechanical process".to_string(),
+                8,
+            );
+        }
+        assert!(m.repetition_hits(0.30) >= 2, "near-verbatim repeats missed");
+    }
+
+    /// The window is bounded, so old repeats age out. Without this a session
+    /// that repeated early would carry the hit forever and the guard would
+    /// latch rather than measure.
+    #[test]
+    fn the_window_is_bounded_and_old_repeats_age_out() {
+        let mut m = DialecticalMemory::new(16, 0.5);
+        for _ in 0..2 {
+            m.record_reply_text("the machine whirring is a mechanical process".into(), 4);
+        }
+        assert!(m.repetition_hits(0.30) >= 1);
+        // Genuinely varied, sharing no vocabulary. An earlier draft of this
+        // test used `format!("unrelated thought number {i}")`, which differs by
+        // one token out of six and so registered as repetition itself — the
+        // detector was right and the test data was wrong.
+        for t in [
+            "rivers carve stone slowly",
+            "the kettle forgot its whistle",
+            "eleven gulls argue about bread",
+            "moss claims every north face",
+        ] {
+            m.record_reply_text(t.to_string(), 4);
+        }
+        assert_eq!(m.repetition_hits(0.30), 0, "the old repeats never aged out");
+    }
+
+    #[test]
+    fn clearing_drops_the_evidence_that_fired() {
+        let mut m = DialecticalMemory::new(16, 0.5);
+        for _ in 0..3 {
+            m.record_reply_text("the machine whirring is a mechanical process".into(), 8);
+        }
+        assert!(m.repetition_hits(0.30) > 0);
+        m.clear_reply_texts();
+        assert_eq!(m.repetition_hits(0.30), 0);
+    }
 }
 
 #[cfg(test)]
@@ -686,6 +1079,95 @@ mod tests {
             };
             Ok(Embedding::new(v, "t"))
         }
+    }
+
+    /// One utterance: what was said, and the voice it was said in.
+    type Utterance = (String, Option<&'static str>);
+    type Transcript = std::rc::Rc<std::cell::RefCell<Vec<Utterance>>>;
+
+    /// Records what was said and in whose voice, so a test can assert on the
+    /// audible shape of a turn rather than only on its decision.
+    #[derive(Default)]
+    struct Heard(Transcript);
+    impl Speaking for Heard {
+        fn speak(&mut self, t: &str, p: Prosody) -> SeamResult<()> {
+            self.0.borrow_mut().push((t.to_string(), p.voice));
+            Ok(())
+        }
+    }
+
+    type SpyLoop = DialecticLoop<L, G, Heard, E, ScriptedDraws>;
+
+    fn loop_with(voice_both: bool, heard: &Heard) -> SpyLoop {
+        DialecticLoop::new(
+            L,
+            G(0),
+            Heard(std::rc::Rc::clone(&heard.0)),
+            E(0),
+            ScriptedDraws::new(vec![0.999]),
+            crate::role::waking_roles().to_vec(),
+            ContextProfile::Focused,
+            DialecticConfig {
+                voice_both,
+                chunk_replies: false,
+                ..DialecticConfig::default()
+            },
+        )
+    }
+
+    /// The default: the competition is inaudible. One utterance per turn, and a
+    /// listener hears a reply rather than a disagreement.
+    #[test]
+    fn without_voice_both_only_the_resolution_is_spoken() {
+        let heard = Heard::default();
+        let turn = loop_with(false, &heard).turn().unwrap().unwrap();
+        let said = heard.0.borrow();
+        assert_eq!(said.len(), 1, "expected one utterance, got {said:?}");
+        assert_eq!(said[0].0, turn.spoken.clone().unwrap());
+    }
+
+    /// With it on, BOTH candidates are spoken, each in its own fixed voice —
+    /// which is the whole point: a listener tracks which position is speaking by
+    /// voice, and two positions in one voice is not a dialectic.
+    #[test]
+    fn voice_both_speaks_each_pole_in_its_own_voice() {
+        let heard = Heard::default();
+        let turn = loop_with(true, &heard).turn().unwrap().unwrap();
+        let said = heard.0.borrow();
+
+        assert_eq!(said.len(), 2, "expected both positions, got {said:?}");
+        let texts: Vec<&str> = said.iter().map(|(t, _)| t.as_str()).collect();
+        for s in &turn.scored {
+            assert!(
+                texts.contains(&s.candidate.text.as_str()),
+                "{} was never spoken: {texts:?}",
+                s.candidate.text
+            );
+        }
+        let voices: Vec<Option<&'static str>> = said.iter().map(|(_, v)| *v).collect();
+        assert_ne!(
+            voices[0], voices[1],
+            "both poles spoke in the same voice, so the dialectic is inaudible"
+        );
+    }
+
+    /// A plain win was already said as one of the positions. Repeating it would
+    /// end every turn in an echo.
+    #[test]
+    fn voice_both_does_not_repeat_a_winner_it_already_spoke() {
+        let heard = Heard::default();
+        let turn = loop_with(true, &heard).turn().unwrap().unwrap();
+        assert!(
+            matches!(turn.resolution.outcome, DialecticalOutcome::Spoke(_)),
+            "this fixture must resolve to a plain win to discriminate"
+        );
+        let said = heard.0.borrow();
+        let winner = turn.spoken.clone().unwrap();
+        assert_eq!(
+            said.iter().filter(|(t, _)| *t == winner).count(),
+            1,
+            "the winner was spoken twice: {said:?}"
+        );
     }
 
     /// The spoken turn must carry the voice of the pole that ACTUALLY SPOKE,
