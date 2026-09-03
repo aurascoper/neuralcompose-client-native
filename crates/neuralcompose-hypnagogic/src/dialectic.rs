@@ -250,9 +250,26 @@ pub struct DialecticConfig {
     /// constant-for-constant against the Swift and this knob has no Swift
     /// counterpart — see the *Additions beyond the Swift* section in `lib.rs`.
     ///
-    /// ponytail: uncalibrated. The right value depends on the embedder and the
-    /// ASR's error profile, and no run has been measured against this metric.
-    /// The tests assert the mechanism, never this number.
+    /// **Calibrated against `bge-small-en-v1.5-f32`, and only that.** Twenty
+    /// live turns through the real embedder, anchored on "What do you know
+    /// about radiotropic biofilms?":
+    ///
+    /// | | n | min | median | max |
+    /// |---|---|---|---|---|
+    /// | on-topic follow-ups | 10 | 0.036 | 0.064 | **0.074** |
+    /// | unrelated utterances | 10 | **0.294** | 0.324 | 0.347 |
+    ///
+    /// The default sits at the midpoint of that gap. An earlier draft shipped
+    /// **0.45**, chosen from the theoretical `0.0..=1.0` range and from a test
+    /// embedder whose vectors were orthogonal — which real sentence embeddings
+    /// never are. Nothing reached it: `0.45` fired on 0 of those 20 turns,
+    /// including the ten about kettles and gulls. A bound nothing can reach
+    /// looks exactly like a guard that is satisfied.
+    ///
+    /// ponytail: embedder-specific. Change `NC_EMBED_MODEL` and this number is
+    /// wrong — a different model has a different cone. Twenty turns on one
+    /// anchor is also a thin calibration. `tests/drift_calibration.rs` pins the
+    /// measurement so a re-fit is a visible edit rather than a silent drift.
     pub drift_ceiling: f32,
     /// Token-overlap similarity at or above which a reply counts as a
     /// near-repeat of a recent one. `0.0` disables the repetition check.
@@ -301,7 +318,7 @@ impl Default for DialecticConfig {
             history_window: 16,
             chunk_replies: true,
             voice_both: false,
-            drift_ceiling: 0.45,
+            drift_ceiling: 0.18,
             repetition_floor: 0.30,
             repetition_hits: 3,
             repetition_window: 8,
