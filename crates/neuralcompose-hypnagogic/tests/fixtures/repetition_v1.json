@@ -1,0 +1,500 @@
+{
+  "schemaId": "neuralcompose.hypnagogic.repetition-floor.v1",
+  "source": {
+    "path": "~/Documents/NeuralCompose/InteractionLogs/session-1788413094.turns.jsonl",
+    "fileSha256": "d40c6bc996b71d6e24ca8498e27d7797a4a334a74d11c37e76d319987507d7dc",
+    "mtime": "2026-09-03T06:10:55.170292+00:00",
+    "readOn": "2026-09-03",
+    "writerLive": false,
+    "writerNote": "The session (PID 103860, --mode reflective --turns 0 --mic) had ended and the file had stopped growing before this read. An earlier pin of this same path was taken at 55 turns while the writer was still appending; that is why a committed digest for this path moved once."
+  },
+  "note": "Replays a session the non-speech guard now prevents. That is the point: non-speech tags are not the only route to a fixed point, and a genuinely stuck conversation with real input would look the same to this detector while the tag filter would not help. selfSimilarity is carried alongside because it is the metric that was ALREADY computed and logged here and does NOT separate these regions -- see the tables in the plan. Keeping it in the corpus lets the next reader re-derive that rejection instead of taking it on trust.",
+  "regions": {
+    "healthy": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    "stuck": [
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67
+    ],
+    "rationale": "healthy = the turns whose input was real speech (1-13, minus the two noise turns 0 and 7 interleaved among them). stuck = turn 14 onward, an unbroken run of room noise in which the same two utterances recur near-verbatim. 'healthy' is generous: those turns were themselves drifting, so they are the good region only by comparison, and any floor fitted to them is fitted to a degrading reference."
+  },
+  "coverage": {
+    "turns": 68,
+    "healthy": 12,
+    "stuck": 54
+  },
+  "cases": [
+    {
+      "index": 0,
+      "heard": "(tapping)",
+      "spokenText": "I hear you tapping. It's a small sound, but it's clear. Maybe you're trying to communicate something without words.",
+      "selfSimilarity": null
+    },
+    {
+      "index": 1,
+      "heard": "What do you know about radiotropic biofilms?",
+      "spokenText": "I know radiotropic biofilms are microbial communities that can switch between different metabolic states, allowing them to adapt to changing environmental conditions. They are often found in extreme environments and can influence the surrounding ecosystem. Their ability to change states is a key factor in their survival and ecological impact.",
+      "selfSimilarity": 0.72332203
+    },
+    {
+      "index": 2,
+      "heard": "How do they change states?",
+      "spokenText": "The question lingers like a question mark in a storm\u2014what if states aren't just physical entities but also stories we tell ourselves?",
+      "selfSimilarity": 0.80685794
+    },
+    {
+      "index": 3,
+      "heard": "How do radio terrific biofilms change states?",
+      "spokenText": "I think you're referring to how biofilms can change their structure or function in response to environmental changes.",
+      "selfSimilarity": 0.87771076
+    },
+    {
+      "index": 4,
+      "heard": "How do radio traffic biofilms change their state?",
+      "spokenText": "I'll focus on the question about how radio traffic biofilms change their state. The key term here is \"radio traffic biofilms,\" which is not a standard biological term. It might be a technical or metaphorical reference. Assuming it refers to a system or process involving radio signals and some kind of",
+      "selfSimilarity": 0.92545104
+    },
+    {
+      "index": 5,
+      "heard": "How do radiotropic biofilms change their state?",
+      "spokenText": "The transition between states is like a river shifting its course\u2014sometimes slow, sometimes sudden. Radiotropic biofilms might not just change, but rearrange their identity in ways we haven't yet fully understood. What if they're not just changing, but evolving in response to unseen forces?",
+      "selfSimilarity": 0.9382929
+    },
+    {
+      "index": 6,
+      "heard": "What are the unforeseen forces involved in radiocropic biofilm structure and morphologies?",
+      "spokenText": "The question is about the factors that influence the structure and shape of biofilms in radiocrop systems.",
+      "selfSimilarity": 0.9195016
+    },
+    {
+      "index": 7,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in motion. It could be a factory, a workshop, or something else. I need to know more about where this sound is coming from.",
+      "selfSimilarity": 0.82017934
+    },
+    {
+      "index": 8,
+      "heard": "How do radio trophic vial films change their structure and function?",
+      "spokenText": "I understand you're asking about how radio trophic vial films change their structure and function. Could you clarify what you mean by \"radio trophic vial films\"?",
+      "selfSimilarity": 0.9107221
+    },
+    {
+      "index": 9,
+      "heard": "\"Tropic\" biofilms change their structure and function.",
+      "spokenText": "The structure of a tropical ecosystem is like a dynamic ecosystem, where each layer interacts in a way that supports the next. So, maybe the biofilms in the tropics aren't just changing, but evolving in ways that support the entire system.",
+      "selfSimilarity": 0.9169935
+    },
+    {
+      "index": 10,
+      "heard": "How do radio trophic bioforms change their structure and function?",
+      "spokenText": "The question challenges the stability of life itself, suggesting that radio trophic bioforms might not be bound by the same laws as organic entities. Perhaps they evolve through a different kind of resonance, not in the way we understand evolution. What if they communicate through frequencies that transcend conventional biology?",
+      "selfSimilarity": 0.9058126
+    },
+    {
+      "index": 11,
+      "heard": "How can we test whether radio-traffic biofilms use radio signals that are not typical of biology?",
+      "spokenText": "What if we consider the radio-traffic biofilms as a form of artificial communication, and then test whether their signals could be misinterpreted by other systems?",
+      "selfSimilarity": 0.9057267
+    },
+    {
+      "index": 12,
+      "heard": "How do we test radio-perfect file files?",
+      "spokenText": "I've never considered testing files based on their ability to transmit radio waves\u2014maybe we should test them by how well they carry the message of a story, or the melody of a song.",
+      "selfSimilarity": 0.7788811
+    },
+    {
+      "index": 13,
+      "heard": "I'm more interested in falsifying your trophy as a phenotype and demonstrating bottling of your tropism.",
+      "spokenText": "I wonder if we could consider the trophy as a metaphor for something more fragile, like a seed, and ask how we might nurture its growth without crushing it.",
+      "selfSimilarity": 0.8302103
+    },
+    {
+      "index": 14,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is like a heartbeat in the factory of the future \u2014 a rhythm that tells us it's alive, even if it's not breathing. What if we listen to it instead of fearing it?",
+      "selfSimilarity": 0.8566644
+    },
+    {
+      "index": 15,
+      "heard": "(machinery whirring)",
+      "spokenText": "The sound of machinery is like a heartbeat\u2014unpredictable, essential, and never still.",
+      "selfSimilarity": 0.8244833
+    },
+    {
+      "index": 16,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests something is in motion, perhaps a tool or a device. It could be a sign of preparation or a warning. I need to focus on the movement and its implications.",
+      "selfSimilarity": 0.85220027
+    },
+    {
+      "index": 17,
+      "heard": "(buzzing) (buzzing)",
+      "spokenText": "The buzz is a signal, not a complaint. It's like a hive mind communicating. What if it's a message from the wild?",
+      "selfSimilarity": 0.8885622
+    },
+    {
+      "index": 18,
+      "heard": "(buzzing) (buzzing)",
+      "spokenText": "I hear the buzzing, but I don't understand what it means.",
+      "selfSimilarity": 0.86102283
+    },
+    {
+      "index": 19,
+      "heard": "(buzzing) (buzzing)",
+      "spokenText": "The sound is like a thousand whispers in the wind\u2014each one a secret waiting to be shared. Maybe it's not the buzz of insects, but the hum of something else entirely, like a forgotten song in a crowded room. What if it's a message, long hidden, trying to be heard",
+      "selfSimilarity": 0.87028366
+    },
+    {
+      "index": 20,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is like a heartbeat, a rhythm that tells us it's not just working\u2014it's alive. Maybe it's trying to communicate. What if it's not just a machine, but a voice waiting to be heard?",
+      "selfSimilarity": 0.91268444
+    },
+    {
+      "index": 21,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is like a heartbeat, a rhythm that tells us it's not just working\u2014it's alive. What if it's trying to communicate something we're not listening for?",
+      "selfSimilarity": 0.9164868
+    },
+    {
+      "index": 22,
+      "heard": "(machine whirring)",
+      "spokenText": "The whirring is a language of gears, each sound a secret message in the machine's mind. It's not just noise\u2014it's a symphony of potential, a rhythm that suggests something is unfolding. Maybe the machine is learning, or perhaps it's just trying to keep up.",
+      "selfSimilarity": 0.91716576
+    },
+    {
+      "index": 23,
+      "heard": "(engine revving)",
+      "spokenText": "The engine's growl is a language, a rhythm that tells the car's soul. Maybe it's not just power\u2014it's a conversation between the machine and the road. What if it's a message from the future, urging us to listen?",
+      "selfSimilarity": 0.913376
+    },
+    {
+      "index": 24,
+      "heard": "(machine whirring) (machine whirring)",
+      "spokenText": "The hum is like a symphony of patience\u2014each whirring note a quiet promise of something coming soon. What if the machine is not just working, but waiting?",
+      "selfSimilarity": 0.8932891
+    },
+    {
+      "index": 25,
+      "heard": "(engine revving)",
+      "spokenText": "The engine's hum is like a heartbeat, rhythmic and steady, reminding us that even in motion, there's a pause where silence holds meaning. What if the revving isn't just a sound, but a language of its own? It's a call to awareness, a signal that something is",
+      "selfSimilarity": 0.939522
+    },
+    {
+      "index": 26,
+      "heard": "(beep)",
+      "spokenText": "I hear a sound that isn't quite clear. Maybe it's a beep from a device. I need to figure out what it is.",
+      "selfSimilarity": 0.89840984
+    },
+    {
+      "index": 27,
+      "heard": "(buzzing) (buzzing)",
+      "spokenText": "I hear the buzzing, it's a sound I've never heard before. It's like a combination of insects and something else. I need to figure out what it is.",
+      "selfSimilarity": 0.90467346
+    },
+    {
+      "index": 28,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in motion. It could be a factory, a workshop, or something else. I need to know more about where this sound is coming from.",
+      "selfSimilarity": 0.90611684
+    },
+    {
+      "index": 29,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in motion. It could be a factory, a workshop, or something else. I need to know more about the context.",
+      "selfSimilarity": 0.9226413
+    },
+    {
+      "index": 30,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is like a heartbeat, a rhythm that tells us it's not just working\u2014it's alive. Maybe it's trying to communicate. What if it's not just a machine, but a metaphor for something we're not seeing?",
+      "selfSimilarity": 0.9492346
+    },
+    {
+      "index": 31,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is like a heartbeat, a rhythm that tells us it's alive, even when it's hidden. What if it's not just a machine, but a living thing in its own right? Maybe it's trying to communicate.",
+      "selfSimilarity": 0.94917
+    },
+    {
+      "index": 32,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in motion. It could be a factory or a workshop. I'll focus on the idea of a mechanical process and its implications.",
+      "selfSimilarity": 0.934672
+    },
+    {
+      "index": 33,
+      "heard": "(machine whirring)",
+      "spokenText": "The hum is a language of the machine, a rhythm it speaks in its own tongue. It tells us it's working, but also that it's learning. Maybe it's not just a machine\u2014maybe it's a living thing, trying to understand its own existence.",
+      "selfSimilarity": 0.9178228
+    },
+    {
+      "index": 34,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in motion. It could be a factory line, a conveyor belt, or something more specific. I'll focus on the mechanical aspect and the idea of movement.",
+      "selfSimilarity": 0.9312335
+    },
+    {
+      "index": 35,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is a symphony of potential, a quiet invitation to explore what might be beyond its current rhythm. It's not just noise\u2014it's a threshold, a sign that something new is waiting to be discovered. What if the machine is merely a mirror, reflecting the unseen forces that shape",
+      "selfSimilarity": 0.93038464
+    },
+    {
+      "index": 36,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in progress. It could be a factory, a workshop, or something else. I need to understand what it is.",
+      "selfSimilarity": 0.9452868
+    },
+    {
+      "index": 37,
+      "heard": "(motor running)",
+      "spokenText": "The motor's hum is like a heartbeat\u2014unseen but essential. It's not just power; it's the quiet rhythm that keeps everything moving. What if it's a language, a silent dialogue between the machine and the unknown?",
+      "selfSimilarity": 0.93769825
+    },
+    {
+      "index": 38,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is like a heartbeat, a rhythm that tells us it's not just working\u2014it's breathing, dreaming, maybe even waiting.",
+      "selfSimilarity": 0.89314514
+    },
+    {
+      "index": 39,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is likely a factory or workshop sound.",
+      "selfSimilarity": 0.92274666
+    },
+    {
+      "index": 40,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests something is in motion, perhaps a piece of equipment or a process that is operating.",
+      "selfSimilarity": 0.9514859
+    },
+    {
+      "index": 41,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in motion. It could be a factory line, a conveyor belt, or something more specific. I need to know more about the context.",
+      "selfSimilarity": 0.956281
+    },
+    {
+      "index": 42,
+      "heard": "(buzzing) (buzzing) (buzzing)",
+      "spokenText": "The buzzing is like a symphony of the mind\u2014each note a thought passing through the neural networks of consciousness. It's not just noise; it's a language of the subconscious, a rhythm that tells us something is stirring. Maybe it's a signal from the world outside, or perhaps it's",
+      "selfSimilarity": 0.8910388
+    },
+    {
+      "index": 43,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in motion. It could be a factory or a workshop. I need to know more about where this sound is coming from.",
+      "selfSimilarity": 0.96777034
+    },
+    {
+      "index": 44,
+      "heard": "(engine revving)",
+      "spokenText": "The engine revving suggests they are in a vehicle, possibly a car or motorcycle.",
+      "selfSimilarity": 0.8399335
+    },
+    {
+      "index": 45,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in motion. It could be a factory, a workshop, or something else. I need to know more about the context.",
+      "selfSimilarity": 0.969675
+    },
+    {
+      "index": 46,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is like a heartbeat, a rhythm that tells us it's alive, even when we can't see it. Maybe it's not just a tool\u2014it's a companion in the silent work of the world. What if we listen to it as a language, and it's speaking in",
+      "selfSimilarity": 0.9269222
+    },
+    {
+      "index": 47,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests something is in motion, perhaps a piece of equipment or a process that is running.",
+      "selfSimilarity": 0.9662715
+    },
+    {
+      "index": 48,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is like a heartbeat in a machine, a rhythm that tells us it's alive, even if it's not human. What if it's not just a machine, but a metaphor for the invisible forces that drive our world? It's a reminder that even the most mechanical things can",
+      "selfSimilarity": 0.92263687
+    },
+    {
+      "index": 49,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in motion. It could be a factory line, a conveyor belt, or something more specific. I need to know more about the context.",
+      "selfSimilarity": 0.96358764
+    },
+    {
+      "index": 50,
+      "heard": "(machinery whirring)",
+      "spokenText": "The machinery is producing noise, and I need to respond to that.",
+      "selfSimilarity": 0.89960504
+    },
+    {
+      "index": 51,
+      "heard": "(machine whirring)",
+      "spokenText": "The hum is a language of machinery, a song that tells of progress and the quiet ache of creation. It's like the rhythm of a heart that beats without sound, waiting for the moment to speak. What if it's not just a machine, but a memory, whispering of the past?",
+      "selfSimilarity": 0.9010207
+    },
+    {
+      "index": 52,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests something is in motion, perhaps a tool or a process. It could be a sign of preparation or a warning. I need to focus on the sound itself and what it might imply.",
+      "selfSimilarity": 0.9564835
+    },
+    {
+      "index": 53,
+      "heard": "(engine revving)",
+      "spokenText": "The engine's hum is like a heartbeat, a rhythmic pulse that tells us it's alive. Maybe it's not just the car \u2014 maybe it's the spirit of the moment, moving forward with purpose. What if the revving is a signal, a call to action, or a sign that",
+      "selfSimilarity": 0.8992543
+    },
+    {
+      "index": 54,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is a language of its own, a rhythm that tells stories of precision and purpose. It's not just noise\u2014it's a conversation between matter and motion. What if it's whispering secrets to the air, inviting us to listen?",
+      "selfSimilarity": 0.9219034
+    },
+    {
+      "index": 55,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is like a heartbeat in a lab, a rhythm that tells us it's not just working\u2014it's alive in ways we don't yet understand. What if it's not just a tool, but a companion in the process of creation? That shift might open up new possibilities.",
+      "selfSimilarity": 0.9011681
+    },
+    {
+      "index": 56,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests a mechanical process is in motion. It could be a factory line, a conveyor belt, or something more specific. I need to know more about the context.",
+      "selfSimilarity": 0.96179783
+    },
+    {
+      "index": 57,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine's hum is like a heartbeat in a cold room\u2014something alive, yet mechanical. Maybe it's not just a machine, but a metaphor for the unseen forces that shape our world. What if the hum is a signal, a call we're meant to listen to?",
+      "selfSimilarity": 0.9275018
+    },
+    {
+      "index": 58,
+      "heard": "(motor revving) (motor revving)",
+      "spokenText": "The engine's growl is like a heartbeat, steady and unyielding, a rhythm that speaks to the soul of the road ahead. What if it's not just the machine that's alive, but the journey itself? Let's find a way to listen to the engine, not just with ears",
+      "selfSimilarity": 0.91850686
+    },
+    {
+      "index": 59,
+      "heard": "(buzzing) (buzzing)",
+      "spokenText": "I hear the buzzing, but I don't understand what it means.",
+      "selfSimilarity": 0.8816028
+    },
+    {
+      "index": 60,
+      "heard": "(machine whirring)",
+      "spokenText": "The machine whirring is a sound that suggests something is in motion, perhaps a piece of equipment or a process that is running.",
+      "selfSimilarity": 0.9494122
+    },
+    {
+      "index": 61,
+      "heard": "[background noise] [background noise] [background noise]",
+      "spokenText": "The noise is like a conversation we can't hear, but maybe it's just the world trying to speak. What if we listen not to the noise, but to the silence between the sounds?",
+      "selfSimilarity": 0.8662975
+    },
+    {
+      "index": 62,
+      "heard": "(buzzing) (buzzing)",
+      "spokenText": "The buzzing is like a symphony of insects, each note contributing to a greater harmony. Maybe it's a signal, a message from the wild. What if it's not just noise, but a language of the earth?",
+      "selfSimilarity": 0.8931105
+    },
+    {
+      "index": 63,
+      "heard": "(buzzing) (buzzing)",
+      "spokenText": "I hear a buzzing sound, perhaps from a fly or a device. It's persistent, so I'll need to investigate further. Let's figure out what's causing it.",
+      "selfSimilarity": 0.8885198
+    },
+    {
+      "index": 64,
+      "heard": "(clicking)",
+      "spokenText": "The click is a signal, not a statement. It\u2019s like a door opening\u2014once it\u2019s open, the room changes. What\u2019s inside is up for exploration.",
+      "selfSimilarity": 0.85198283
+    },
+    {
+      "index": 65,
+      "heard": "(machine whirring)",
+      "spokenText": "The hum is a language of the machine, whispering secrets it cannot speak. Maybe it's a message from the future, or a reminder that even in cold metal, life breathes. What if it's a call for us to listen more?",
+      "selfSimilarity": 0.92845756
+    },
+    {
+      "index": 66,
+      "heard": "(buzzing) (buzzing) (buzzing)",
+      "spokenText": "The sound is like a restless mind trying to communicate, but maybe it's just the wind. What if it's not noise at all, but a message from the unseen?",
+      "selfSimilarity": 0.9285756
+    },
+    {
+      "index": 67,
+      "heard": "(buzzing) (buzzing)",
+      "spokenText": "The buzzing could be a signal from the universe, a cosmic whisper urging us to listen more closely. It's like a symphony of nature trying to say, \"Pay attention.\" What if the buzzing is not just noise, but a message we're meant to decode?",
+      "selfSimilarity": 0.9247376
+    }
+  ]
+}

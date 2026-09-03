@@ -19,11 +19,13 @@
 //! fixture suites: a conformance test that passes quietly when its ground truth
 //! is absent reports green for exactly the state it exists to detect.
 //!
-//! Regenerate with:
+//! Regenerate with (this emits `repetition_v1.json` too, from the same single
+//! read, so both fixtures pin one digest of one file by construction rather
+//! than by anyone remembering to run two scripts against a moving target):
 //!
-//!   python3 tools/nonspeech-fixture/generate.py \
+//!   python3 tools/session-fixtures/generate.py \
 //!       ~/Documents/NeuralCompose/InteractionLogs/session-1788413094.turns.jsonl \
-//!       > crates/neuralcompose-hypnagogic/tests/fixtures/nonspeech_v1.json
+//!       crates/neuralcompose-hypnagogic/tests/fixtures
 
 use neuralcompose_hypnagogic::loops::is_non_speech;
 use serde::Deserialize;

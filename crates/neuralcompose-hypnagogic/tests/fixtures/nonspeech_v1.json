@@ -2,17 +2,19 @@
   "schemaId": "neuralcompose.hypnagogic.nonspeech-guard.v1",
   "source": {
     "path": "~/Documents/NeuralCompose/InteractionLogs/session-1788413094.turns.jsonl",
-    "fileSha256": "030f91cd2eb927baa9b806a1380a1d88602ca07dbc1458f1db3feedcfd0f4cbd",
-    "mtime": "2026-09-03T06:01:28.711199+00:00",
-    "labelledBy": "tools/spoken-loop/converse.py:404",
-    "readOn": "2026-09-03"
+    "fileSha256": "d40c6bc996b71d6e24ca8498e27d7797a4a334a74d11c37e76d319987507d7dc",
+    "mtime": "2026-09-03T06:10:55.170292+00:00",
+    "readOn": "2026-09-03",
+    "writerLive": false,
+    "writerNote": "The session (PID 103860, --mode reflective --turns 0 --mic) had ended and the file had stopped growing before this read. An earlier pin of this same path was taken at 55 turns while the writer was still appending; that is why a committed digest for this path moved once."
   },
-  "note": "Every heard value from the session, labelled by the Python reference's own guard. The speech cases matter as much as the non-speech ones: a guard that swallowed real utterances would pass a fixture holding only the noise. The source was an open-ended session (--turns 0) still appending when it was read, so a regeneration yielding more cases and a different digest is expected, not corruption.",
+  "note": "Every heard value from the session, labelled by the Python reference's own guard (converse.py:404). The speech cases matter as much as the non-speech ones: a guard that swallowed real utterances would pass a fixture holding only the noise.",
+  "labelledBy": "tools/spoken-loop/converse.py:404",
   "coverage": {
-    "turns": 55,
-    "nonSpeech": 43,
+    "turns": 68,
+    "nonSpeech": 56,
     "speech": 12,
-    "longestNonSpeechRun": 41
+    "longestNonSpeechRun": 54
   },
   "cases": [
     {
@@ -288,6 +290,71 @@
     {
       "index": 54,
       "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 55,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 56,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 57,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 58,
+      "heard": "(motor revving) (motor revving)",
+      "nonSpeech": true
+    },
+    {
+      "index": 59,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 60,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 61,
+      "heard": "[background noise] [background noise] [background noise]",
+      "nonSpeech": true
+    },
+    {
+      "index": 62,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 63,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 64,
+      "heard": "(clicking)",
+      "nonSpeech": true
+    },
+    {
+      "index": 65,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 66,
+      "heard": "(buzzing) (buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 67,
+      "heard": "(buzzing) (buzzing)",
       "nonSpeech": true
     }
   ]
