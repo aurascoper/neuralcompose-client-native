@@ -318,6 +318,44 @@ pub fn is_non_speech(text: &str) -> bool {
     out.trim().is_empty()
 }
 
+/// Token-set overlap between two replies, in `0.0..=1.0` (Jaccard).
+///
+/// **Deliberately lexical, and chosen over the cosine that was already here.**
+/// `DialecticLoop` already computes `self_similarity` — the embedding cosine of
+/// each reply against the recent-reply centroid — and already logs it, and it
+/// is the obvious thing to promote into a repetition check. It does not work.
+/// Measured across the 68 turns of session `1788413094`:
+///
+/// | | min | median | max |
+/// |---|---|---|---|
+/// | healthy turns | 0.723 | 0.906 | **0.938** |
+/// | stuck turns | **0.824** | 0.919 | 0.970 |
+///
+/// The ranges overlap almost entirely, because high self-similarity means
+/// *coherent*, and coherent and stuck are not distinguishable by it. This
+/// measure separates the same two regions cleanly — healthy tops out at 0.226
+/// against a stuck median of 0.311 and a max of 0.839 — and costs no embedder
+/// call. `tests/repetition_floor.rs` replays the corpus so that claim is
+/// checkable rather than quoted.
+///
+/// Case- and punctuation-insensitive, since the comparison is between two
+/// generated replies and neither's capitalisation carries meaning here. Two
+/// empty texts are `0.0`, not `1.0`: "nothing was said twice" is not a repeat.
+pub fn similarity(a: &str, b: &str) -> f32 {
+    fn tokens(text: &str) -> std::collections::BTreeSet<String> {
+        text.split(|c: char| !c.is_alphanumeric())
+            .filter(|t| !t.is_empty())
+            .map(|t| t.to_lowercase())
+            .collect()
+    }
+    let (x, y) = (tokens(a), tokens(b));
+    let union = x.union(&y).count();
+    if union == 0 {
+        return 0.0;
+    }
+    x.intersection(&y).count() as f32 / union as f32
+}
+
 /// pure and tested, instead of in the generator shell, because it is the same
 /// cleanup for every backend.
 pub fn strip_for_speech(text: &str) -> String {
@@ -413,6 +451,44 @@ mod stop_phrase_tests {
     fn silence_is_not_a_stop_phrase() {
         assert!(!is_stop_phrase(""));
         assert!(!is_stop_phrase("   "));
+    }
+}
+
+#[cfg(test)]
+mod similarity_tests {
+    use super::similarity;
+
+    #[test]
+    fn identical_text_is_one_and_disjoint_text_is_zero() {
+        assert_eq!(similarity("the machine whirring", "the machine whirring"), 1.0);
+        assert_eq!(similarity("alpha beta", "gamma delta"), 0.0);
+    }
+
+    #[test]
+    fn casing_and_punctuation_do_not_change_the_answer() {
+        assert_eq!(similarity("The machine, whirring!", "the machine whirring"), 1.0);
+    }
+
+    /// Two empty texts are 0.0, not 1.0. "Nothing was said twice" is not a
+    /// repeat, and a 1.0 there would let a pair of empty replies trip the
+    /// repetition guard on their own.
+    #[test]
+    fn empty_texts_are_not_a_repeat() {
+        assert_eq!(similarity("", ""), 0.0);
+        assert_eq!(similarity("", "something"), 0.0);
+    }
+
+    /// The pair the whole design turns on: two replies from the stuck run score
+    /// far above two from the healthy region. The exact figures are pinned in
+    /// `tests/repetition_floor.rs` against the real corpus; this is the
+    /// unit-level sanity check that the function has the right sense.
+    #[test]
+    fn recurring_boilerplate_scores_above_ordinary_variety() {
+        let a = "The machine whirring is a sound that suggests a mechanical                  process is in motion. It could be a factory, a workshop, or                  something else. I need to know more about the context.";
+        let b = "The machine whirring is a sound that suggests a mechanical                  process is in motion. It could be a factory or a workshop. I                  need to know more about the context.";
+        let c = "What if we consider the radio-traffic biofilms as a form of                  artificial communication, and test whether their signals could                  be misinterpreted?";
+        assert!(similarity(a, b) > 0.75, "near-verbatim pair scored {}", similarity(a, b));
+        assert!(similarity(a, c) < 0.20, "unrelated pair scored {}", similarity(a, c));
     }
 }
 

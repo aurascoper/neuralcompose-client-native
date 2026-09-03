@@ -1890,6 +1890,29 @@ fn run(args: Args) -> Result<(), String> {
                         if let Some(err) = &t.witness_error {
                             eprintln!("witness failed on turn {}: {err}", t.index);
                         }
+                        // The loop's own drift and repetition state, on stderr
+                        // beside the witness line. Before this, every one of
+                        // these numbers was computed each turn and written only
+                        // to the jsonl, where nobody looked until after a
+                        // session had already gone wrong — `self_similarity`
+                        // still is, and is printed here for exactly that
+                        // reason.
+                        if t.reanchored {
+                            eprintln!(
+                                "turn {}: drift {:.3} past the ceiling — prompts re-anchored                                  to the opening utterance (self-similarity {})",
+                                t.index,
+                                t.topic_drift.unwrap_or(f32::NAN),
+                                t.self_similarity
+                                    .map(|s| format!("{s:.3}"))
+                                    .unwrap_or_else(|| "n/a".into()),
+                            );
+                        }
+                        if t.repetition_forced_silence {
+                            eprintln!(
+                                "turn {}: {} of the last replies were near-repeats — turn                                  forced silent (the competition chose to speak; the log keeps                                  both)",
+                                t.index, t.repetition_hits,
+                            );
+                        }
                     }
                     Ok(None) => eprintln!("turn {turn_number} skipped (nothing heard)"),
                     Err(e) => eprintln!("turn failed: {e}"),
