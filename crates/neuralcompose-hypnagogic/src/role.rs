@@ -302,9 +302,8 @@ mod tests {
                  quotes, where it reads as something the person said",
                 role.id
             );
-            let quoted_end = p.find(&format!("\"{heard}\"")).expect("quoted utterance")
-                + heard.len()
-                + 2;
+            let quoted_end =
+                p.find(&format!("\"{heard}\"")).expect("quoted utterance") + heard.len() + 2;
             assert!(
                 p.find(anchor).expect("anchor present") > quoted_end,
                 "{}: the anchor appears before the utterance ends",

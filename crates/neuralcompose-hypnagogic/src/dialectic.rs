@@ -3,7 +3,9 @@
 //! Port of `Sources/BCICore/Composition/HypnagogicDialecticLoop.swift` (460
 //! lines), **plus behaviour the Swift does not have** — the session anchor, the
 //! prompt re-framing and the repetition floor. All three are listed under
-//! *Additions beyond the Swift* in `lib.rs`; none is a port artifact. Where [`crate::loops::MirrorLoop`] collapses each turn into one
+//! *Additions beyond the Swift* in `lib.rs`; none is a port artifact.
+//!
+//! Where [`crate::loops::MirrorLoop`] collapses each turn into one
 //! reply, this runs every [`DialecticalRole`] against the same utterance, scores
 //! the candidates on shared semantic axes, and resolves the turn by a
 //! tension-sharpened sample into *speaking* a basin or falling *silent* on a
@@ -831,9 +833,7 @@ where
             reanchored: drifted,
             repetition_hits,
             repetition_forced_silence: repetition_forced,
-            clarification_requested: candidates
-                .iter()
-                .any(|(_, t)| asks_for_clarification(t)),
+            clarification_requested: candidates.iter().any(|(_, t)| asks_for_clarification(t)),
             consecutive_silence: self.consecutive_silence,
             witness_error,
         }))

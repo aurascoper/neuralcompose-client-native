@@ -112,6 +112,13 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
   --voice-both                    speak BOTH poles each turn, in their own
                                   voices, so the dialectic is audible
   --mic-gate <n>                  skip calibration and use this speech gate
+  --drift-ceiling <n>             re-anchor the poles' prompts past this
+                                  distance from the opening utterance; 0
+                                  disables. EMBEDDER-SPECIFIC: the default is
+                                  measured against bge-small, so change it if
+                                  you change NC_EMBED_MODEL
+  --repetition-floor <n>          force a silent turn when the replies stop
+                                  moving; 0 disables
   --speak                         synthesize audio instead of printing
   --tts <kokoro|espeak>           voice engine for --speak (default kokoro)
   --eeg-url <ws://…>              attach an EEG source (dialectical modes only)
@@ -1931,7 +1938,8 @@ fn run(args: Args) -> Result<(), String> {
                         // reason.
                         if t.reanchored {
                             eprintln!(
-                                "turn {}: drift {:.3} past the ceiling — prompts re-anchored                                  to the opening utterance (self-similarity {})",
+                                "turn {}: drift {:.3} past the ceiling — prompts re-anchored \
+                                 to the opening utterance (self-similarity {})",
                                 t.index,
                                 t.topic_drift.unwrap_or(f32::NAN),
                                 t.self_similarity
@@ -1941,7 +1949,9 @@ fn run(args: Args) -> Result<(), String> {
                         }
                         if t.repetition_forced_silence {
                             eprintln!(
-                                "turn {}: {} of the last replies were near-repeats — turn                                  forced silent (the competition chose to speak; the log keeps                                  both)",
+                                "turn {}: {} of the last replies were near-repeats — turn \
+                                 forced silent (the competition chose to speak; the log \
+                                 keeps both)",
                                 t.index, t.repetition_hits,
                             );
                         }

@@ -460,13 +460,19 @@ mod similarity_tests {
 
     #[test]
     fn identical_text_is_one_and_disjoint_text_is_zero() {
-        assert_eq!(similarity("the machine whirring", "the machine whirring"), 1.0);
+        assert_eq!(
+            similarity("the machine whirring", "the machine whirring"),
+            1.0
+        );
         assert_eq!(similarity("alpha beta", "gamma delta"), 0.0);
     }
 
     #[test]
     fn casing_and_punctuation_do_not_change_the_answer() {
-        assert_eq!(similarity("The machine, whirring!", "the machine whirring"), 1.0);
+        assert_eq!(
+            similarity("The machine, whirring!", "the machine whirring"),
+            1.0
+        );
     }
 
     /// Two empty texts are 0.0, not 1.0. "Nothing was said twice" is not a
@@ -484,11 +490,25 @@ mod similarity_tests {
     /// unit-level sanity check that the function has the right sense.
     #[test]
     fn recurring_boilerplate_scores_above_ordinary_variety() {
-        let a = "The machine whirring is a sound that suggests a mechanical                  process is in motion. It could be a factory, a workshop, or                  something else. I need to know more about the context.";
-        let b = "The machine whirring is a sound that suggests a mechanical                  process is in motion. It could be a factory or a workshop. I                  need to know more about the context.";
-        let c = "What if we consider the radio-traffic biofilms as a form of                  artificial communication, and test whether their signals could                  be misinterpreted?";
-        assert!(similarity(a, b) > 0.75, "near-verbatim pair scored {}", similarity(a, b));
-        assert!(similarity(a, c) < 0.20, "unrelated pair scored {}", similarity(a, c));
+        let a = "The machine whirring is a sound that suggests a mechanical \
+                 process is in motion. It could be a factory, a workshop, or \
+                 something else. I need to know more about the context.";
+        let b = "The machine whirring is a sound that suggests a mechanical \
+                 process is in motion. It could be a factory or a workshop. I \
+                 need to know more about the context.";
+        let c = "What if we consider the radio-traffic biofilms as a form of \
+                 artificial communication, and test whether their signals could \
+                 be misinterpreted?";
+        assert!(
+            similarity(a, b) > 0.75,
+            "near-verbatim pair scored {}",
+            similarity(a, b)
+        );
+        assert!(
+            similarity(a, c) < 0.20,
+            "unrelated pair scored {}",
+            similarity(a, c)
+        );
     }
 }
 

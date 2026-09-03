@@ -109,7 +109,11 @@ fn the_healthy_region_alone_never_trips_the_floor() {
     let f = fixture();
     let cfg = DialecticConfig::default();
     let mut memory = DialecticalMemory::new(16, 0.5);
-    for c in f.cases.iter().filter(|c| f.regions.healthy.contains(&c.index)) {
+    for c in f
+        .cases
+        .iter()
+        .filter(|c| f.regions.healthy.contains(&c.index))
+    {
         let Some(text) = c.spoken_text.as_deref() else {
             continue;
         };

@@ -3,20 +3,20 @@
 //!
 //! `is_non_speech` restores a line the Python loop has and the Rust port lost.
 //! The ground truth is therefore the Python, and the fixture is labelled by
-//! **its own regex** (`tools/nonspeech-fixture/generate.py`), never by a reading
+//! **its own regex** (`tools/session-fixtures/generate.py`), never by a reading
 //! of the Rust. A fixture labelled from a second implementation of the same
 //! prose would agree with this port by construction and prove nothing — the
 //! argument `env_conformance.rs` already makes.
 //!
 //! The cases are every `heard` value from a real session,
-//! `session-1788413094.turns.jsonl`, in which the loop spent forty consecutive
-//! turns replying to a fan. **Retyping those strings into this file would defeat
+//! `session-1788413094.turns.jsonl`, in which the loop spent its last 54
+//! consecutive turns replying to a fan. **Retyping those strings into this file would defeat
 //! the point**: a pasted list stays green no matter what the log later holds,
 //! and the link back to the thing that actually happened is what makes this a
 //! regression test rather than a restatement of the implementation.
 //!
-//! **A missing fixture FAILS. It does not skip.** Same rule as the other two
-//! fixture suites: a conformance test that passes quietly when its ground truth
+//! **A missing fixture FAILS. It does not skip.** Same rule as every other
+//! fixture suite here: a conformance test that passes quietly when its ground truth
 //! is absent reports green for exactly the state it exists to detect.
 //!
 //! Regenerate with (this emits `repetition_v1.json` too, from the same single
@@ -66,7 +66,7 @@ fn fixture() -> Fixture {
         panic!(
             "{FIXTURE_PATH} is missing or unreadable ({e}). This test does not \
              skip without its ground truth — regenerate it with \
-             tools/nonspeech-fixture/generate.py (see the module header)."
+             tools/session-fixtures/generate.py (see the module header)."
         )
     });
     let f: Fixture = serde_json::from_str(&raw).expect("fixture is valid JSON");
@@ -82,10 +82,7 @@ fn every_recorded_utterance_is_classified_as_the_python_reference_classifies_it(
         if is_non_speech(&c.heard) != c.non_speech {
             disagreements.push(format!(
                 "turn {}: converse.py says nonSpeech={}, is_non_speech says {} — {:?}",
-                c.index,
-                c.non_speech,
-                !c.non_speech,
-                c.heard
+                c.index, c.non_speech, !c.non_speech, c.heard
             ));
         }
     }
@@ -135,7 +132,9 @@ fn the_corpus_holds_both_speech_and_noise() {
 fn parenthetical_asides_and_unterminated_brackets_are_still_speech() {
     assert!(!is_non_speech("I said (loudly) yes"));
     assert!(!is_non_speech("(unterminated"));
-    assert!(!is_non_speech("radiotropic biofilms [see chapter 3] switch states"));
+    assert!(!is_non_speech(
+        "radiotropic biofilms [see chapter 3] switch states"
+    ));
     assert!(is_non_speech("[BLANK_AUDIO]"));
     assert!(is_non_speech("(buzzing) (buzzing)"));
     assert!(is_non_speech("   "));
