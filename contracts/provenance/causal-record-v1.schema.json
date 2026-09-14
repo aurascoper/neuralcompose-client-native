@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.neuralcompose.invalid/provenance/causal-record-v1.schema.json",
+  "title": "Causal record v1 (ADR-004 composition)",
+  "description": "Temporal wrapper for an existing ProvenanceEnvelope; changes neither its assertion kinds nor its evidence eligibility.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaId", "provenance", "sourceTimestamp", "availableAt", "decisionCutoff", "expiresAt", "policyVersion", "payloadSha256", "lineage"],
+  "properties": {
+    "schemaId": {"const": "neuralcompose.causal-record.v1"},
+    "provenance": {"$ref": "https://contracts.neuralcompose.invalid/provenance/provenance-envelope.schema.json"},
+    "sourceTimestamp": {"type": "string", "format": "date-time"},
+    "availableAt": {"type": "string", "format": "date-time"},
+    "decisionCutoff": {"type": "string", "format": "date-time"},
+    "expiresAt": {"type": "string", "format": "date-time"},
+    "policyVersion": {"type": "string", "minLength": 1},
+    "payloadSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "lineage": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  }
+}
