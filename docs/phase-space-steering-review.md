@@ -38,12 +38,20 @@ midline electrode measurement. Name an eventual feature by its actual computatio
 and montage. Specify whether powers or waveforms are combined; those operations
 are not interchangeable. [Muse recording study](https://pmc.ncbi.nlm.nih.gov/articles/PMC10590850/).
 
-Apparent coupling across scalp channels can arise from the same underlying source
-being measured at multiple electrodes. Muscle signals can contaminate scalp EEG,
-including high-frequency power. A user moving the display through jaw tension
-would demonstrate a control path, but not the proposed cognitive mechanism.
-[Nolte et al.](https://pubmed.ncbi.nlm.nih.gov/15351371/),
-[Whitham et al.](https://pubmed.ncbi.nlm.nih.gov/17574912/).
+Three proposed controls have specific alternative explanations. These are risks to
+test, not findings that the unrecorded steering signal is entirely artifact.
+
+| Proposed control | Alternative explanation and interpretation limit |
+| --- | --- |
+| AF8–AF7 log alpha-power difference | Frontal alpha asymmetry commonly uses F3/F4 and F7/F8; AF7/AF8 is a different montage. Forehead muscle activity and eye movements can alter anterior spectral power. Eyebrow or gaze control would not validate a verbal-versus-spatial axis. [Conventional pairs](https://pmc.ncbi.nlm.nih.gov/articles/PMC3984363/), [ocular artifact experiment](https://doi.org/10.1016/S1388-2457(00)00541-1). |
+| Frontal theta/beta ratio | Muscle electrical activity (EMG) from forehead and jaw muscles overlaps beta. Contraction can change the denominator and move the control without the claimed cognitive change. Even weak contractions can mimic scalp rhythms. [Goncharova et al.](https://pubmed.ncbi.nlm.nih.gov/12948787/). |
+| Four-channel phase-locking value (PLV) | Channels measured as `s1-r` and `s2-r` share the reference term `r`. It can contribute apparent phase synchrony without coupling between the intended sources. The reference activity need not itself be non-neural. Volume conduction adds a separate common-source problem. [Reference analysis](https://pmc.ncbi.nlm.nih.gov/articles/PMC2891575/), [Nolte et al.](https://pubmed.ncbi.nlm.nih.gov/15351371/). |
+
+Muse spectral/asymmetry validation has been studied with specified processing and
+references; that does not establish the attachment's semantic controls.
+[Cannard et al., author preprint](https://www.biorxiv.org/content/10.1101/2021.11.02.466989v1.full).
+Reference effects and shared mains interference are both common-input concerns;
+this review does not establish the cause of an earlier 60 Hz observation.
 
 Use feature names such as log alpha-power difference or theta/beta ratio until
 mental-state interpretations have separate evidence. Invalid powers, zero
@@ -62,9 +70,13 @@ features without naming them “flow,” “deep focus,” or “creative incuba
 normalization within a trial, or explicitly record an adaptive baseline. Otherwise,
 a rolling baseline can change the control map while the participant learns it.
 
-A candidate pilot would use one declared feature, repeated randomized cue blocks,
-artifact checks, and held-out trials. Compare contingent feedback with a suitable
-control condition. Predefine the endpoint and failure rule before collecting data;
+A candidate pilot would first test whether facial or eye movement explains control.
+Include labeled eyebrow, jaw, blink, and gaze trials, with independent muscle and
+eye-activity measurements where available. Predefine artifact exclusions and report
+performance on held-out retained trials. Four EEG channels alone do not establish
+that these sources have been separated. Then use one declared feature, repeated
+randomized cue blocks, and a suitable feedback control condition.
+Predefine the endpoint and failure rule before collecting data;
 report failed calibration and nonresponse. These are proposed design choices, not
 results or an approved human-study protocol. CRED-nf provides a relevant framework
 for subsequent study design and reporting.
@@ -87,8 +99,11 @@ Hysteresis instead uses different transition thresholds depending on current sta
 
 The current band estimate uses 512 samples at 256 Hz: two seconds of history. This
 is window support, not a claim that its output has exactly two seconds of delay.
-Frame interval and newest-sample receipt-to-submit age omit sensor transport,
-estimator response, and physical scan-out. Measure those separately for steering.
+The largest recorded receipt-to-submit p95, 40.97 ms, starts inside the viewer.
+It excludes electrode/amplifier acquisition, Bluetooth, bridge processing, and
+display presentation. It also does not measure the feature estimator's response.
+Sensor-to-screen latency remains unknown; this benchmark supplies no multiplier
+for estimating it. Measure those stages separately for steering.
 
 There is no basis here for a universal 10–20 ms embodiment cutoff. For example, a
 rubber-hand experiment found stronger ownership effects below 300 ms of visual–tactile

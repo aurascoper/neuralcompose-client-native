@@ -61,6 +61,8 @@ The workspace/all-features Rust suite passed 453 tests; the artifact checks pass
 passed. The separate evidence-class drift guard failed only because the sibling
 repository's checkout revision differs from its pinned record; the enum source is
 unchanged. The provenance fixture was not advanced by this work.
+The [follow-up guard inspection](../../../tools/phase-space/VERIFICATION.md#follow-up-what-the-evidence-class-guard-asserts)
+separates its content checks from its checkout revision requirement.
 
 ## Evidence boundary
 

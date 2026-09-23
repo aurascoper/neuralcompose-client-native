@@ -49,3 +49,46 @@ The local sibling checkout is clean at `127c10987ae9b0aef58f9e354dd040ab4432a358
 `crates/neural-memory-domain/src/terms.rs` is byte-identical between those revisions,
 and the guard's enum comparison passed. Its revision equality check failed. This
 work does not advance that independent provenance record or claim the guard passed.
+
+## Follow-up: what the evidence-class guard asserts
+
+Inspected and rerun on 2026-09-23 after the recorded benchmark. The guard returned
+exit status 1, solely for sibling checkout revision equality. It checks
+`neural-memory-server`, defaulting to `~/src/neural-memory-server` with a
+`NEURAL_MEMORY_SERVER_DIR` override. It does not check `neuralcompose-eeg-lejepa`
+or require the client and server repositories to have the same HEAD.
+
+| Assertion in `scripts/check-evidence-class-drift.sh` | Observed result |
+| --- | --- |
+| Hash the source file at the fixture's historical upstream commit and compare with `upstream.fileSha256` | Passed |
+| Parse the current working file's `EvidenceClass` variant names and compare with `upstream.evidenceClasses` | Passed |
+| Require the sibling's current HEAD to equal `upstream.commit` | Failed: `127c109` differs from `5da4a5c` |
+
+An independent SHA-256 comparison found the same digest for the historical file,
+the current HEAD file, the working file, and the fixture:
+
+`6f4f06a0014cf8f3b16ecfc700018f88c0d2cb31f238f6fc4027b69cdde75255`
+
+The sibling checkout was clean. The guard itself does **not** compare the current
+whole-file hash with the historical hash; its current-file comparison extracts
+variant names. This independent hash check establishes the stronger content
+equality for this inspection.
+
+The [provenance ADR](../../docs/architecture/decision-log/ADR-004-provenance-vocabulary.md)
+describes preventing silent vocabulary drift and a local developer gate. The
+script additionally requires the checkout to remain at the dated source revision.
+That requirement is stronger than content agreement: an unrelated upstream commit
+can fail it. Thus the failure is correct under the script's literal rule, but does
+not establish enum drift. Its suggested `checkedAgainstCommit/checkedOn` fields
+also do not exist in this fixture; the actual fields are `upstream.commit` and
+`upstream.readOn`.
+
+If the intended contract is vocabulary compatibility, a future change should
+report historical evidence integrity, current vocabulary compatibility, and
+checkout revision difference separately. Keep the original source pin, fail when
+its source is unavailable or inconsistent, and do not rewrite it just to obtain a
+passing check. No guard, mapping, or fixture change was made by this review.
+
+Separately, local `git remote` for `neuralcompose-eeg-lejepa` returned `origin`.
+The premise that this checkout has no configured remote is not current. This
+inspection contacted no remote and read no EEG-derived data from that repository.
