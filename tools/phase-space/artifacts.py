@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Adapt retained Office templates without replacing their layout or styles."""
-import argparse, collections, copy, hashlib, itertools, json, math, pathlib, statistics, zipfile
+import argparse, collections, copy, datetime, hashlib, itertools, json, math, pathlib, statistics, zipfile
 from xml.etree import ElementTree as E
 
 ROOT=pathlib.Path('/home/aurascoper/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills')
@@ -64,6 +64,7 @@ def workbook(source,out,groups,runs,manifest):
     if formats is None:formats=E.Element(tag(S,'numFmts'),count='0');styles.insert(0,formats)
     xfs=styles.find(tag(S,'cellXfs'));style_cache={}
     def setcell(root,ref,v=None,formula=None,number_format=None):
+        if root is sheets[2] and number_format is None:number_format='General'
         c=get(root,ref)
         for child in list(c):c.remove(child)
         c.attrib.pop('t',None)
@@ -112,8 +113,15 @@ def workbook(source,out,groups,runs,manifest):
         summaries[case]=vals;setcell(data,'B'+str(row),case,number_format='General')
         for col,v in zip('CDEFGHI',vals):setcell(data,col+str(row),v,number_format='0.0%' if col in 'EFI' else '0.00')
         for col,v in zip('JKLMNOP',[20,100,1,0.95,60,None,None]):setcell(data,col+str(row),v,number_format='0.0%' if col in 'LMP' else '0.00')
-    for column in data.find(tag(S,'cols')):
-        if column.get('min')=='2' and column.get('max')=='2':column.set('width','32')
+    columns=data.find(tag(S,'cols'))
+    for column in list(columns):
+        if int(column.get('min'))<=2<=int(column.get('max')):
+            left,right=int(column.get('min')),int(column.get('max'))
+            index=list(columns).index(column);columns.remove(column)
+            spans=([(left,1,column.get('width'))] if left<2 else [])+[(2,2,'32')]+([(3,right,column.get('width'))] if right>2 else [])
+            for lo,hi,width in spans:
+                new=copy.deepcopy(column);new.set('min',str(lo));new.set('max',str(hi));new.set('width',width)
+                columns.insert(index,new);index+=1
     metric_names=['Frame p95 ms','Age p95 ms','Live fraction','Within 20ms','Median FPS','Accepted samples','Clipped fraction','Skipped notifications']
     selected=CASES[0];selected_values=summaries[selected]+[sum(r.get('skipped_notifications',0) for r in groups.get(selected,[])) if groups.get(selected) else None]
     for row,(label,actual) in enumerate(zip(metric_names,selected_values),2):
@@ -201,6 +209,33 @@ def workbook(source,out,groups,runs,manifest):
             for parent in chart.iter():
                 for node in list(parent):
                     if node.tag in (tag(C,'numCache'),tag(C,'strCache')):parent.remove(node)
+            # Explicit current caches keep absent observations out of chart positions.
+            series_values={'I':[summaries[c][0] for c in CASES],'J':[20]*12,
+                           'M':[summaries[c][1] for c in CASES],'N':[100]*12,
+                           'Q':counts if runs else [None]*5,
+                           'T':[statuses[label] for label in ['accepted','targets not met','unresolved','not measured']] if runs else [None]*4}
+            for ref in chart.iter(tag(C,'numRef')):
+                formula=ref.find(tag(C,'f'))
+                key=formula.text.split('!')[-1].replace('$','')[0]
+                if key not in series_values:continue
+                values=series_values[key];cache=E.SubElement(ref,tag(C,'numCache'))
+                E.SubElement(cache,tag(C,'formatCode')).text='General'
+                E.SubElement(cache,tag(C,'ptCount'),val=str(len(values)))
+                for index,v in enumerate(values):
+                    if v is not None:E.SubElement(E.SubElement(cache,tag(C,'pt'),idx=str(index)),tag(C,'v')).text=str(v)
+            for node in chart.iter(tag(C,'dispBlanksAs')):node.set('val','gap')
+            if name.endswith(('chart3.xml','chart4.xml')):
+                for parent in chart.iter():
+                    for labels in list(parent.findall(tag(C,'dLbls'))):parent.remove(labels)
+                if name.endswith('chart4.xml'):
+                    plot=next(chart.iter(tag(C,'pieChart')));labels=E.SubElement(plot,tag(C,'dLbls'))
+                    E.SubElement(labels,tag(C,'numFmt'),formatCode='0',sourceLinked='0')
+                    A='http://schemas.openxmlformats.org/drawingml/2006/main'
+                    tx=E.SubElement(labels,tag(C,'txPr'));E.SubElement(tx,tag(A,'bodyPr'));E.SubElement(tx,tag(A,'lstStyle'))
+                    para=E.SubElement(tx,tag(A,'p'));pr=E.SubElement(para,tag(A,'pPr'));run=E.SubElement(pr,tag(A,'defRPr'),sz='1100')
+                    E.SubElement(E.SubElement(run,tag(A,'solidFill')),tag(A,'srgbClr'),val='D7E2EC')
+                    E.SubElement(labels,tag(C,'dLblPos'),val='ctr')
+                    for field,val in [('showLegendKey','0'),('showVal','1'),('showCatName','0'),('showSerName','0'),('showPercent','0')]:E.SubElement(labels,tag(C,field),val=val)
             parts[name]=xml_bytes(chart)
     zip_write(source,out,parts)
 
@@ -208,6 +243,11 @@ def document(source,out,groups,runs,manifest):
     E.register_namespace('w',W);E.register_namespace('r',R)
     with zipfile.ZipFile(source) as z:root=E.fromstring(z.read('word/document.xml'))
     date=manifest.get('ended_utc',manifest.get('started_utc','Not measured'))
+    if date!='Not measured':date=date[:10]
+    wall_time='Not measured'
+    if manifest.get('ended_utc') and manifest.get('started_utc'):
+        elapsed=(datetime.datetime.fromisoformat(manifest['ended_utc'])-datetime.datetime.fromisoformat(manifest['started_utc'])).total_seconds()
+        wall_time=f'{elapsed/60:.2f} minutes, including warmup and process setup'
     commit=manifest.get('commit','Not measured');a=[r for r in runs if r['case'].endswith('-trace')];b=[r for r in runs if r['case'].endswith('-full')]
     def stat(rs,key):
         values=[r[key] for r in rs if r.get(key) is not None];return max(values) if values else None
@@ -223,7 +263,7 @@ def document(source,out,groups,runs,manifest):
                 ps=cell.findall(tag(W,'p'));paragraph(ps[0],v)
                 for p in ps[1:]:paragraph(p,'')
     table(0,[['Version','1.0'],['Prepared By','Automated local engineering validation'],['Reviewers','Not assigned'],['Date Prepared',date],['Reporting Window','Fixed benchmark schedule; see run manifest'],['Status','Measured engineering report' if runs else 'Not measured']])
-    table(1,[['Field','Details'],['Experiment Name','Phase-space / live dialectic renderer'],['Experiment Key','phase-space-v1'],['Owner Team','NeuralCompose'],['Business Owner','Not specified'],['Product Surface','Linux native Rust GPU window'],['Primary Objective','Measure scene-submission timing and preserve signal/model semantics'],['Control (Variant A)','Trace-only rendering'],['Treatment (Variant B)','Trace, band atmosphere, chronological semantic graph, final text'],['Allocation','Three rounds; every case once per round'],['Unit of Randomization','Recorded seeded order within round'],['Audience','Engineering maintainers; no human participants'],['Exclusions','Dirty, incomplete or aborted runs are non-quotable; no replacements'],['Start Date',manifest.get('started_utc','Not measured')],['End Date',manifest.get('ended_utc','Not measured')],['Planned Runtime','36 × (5 s warmup + 60 s): 39 minutes, plus setup'],['Actual Runtime',fmt(sum(r['duration_s'] for r in runs))+' measured seconds' if runs else 'Not measured']])
+    table(1,[['Field','Details'],['Experiment Name','Phase-space / live dialectic renderer'],['Experiment Key','phase-space-v1'],['Owner Team','NeuralCompose'],['Business Owner','Not specified'],['Product Surface','Linux native Rust GPU window'],['Primary Objective','Measure scene-submission timing and preserve signal/model semantics'],['Control (Variant A)','Trace-only rendering'],['Treatment (Variant B)','Trace, band atmosphere, chronological semantic graph, final text'],['Allocation','Three rounds; every case once per round'],['Unit of Randomization','Recorded seeded order within round'],['Audience','Engineering maintainers; no human participants'],['Exclusions','Dirty, incomplete or aborted runs are non-quotable; no replacements'],['Start Date',manifest.get('started_utc','Not measured')],['End Date',manifest.get('ended_utc','Not measured')],['Planned Runtime','36 × (5 s warmup + 60 s): 39 minutes, plus setup'],['Actual Runtime',wall_time]])
     table(2,[['Metric','Target/Rule'],['Primary Metric','Per-run nearest-rank frame-interval p95 ≤20 ms'],['Guardrail 1','Per-run sample-to-submit age p95 ≤100 ms'],['Guardrail 2','Bounded buffers; no rendering-induced ingestion loss'],['Guardrail 3','Observer parity under a full publisher channel; absence never becomes similarity zero'],['Decision Rule','Three quotable repeats: 3/3 accepted; 0/3 not met; mixed or missing unresolved. No extra runs.']])
     table(3,[['Metric','Variant A (Control)','Variant B (Treatment)'],['Completed runs',str(len(a)),str(len(b))],['Rendered frames',str(sum(r['rendered_frames'] for r in a)),str(sum(r['rendered_frames'] for r in b))],['Accepted samples',str(sum(r['accepted_samples'] for r in a)),str(sum(r['accepted_samples'] for r in b))],['Cases × repeats','6 × 3 planned','6 × 3 planned'],['Sample Ratio Check','Not applicable; fixed engineering schedule','Not applicable; fixed engineering schedule']])
     x,y=stat(a,'frame_p95_ms'),stat(b,'frame_p95_ms')
@@ -269,7 +309,15 @@ def document(source,out,groups,runs,manifest):
         values=spread(groups.get(case,[]),'age_p95_ms')
         p=E.Element(tag(W,'p'));paragraph(p,case+': '+('Not measured' if values is None else ' / '.join(fmt(v) for v in values)))
         body.insert(len(body)-1,p)
-    zip_write(source,out,{'word/document.xml':xml_bytes(root)})
+    changed={'word/document.xml':xml_bytes(root)}
+    with zipfile.ZipFile(source) as z:
+        for name in z.namelist():
+            if name.startswith(('word/header','word/footer')) and name.endswith('.xml'):
+                part=E.fromstring(z.read(name))
+                for node in part.iter(tag(W,'t')):
+                    if node.text and 'Report Name' in node.text:node.text=node.text.replace('Report Name','Phase-space validation')
+                changed[name]=xml_bytes(part)
+    zip_write(source,out,changed)
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runs',type=pathlib.Path,required=True);p.add_argument('--output',type=pathlib.Path,required=True)

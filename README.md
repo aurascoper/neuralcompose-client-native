@@ -40,3 +40,6 @@ The opt-in [native phase-space viewer](crates/neuralcompose-viz/README.md) combi
 four-channel EEG geometry with a live chronological dialectic graph. Its
 [measurement protocol](tools/phase-space/PREREGISTRATION.md) fixes three repetitions
 per case and treats missing semantic data as unavailable.
+
+See the [recorded validation and artifacts](docs/acceptance/phase-space-v1/README.md)
+and the [media-theory / steering review](docs/phase-space-steering-review.md).

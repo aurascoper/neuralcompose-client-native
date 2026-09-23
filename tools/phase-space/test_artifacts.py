@@ -1,4 +1,5 @@
 """Evidence rules and template absence checks; no simulated benchmark results."""
+import json
 import pathlib
 import tempfile
 import unittest
@@ -24,6 +25,25 @@ class ArtifactRules(unittest.TestCase):
         rows[0]['commit'] = 'a'
         rows[0]['clean_tree'] = False
         self.assertEqual(artifacts.verdict(rows), 'unresolved')
+
+    def test_partial_results_do_not_plot_missing_cases_as_zero(self):
+        source = artifacts.ROOT / 'artifact-template-analytics-dashboard/assets/reference.xlsx'
+        evidence = pathlib.Path(__file__).resolve().parents[2] / 'docs/acceptance/phase-space-v1/runs/noise-delay-full-r1.json'
+        if not source.exists():
+            self.skipTest('template plugin is not installed')
+        run = json.loads(evidence.read_text())
+        with tempfile.TemporaryDirectory() as td:
+            out = pathlib.Path(td) / 'partial.xlsx'
+            artifacts.workbook(source, out, {run['case']: [run]}, [run], {})
+            with zipfile.ZipFile(out) as z:
+                chart = E.fromstring(z.read('xl/charts/chart1.xml'))
+                refs = list(chart.iter(artifacts.tag(artifacts.C, 'numRef')))
+                measured = next(ref for ref in refs if '$I$' in ref.find(artifacts.tag(artifacts.C, 'f')).text)
+                cache = measured.find(artifacts.tag(artifacts.C, 'numCache'))
+                points = cache.findall(artifacts.tag(artifacts.C, 'pt'))
+                self.assertEqual(len(points), 1)
+                self.assertEqual(float(points[0].find(artifacts.tag(artifacts.C, 'v')).text), run['frame_p95_ms'])
+                self.assertEqual(cache.find(artifacts.tag(artifacts.C, 'ptCount')).get('val'), '12')
 
     def test_empty_copy_has_no_sample_values_or_shared_formulas(self):
         source = artifacts.ROOT / 'artifact-template-analytics-dashboard/assets/reference.xlsx'

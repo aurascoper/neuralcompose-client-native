@@ -43,12 +43,17 @@ formula caches are replaced. No runs produces “Not measured,” never example 
 The JSON summary records template hashes and each case's two p95 spreads.
 
 LibreOffice can render local PDF previews. SinglePageSheets preserves dashboard
-layout without splitting charts across paper pages:
+layout without splitting charts across paper pages. Extract its first page for a
+dashboard-only preview; SinglePageSheets also exports the hidden helper sheet:
 
 ```sh
 libreoffice --headless --convert-to \
   'pdf:calc_pdf_Export:{"SinglePageSheets":{"type":"boolean","value":"true"}}' \
   --outdir /absolute/path/artifacts /absolute/path/artifacts/phase-space-dashboard.xlsx
+pdfseparate -f 1 -l 1 /absolute/path/artifacts/phase-space-dashboard.pdf \
+  /absolute/path/artifacts/dashboard-page-%d.pdf
+mv /absolute/path/artifacts/dashboard-page-1.pdf \
+  /absolute/path/artifacts/phase-space-dashboard.pdf
 libreoffice --headless --convert-to pdf --outdir /absolute/path/artifacts \
   /absolute/path/artifacts/phase-space-experiment.docx
 ```

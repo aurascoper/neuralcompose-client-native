@@ -1,0 +1,8 @@
+test_empty_copy_has_no_sample_values_or_shared_formulas (test_artifacts.ArtifactRules.test_empty_copy_has_no_sample_values_or_shared_formulas) ... ok
+test_partial_results_do_not_plot_missing_cases_as_zero (test_artifacts.ArtifactRules.test_partial_results_do_not_plot_missing_cases_as_zero) ... ok
+test_verdict_requires_distinct_repeats_and_one_clean_build (test_artifacts.ArtifactRules.test_verdict_requires_distinct_repeats_and_one_clean_build) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.168s
+
+OK
