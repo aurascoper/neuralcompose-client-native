@@ -502,6 +502,40 @@ where
     /// One dialectical turn. `Ok(None)` means the turn was skipped without any
     /// state change — silence heard, or every generator returned empty text.
     pub fn turn(&mut self) -> SeamResult<Option<DialecticTurn>> {
+        self.turn_with_observer(&mut |_| {})
+    }
+
+    /// Observation never changes prompting, embedding order, draws, or memory.
+    /// Production observers must publish through the nonblocking visual mailbox.
+    pub fn turn_with_observer(
+        &mut self,
+        observer: &mut impl FnMut(&crate::visual::TurnVisual),
+    ) -> SeamResult<Option<DialecticTurn>> {
+        let mut visual = crate::visual::TurnVisual::new(self.turn_index);
+        observer(&visual);
+        let result = self.observed_turn(observer, &mut visual);
+        match &result {
+            Ok(Some(t)) => {
+                visual.stage = "completed".into();
+                visual.final_text = t.spoken.clone();
+                visual.repetition_forced_silence = t.repetition_forced_silence;
+                visual.reanchored = t.reanchored;
+            }
+            Ok(None) => visual.stage = "skipped".into(),
+            Err(e) => {
+                visual.stage = "failed".into();
+                visual.error = Some(e.to_string());
+            }
+        }
+        observer(&visual);
+        result
+    }
+
+    fn observed_turn(
+        &mut self,
+        observer: &mut impl FnMut(&crate::visual::TurnVisual),
+        visual: &mut crate::visual::TurnVisual,
+    ) -> SeamResult<Option<DialecticTurn>> {
         let heard = match self.listener.listen()? {
             Some(h) if !h.trim().is_empty() => h.trim().to_string(),
             // Nothing heard: speak a soft cue rather than competing over silence.
@@ -519,7 +553,13 @@ where
         // The Swift embeds this in the batch at step 2; moving it earlier costs
         // nothing (the same single call, just sooner) and is what lets step 1
         // react to drift at all.
+        visual.heard = heard.clone();
+        visual.stage = "embedding input".into();
+        observer(visual);
         let heard_emb = self.embedder.embed(&heard)?;
+        visual.heard_embedding = Some(heard_emb.clone());
+        visual.stage = "generating".into();
+        observer(visual);
 
         // Distance from the anchor — the FIRST utterance of the session, set
         // once and never updated. Measuring against `history_centroid` instead
@@ -568,6 +608,13 @@ where
                 .generate(role_system(role), &prompt, params)?;
             let text = crate::loops::strip_for_speech(&raw);
             if !text.is_empty() {
+                visual.candidates.push(crate::visual::VisualCandidate {
+                    role: role.id.to_string(),
+                    text: text.clone(),
+                    embedding: None,
+                    potential: None,
+                });
+                observer(visual);
                 candidates.push((role.id.to_string(), text));
             }
         }
@@ -578,8 +625,13 @@ where
 
         // 2. Embed every candidate. `heard` was embedded at step 0.
         let mut candidate_embs: Vec<Embedding> = Vec::with_capacity(candidates.len());
-        for (_, t) in &candidates {
-            candidate_embs.push(self.embedder.embed(t)?);
+        visual.stage = "embedding candidates".into();
+        observer(visual);
+        for (index, (_, t)) in candidates.iter().enumerate() {
+            let embedding = self.embedder.embed(t)?;
+            visual.candidates[index].embedding = Some(embedding.clone());
+            candidate_embs.push(embedding);
+            observer(visual);
         }
 
         // 3. Score against the accumulated trajectory.
@@ -623,8 +675,24 @@ where
             SeamError::Failed("candidates are not mutually comparable".to_string())
         })?;
 
+        let potentials: Vec<f32> = scored.iter().map(|s| s.potential).collect();
+        visual.scored(
+            &scored,
+            dynamics::probabilities(
+                &potentials,
+                dynamics::selection_temperature(tension, &self.tuning),
+            ),
+        );
+        observer(visual);
         let draw = self.draws.next_draw();
         let resolution = dynamics::compete(&scored, tension, draw, &self.tuning, None, false);
+        visual.stage = "resolved".into();
+        visual.outcome = Some(match &resolution.outcome {
+            DialecticalOutcome::Spoke(c) => format!("spoke:{}", c.role_id),
+            DialecticalOutcome::Synthesized(c) => format!("synthesized:{}", c.role_id),
+            DialecticalOutcome::Silent => "silent".into(),
+        });
+        observer(visual);
 
         // 4. Record and act.
         //

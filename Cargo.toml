@@ -5,4 +5,5 @@ members = [
     "crates/neuralcompose-headless",
     "crates/neuralcompose-hypnagogic",
     "crates/neuralcompose-llama",
+    "crates/neuralcompose-viz",
 ]

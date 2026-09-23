@@ -33,3 +33,10 @@ cargo test --features uniffi                # FFI attribute surface
 node contracts/stub-server/server.mjs &     # Gate 4 reference stub
 cargo run --example gate4_probe             # live phase-transition replay
 ```
+
+## Phase-space viewer
+
+The opt-in [native phase-space viewer](crates/neuralcompose-viz/README.md) combines
+four-channel EEG geometry with a live chronological dialectic graph. Its
+[measurement protocol](tools/phase-space/PREREGISTRATION.md) fixes three repetitions
+per case and treats missing semantic data as unavailable.
