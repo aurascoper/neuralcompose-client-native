@@ -161,6 +161,19 @@ fn the_drift_record_pins_its_own_source() {
             "upstream.{field} is not {len} lowercase hex: {v:?}"
         );
     }
+    // The write clamp is pinned by content too, so the drift check can pass a
+    // moved commit without losing sight of write.rs.
+    let clamp = read("fixtures/evidence-class-names.json")["agentWritableClasses"]["fileSha256"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
+    assert!(
+        clamp.len() == 64
+            && clamp
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()),
+        "agentWritableClasses.fileSha256 is not 64 lowercase hex: {clamp:?}"
+    );
 }
 
 /// Local extensions are kept apart from mirrored names on purpose: otherwise an

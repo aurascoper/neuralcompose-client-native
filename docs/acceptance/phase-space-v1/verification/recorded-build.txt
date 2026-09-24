@@ -1,0 +1,4 @@
+warning: neuralcompose-llama@0.1.0: LLAMA_CPP_DIR unset — neuralcompose-llama built as a stub (every call returns Unavailable). Set it to a llama.cpp checkout to enable.
+   Compiling neuralcompose-hypnagogic v0.1.0 (/home/aurascoper/src/neuralcompose-client-native-viz/crates/neuralcompose-hypnagogic)
+   Compiling neuralcompose-viz v0.1.0 (/home/aurascoper/src/neuralcompose-client-native-viz/crates/neuralcompose-viz)
+    Finished `release` profile [optimized] target(s) in 12.07s

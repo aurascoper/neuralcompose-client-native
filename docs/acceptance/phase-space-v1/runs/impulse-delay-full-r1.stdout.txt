@@ -1,0 +1,1 @@
+{"age_p95_ms":40.59560800000327,"frame_p95_ms":9.653440000001012,"frames":7141,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-delay-full-r1.json","quotable":true}

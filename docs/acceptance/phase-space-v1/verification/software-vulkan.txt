@@ -1,0 +1,1 @@
+{"age_p95_ms":41.73816199999965,"frame_p95_ms":12.110873999999328,"frames":557,"metrics":"/home/aurascoper/phase-space-validation/preflight/software-vulkan.json","quotable":false}

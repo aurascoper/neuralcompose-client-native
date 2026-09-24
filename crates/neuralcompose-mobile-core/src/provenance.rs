@@ -55,8 +55,10 @@ where
 ///
 /// Five of the six are spelled exactly as `neural-memory-server`'s
 /// `EvidenceClass` serializes them (`crates/neural-memory-domain/src/terms.rs:49-63`
-/// at commit `5da4a5c`); [`evidence_mapping`] is where that correspondence is
-/// written down and `scripts/check-evidence-class-drift.sh` is what re-checks it.
+/// first read at commit `5da4a5c`; the current pin is `upstream.commit` in
+/// `contracts/provenance/fixtures/evidence-class-names.json`);
+/// [`evidence_mapping`] is where that correspondence is written down
+/// and `scripts/check-evidence-class-drift.sh` is what re-checks it.
 ///
 /// The sixth, [`AssertionKind::HeuristicAnnotation`], has **no** counterpart
 /// there, on purpose. A threshold that a source file itself calls unvalidated —

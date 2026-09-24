@@ -12,6 +12,8 @@
 //!
 //! Verification for this file is the end-to-end run, not the test suite.
 
+mod visual_socket;
+
 use neuralcompose_hypnagogic::claude_cli;
 use neuralcompose_hypnagogic::command;
 use neuralcompose_hypnagogic::dialectic::{DialecticConfig, DialecticLoop};
@@ -58,6 +60,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 // ─────────────────────────────────────────────────────────────────── args ──
 
 struct Args {
+    visualization_socket: Option<PathBuf>,
     mode: HypnagogicMode,
     turns: u32,
     server: String,
@@ -127,6 +130,7 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
                                   (both are recorded as YOUR claim, not a reading)
   --world-model-demo              run the planner comparison and exit
   --heldout                       with it: the §8 held-out set and seeds
+  --visualization-socket <path>   ephemeral local live-dialectic snapshots
   --json                          --verify-log <path>
   --eligibility <turns.jsonl>     query a recorded session against the sealed
                                   pre-registration in contracts/eeg/
@@ -140,6 +144,7 @@ None of them needs llama-server, a model, a microphone or a headband.
 fn parse_args() -> Result<Args, String> {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
     let mut a = Args {
+        visualization_socket: None,
         mode: HypnagogicMode::Mirror,
         turns: 1,
         server: "http://127.0.0.1:8080".into(),
@@ -206,6 +211,10 @@ fn parse_args() -> Result<Args, String> {
             }
             "--verify-log" => {
                 a.verify_log = Some(PathBuf::from(need(i)?));
+                i += 1;
+            }
+            "--visualization-socket" => {
+                a.visualization_socket = Some(PathBuf::from(need(i)?));
                 i += 1;
             }
             "--eeg-url" => {
@@ -1801,6 +1810,15 @@ fn run(args: Args) -> Result<(), String> {
         }
     };
 
+    if args.visualization_socket.is_some() && args.mode.profile().is_none() {
+        return Err("--visualization-socket requires a dialectical mode".into());
+    }
+    let visual_publisher = args
+        .visualization_socket
+        .as_ref()
+        .map(|path| visual_socket::start(path, session_id.clone()))
+        .transpose()
+        .map_err(|e| format!("visualization socket: {e}"))?;
     match args.mode.profile() {
         None => {
             let mut l = MirrorLoop::new(
@@ -1874,7 +1892,12 @@ fn run(args: Args) -> Result<(), String> {
             let mut turn_number = 0u32;
             let mut stopped = false;
             while !stopped && (open_ended || turn_number < args.turns) {
-                match l.turn() {
+                let result = l.turn_with_observer(&mut |state| {
+                    if let Some(publisher) = &visual_publisher {
+                        publisher.publish(state);
+                    }
+                });
+                match result {
                     Ok(Some(t)) => {
                         // Checked before the record is written, so the turn that
                         // ends the session is still logged. It was a real turn.

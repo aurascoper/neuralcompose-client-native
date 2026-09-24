@@ -1,0 +1,1 @@
+{"age_p95_ms":40.57528199999797,"frame_p95_ms":9.632240000001957,"frames":7169,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-delay-full-r3.json","quotable":true}

@@ -1,0 +1,178 @@
+{
+  "cases": {
+    "rhythmic-channels-trace": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.303726999995376,
+        9.357198000003564,
+        10.091424999998821
+      ],
+      "age_p95_spread": [
+        40.27803800000038,
+        40.53923699999723,
+        40.70787000000564
+      ],
+      "runs": 3
+    },
+    "rhythmic-channels-full": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.001346999998106,
+        9.673922000001056,
+        10.030900000000287
+      ],
+      "age_p95_spread": [
+        40.59611500000028,
+        40.6071669999983,
+        40.64384099999734
+      ],
+      "runs": 3
+    },
+    "rhythmic-delay-trace": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.086729999999932,
+        9.25125399999871,
+        9.326940999997646
+      ],
+      "age_p95_spread": [
+        40.26747199999954,
+        40.43812500000058,
+        40.464389000000665
+      ],
+      "runs": 3
+    },
+    "rhythmic-delay-full": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.070358000002443,
+        9.30968800000187,
+        9.632240000001957
+      ],
+      "age_p95_spread": [
+        40.48168900000019,
+        40.57528199999797,
+        40.66582400000152
+      ],
+      "runs": 3
+    },
+    "noise-channels-trace": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.425285000000727,
+        9.489227999999628,
+        9.858533999999253
+      ],
+      "age_p95_spread": [
+        40.546753000002354,
+        40.58129000000008,
+        40.61235000000306
+      ],
+      "runs": 3
+    },
+    "noise-channels-full": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.143137000002355,
+        9.171714000004272,
+        9.8979589999999
+      ],
+      "age_p95_spread": [
+        40.5068820000015,
+        40.50964899999963,
+        40.81647299999895
+      ],
+      "runs": 3
+    },
+    "noise-delay-trace": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.20915300000047,
+        9.663239999998297,
+        10.434391000000431
+      ],
+      "age_p95_spread": [
+        40.26230200000282,
+        40.44188600000052,
+        40.973307000000204
+      ],
+      "runs": 3
+    },
+    "noise-delay-full": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.091062000003092,
+        9.34757800000341,
+        9.37986799999635
+      ],
+      "age_p95_spread": [
+        40.363777999999,
+        40.62357999999949,
+        40.66573300000164
+      ],
+      "runs": 3
+    },
+    "impulse-channels-trace": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.359142000000986,
+        9.442678999995735,
+        9.511491999999677
+      ],
+      "age_p95_spread": [
+        40.473195000005944,
+        40.52849800000331,
+        40.55729199999769
+      ],
+      "runs": 3
+    },
+    "impulse-channels-full": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.11167799999646,
+        9.171053999999401,
+        9.613575000003038
+      ],
+      "age_p95_spread": [
+        40.44585300000108,
+        40.58349499999895,
+        40.72931900000003
+      ],
+      "runs": 3
+    },
+    "impulse-delay-trace": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.13551600000062,
+        9.155173999999988,
+        9.810649999991483
+      ],
+      "age_p95_spread": [
+        40.473581999998714,
+        40.47607200000493,
+        40.52105599999777
+      ],
+      "runs": 3
+    },
+    "impulse-delay-full": {
+      "verdict": "accepted",
+      "frame_p95_spread": [
+        9.39386600000347,
+        9.556607999996913,
+        9.653440000001012
+      ],
+      "age_p95_spread": [
+        40.59560800000327,
+        40.596542999999656,
+        40.6436920000051
+      ],
+      "runs": 3
+    }
+  },
+  "template_sha256": {
+    "reference.xlsx artifact-template-analytics-dashboard": "ab655c867ea1c9eed617ec0eeec643946c1e49e9d5227e9db740c95daba26e46",
+    "reference.docx artifact-template-experiment-analysis": "d823cd0115186b34c01c6e4b4da3be28b64ee73cac849dbd62d6f4bb6385b0fb"
+  },
+  "commit": "3745369692fdd9908588316bac212f6e3b171183",
+  "run_count": 36
+}

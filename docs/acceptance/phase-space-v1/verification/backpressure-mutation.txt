@@ -1,0 +1,39 @@
+    Blocking waiting for file lock on build directory
+   Compiling smallvec v1.15.2
+   Compiling percent-encoding v2.3.2
+   Compiling getrandom v0.2.17
+   Compiling getrandom v0.3.4
+warning: neuralcompose-llama@0.1.0: LLAMA_CPP_DIR unset — neuralcompose-llama built as a stub (every call returns Unavailable). Set it to a llama.cpp checkout to enable.
+   Compiling neuralcompose-mobile-core v0.1.0 (/home/aurascoper/src/neuralcompose-client-native-viz/crates/neuralcompose-mobile-core)
+   Compiling neuralcompose-hypnagogic v0.1.0 (/home/aurascoper/src/neuralcompose-client-native-viz/crates/neuralcompose-hypnagogic)
+   Compiling ring v0.17.14
+   Compiling form_urlencoded v1.2.2
+   Compiling rand_core v0.9.5
+   Compiling icu_normalizer v2.2.0
+   Compiling rand_chacha v0.9.0
+   Compiling rand v0.9.5
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling tungstenite v0.28.0
+   Compiling rustls-webpki v0.103.13
+   Compiling rustls v0.23.42
+   Compiling ureq v2.12.1
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 50.97s
+     Running tests/visual_observer.rs (target/debug/deps/visual_observer-2006f6f4bbe10622)
+
+running 1 test
+
+thread 'full_publisher_cannot_block_or_change_drift_prompts_draws_or_reply_ring' (1032402) panicked at crates/neuralcompose-hypnagogic/tests/visual_observer.rs:147:35:
+generation waited for the stalled consumer: Timeout
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test full_publisher_cannot_block_or_change_drift_prompts_draws_or_reply_ring ... FAILED
+
+failures:
+
+failures:
+    full_publisher_cannot_block_or_change_drift_prompts_draws_or_reply_ring
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 5.00s
+
+error: test failed, to rerun pass `-p neuralcompose-hypnagogic --test visual_observer`

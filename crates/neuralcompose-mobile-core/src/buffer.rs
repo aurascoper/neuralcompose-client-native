@@ -11,6 +11,11 @@ pub struct SampleBuffer {
 }
 
 impl SampleBuffer {
+    /// The same bounded window as channel_arrays, retaining source timestamps.
+    pub fn window(&self) -> &[EEGSample] {
+        &self.samples[self.samples.len().saturating_sub(self.keep)..]
+    }
+
     pub fn new(keep: u32) -> Self {
         let keep = keep.max(1) as usize;
         Self {

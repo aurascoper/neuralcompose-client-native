@@ -19,6 +19,7 @@ name = "neuralcompose-hypnagogic"
 path = "src/main.rs"
 
 [dependencies]
+arc-swap = "1.7"
 neuralcompose-mobile-core = { path = "../neuralcompose-mobile-core" }
 serde = { version = "1", features = ["derive"] }
 # See mobile-core's Cargo.toml: the default parser does not round-trip f64.
