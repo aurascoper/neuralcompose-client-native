@@ -92,3 +92,30 @@ passing check. No guard, mapping, or fixture change was made by this review.
 Separately, local `git remote` for `neuralcompose-eeg-lejepa` returned `origin`.
 The premise that this checkout has no configured remote is not current. This
 inspection contacted no remote and read no EEG-derived data from that repository.
+
+## Follow-up, 2026-09-24: guard fixed in `81449c3`
+
+The entries above record the guard as it was on 2026-09-23. They are unchanged.
+On 2026-09-24 the guard stopped failing on a moved commit alone:
+
+- `c942e51` re-pinned `upstream.commit` to `127c10987ae9b0aef58f9e354dd040ab4432a358`,
+  on `neural-memory-server` `main` and `origin/main`. This departs from the
+  "keep the original source pin" suggestion above, by the owner's decision.
+  `5da4a5c` stays recorded as the first read in `provenance.rs`.
+- `81449c3` hashes each pinned file at the recorded commit and at HEAD.
+  It adds `agentWritableClasses.fileSha256` for `write.rs`, which had no check.
+  A moved commit with identical bytes passes with a NOTE.
+- The next commit makes a hash failure name the line range and what to re-read
+  there. It prints the checkout's branch next to the commit.
+
+Controls, each on a scratch copy of the fixture or a scratch clone of the server:
+
+| Control | Result |
+| --- | --- |
+| Record at `5da4a5c`, identical files | exit 0, NOTE: pinned files are byte-identical |
+| `write.rs` edited at HEAD | exit 1, `write.rs changed since 127c109…` |
+| Wrong `write.rs` hash in the record | exit 1, record digest mismatch |
+| Pinned commit absent from the checkout | exit 1, `… is not in …/neural-memory-server` |
+| `humanDecision` renamed in the record | exit 1, enum diff printed |
+
+The real checkout passes: exit 0, `main` at `127c109`.

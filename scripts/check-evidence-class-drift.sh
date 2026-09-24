@@ -36,6 +36,7 @@ fi
 # they can disagree about a tree that changed between two git invocations.
 status="$(git -C "$SERVER_DIR" status --porcelain=v2 --branch)"
 head_oid="$(awk '/^# branch\.oid /{print $3}' <<<"$status")"
+head_branch="$(awk '/^# branch\.head /{print $3}' <<<"$status")"
 if grep -qv '^#' <<<"$status"; then
   echo "evidence-class drift: NOTE — $SERVER_DIR has uncommitted changes;" >&2
   echo "  the variants below may not be what commit $head_oid contains." >&2
@@ -68,6 +69,11 @@ fi
 fail=0
 for section in upstream agentWritableClasses; do
   path="$(field "$section" path)"
+  lines="$(field "$section" lines)"
+  case "$section" in
+    upstream) what="the EvidenceClass enum: its variants and their serde names" ;;
+    agentWritableClasses) what="the agent write clamp: every WriteChannel::Agent write is forced to agentInference" ;;
+  esac
   pinned="$(field "$section" fileSha256)"
   if [ -z "$pinned" ]; then
     echo "evidence-class drift: FAILED — $section.fileSha256 is missing in $RECORD" >&2
@@ -83,7 +89,10 @@ for section in upstream agentWritableClasses; do
   at_head="$(blob_sha "$head_oid" "$path")"
   if [ "$at_head" != "$pinned" ]; then
     echo "evidence-class drift: FAILED — $path changed since $recorded_commit" >&2
-    echo "  Re-read $section from source, then update the record and the mapping together." >&2
+    echo "  The hash covers the whole file, so the edit may be elsewhere. Before re-pinning," >&2
+    echo "  read $path near lines $lines and confirm $what." >&2
+    echo "  If it still holds, update the lines, fileSha256, and upstream.commit/readOn in $RECORD." >&2
+    echo "  If it does not, update the mapping in provenance.rs as well." >&2
     fail=1
   fi
 done
@@ -97,7 +106,7 @@ fi
 [ "$fail" -eq 0 ] || exit 1
 
 if [ "$head_oid" != "$recorded_commit" ]; then
-  echo "evidence-class drift: NOTE — checkout is at $head_oid, record at $recorded_commit;" >&2
+  echo "evidence-class drift: NOTE — checkout is on $head_branch at $head_oid, record at $recorded_commit;" >&2
   echo "  pinned files are byte-identical. Re-pinning upstream.commit is optional." >&2
 fi
-echo "evidence-class drift: clean (5 variants, $SERVER_DIR at $head_oid)"
+echo "evidence-class drift: clean (5 variants, $SERVER_DIR on branch $head_branch at $head_oid)"
