@@ -5,9 +5,9 @@
     "repo": "neural-memory-server",
     "path": "crates/neural-memory-domain/src/terms.rs",
     "lines": "49-63",
-    "commit": "5da4a5c5ab509e22bc9eb72dbeb6d3fac835606b",
+    "commit": "127c10987ae9b0aef58f9e354dd040ab4432a358",
     "fileSha256": "6f4f06a0014cf8f3b16ecfc700018f88c0d2cb31f238f6fc4027b69cdde75255",
-    "readOn": "2026-08-13",
+    "readOn": "2026-09-24",
     "evidenceClasses": [
       "observed",
       "derivedDeterministically",

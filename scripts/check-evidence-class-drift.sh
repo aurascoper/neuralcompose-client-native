@@ -74,7 +74,7 @@ if ! diff -u <(echo "$expected") <(echo "$actual") ; then
 fi
 if [ "$head_oid" != "$recorded_commit" ]; then
   echo "evidence-class drift: FAILED — recorded against $recorded_commit, checkout is at $head_oid" >&2
-  echo "  Re-verify and update checkedAgainstCommit/checkedOn in $RECORD." >&2
+  echo "  Re-verify and update upstream.commit/upstream.readOn in $RECORD." >&2
   fail=1
 fi
 [ "$fail" -eq 0 ] || exit 1
