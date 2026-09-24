@@ -1,11 +1,16 @@
 """Evidence rules and template absence checks; no simulated benchmark results."""
 import json
+import os
 import pathlib
 import tempfile
 import unittest
 import zipfile
 from xml.etree import ElementTree as E
 import artifacts
+
+# The generator takes template paths as arguments; the tests take one from the
+# environment and skip without it, as the generator no longer assumes a host path.
+TEMPLATE = pathlib.Path(os.environ.get('PHASE_SPACE_DASHBOARD_TEMPLATE', '/nonexistent'))
 
 class ArtifactRules(unittest.TestCase):
     def test_verdict_requires_distinct_repeats_and_one_clean_build(self):
@@ -27,10 +32,10 @@ class ArtifactRules(unittest.TestCase):
         self.assertEqual(artifacts.verdict(rows), 'unresolved')
 
     def test_partial_results_do_not_plot_missing_cases_as_zero(self):
-        source = artifacts.ROOT / 'artifact-template-analytics-dashboard/assets/reference.xlsx'
+        source = TEMPLATE
         evidence = pathlib.Path(__file__).resolve().parents[2] / 'docs/acceptance/phase-space-v1/runs/noise-delay-full-r1.json'
         if not source.exists():
-            self.skipTest('template plugin is not installed')
+            self.skipTest('PHASE_SPACE_DASHBOARD_TEMPLATE is not set')
         run = json.loads(evidence.read_text())
         with tempfile.TemporaryDirectory() as td:
             out = pathlib.Path(td) / 'partial.xlsx'
@@ -46,9 +51,9 @@ class ArtifactRules(unittest.TestCase):
                 self.assertEqual(cache.find(artifacts.tag(artifacts.C, 'ptCount')).get('val'), '12')
 
     def test_empty_copy_has_no_sample_values_or_shared_formulas(self):
-        source = artifacts.ROOT / 'artifact-template-analytics-dashboard/assets/reference.xlsx'
+        source = TEMPLATE
         if not source.exists():
-            self.skipTest('template plugin is not installed')
+            self.skipTest('PHASE_SPACE_DASHBOARD_TEMPLATE is not set')
         before = source.read_bytes()
         with tempfile.TemporaryDirectory() as td:
             out = pathlib.Path(td) / 'empty.xlsx'
@@ -60,6 +65,8 @@ class ArtifactRules(unittest.TestCase):
                         self.assertNotEqual(f.get('t'), 'shared')
                     for v in root.iter(artifacts.tag(artifacts.S, 'v')):
                         self.assertNotIn(v.text, ('31500', '403700', '4480'))
+                sst = E.fromstring(z.read('xl/sharedStrings.xml'))
+                self.assertEqual(len(sst), 0, 'template strings survived')
                 data = E.fromstring(z.read('xl/worksheets/sheet2.xml'))
                 for c in data.iter(artifacts.tag(artifacts.S, 'c')):
                     ref = c.get('r')
