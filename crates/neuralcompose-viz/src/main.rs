@@ -398,6 +398,10 @@ impl App {
             }
             if packet.sequence > self.sequence {
                 self.sequence = packet.sequence;
+                self.recorder
+                    .lock()
+                    .unwrap()
+                    .turn(self.epoch.elapsed().as_secs_f64());
                 if self
                     .history
                     .back()

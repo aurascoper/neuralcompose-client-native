@@ -36,6 +36,13 @@ pub struct Run {
     pub within_budget_fraction: f64,
     pub clipped_fraction: f64,
     pub skipped_notifications: u64,
+    /// Seconds since process start at each scene submission in the window, so
+    /// stalls can be placed in time without summing intervals.
+    #[serde(default)]
+    pub frame_submit_s: Vec<f64>,
+    /// Seconds since process start when the observer accepted a new turn.
+    #[serde(default)]
+    pub turn_received_s: Vec<f64>,
 }
 impl Run {
     pub fn meets_targets(&self) -> bool {

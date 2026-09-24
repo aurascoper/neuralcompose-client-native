@@ -6,6 +6,8 @@ pub struct Recorder {
     pub framebuffer: [u32; 2],
     pub frames: Vec<f64>,
     pub ages: Vec<f64>,
+    times: Vec<f64>,
+    turns: Vec<f64>,
     first: Option<f64>,
     last: Option<f64>,
     first_received: Option<u64>,
@@ -24,6 +26,8 @@ impl Recorder {
             framebuffer: [0; 2],
             frames: Vec::new(),
             ages: Vec::new(),
+            times: Vec::new(),
+            turns: Vec::new(),
             first: None,
             last: None,
             first_received: None,
@@ -46,7 +50,7 @@ impl Recorder {
         examined: usize,
         skipped: u64,
     ) {
-        if now < self.warmup || (self.seconds > 0.0 && now > self.warmup + self.seconds) {
+        if !self.in_window(now) {
             return;
         }
         self.first.get_or_insert(now);
@@ -55,6 +59,7 @@ impl Recorder {
             self.frames.push((now - last) * 1000.0);
         }
         self.last = Some(now);
+        self.times.push(now);
         self.received = received;
         self.frame_count += 1;
         self.live += usize::from(live);
@@ -68,6 +73,16 @@ impl Recorder {
         if self.seconds == 0.0 && self.frames.len() > 36000 {
             self.frames.drain(..18000);
             self.ages.drain(..self.ages.len().saturating_sub(18000));
+            self.times.drain(..18000);
+            self.turns.retain(|t| *t >= self.times[0]);
+        }
+    }
+    fn in_window(&self, now: f64) -> bool {
+        now >= self.warmup && (self.seconds == 0.0 || now <= self.warmup + self.seconds)
+    }
+    pub fn turn(&mut self, now: f64) {
+        if self.in_window(now) {
+            self.turns.push(now);
         }
     }
     pub fn finish(
@@ -81,7 +96,7 @@ impl Recorder {
     ) -> Run {
         let duration = self.last.unwrap_or(0.0) - self.first.unwrap_or(0.0);
         Run {
-            schema: "neuralcompose.phase-space.run.v1".into(),
+            schema: "neuralcompose.phase-space.run.v2".into(),
             case,
             repeat,
             commit: env!("NC_VIZ_COMMIT").into(),
@@ -118,6 +133,28 @@ impl Recorder {
                 / self.frames.len().max(1) as f64,
             clipped_fraction: self.clipped as f64 / self.examined.max(1) as f64,
             skipped_notifications: self.skipped,
+            frame_submit_s: self.times.clone(),
+            turn_received_s: self.turns.clone(),
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::Recorder;
+
+    #[test]
+    fn turn_and_frame_times_stay_inside_the_measurement_window() {
+        let mut r = Recorder::new(1.0, 2.0);
+        r.turn(0.5); // warmup
+        for now in [0.9, 1.0, 1.5, 3.0, 3.1] {
+            r.submit(now, None, 0, true, 0, 0, 0);
+        }
+        r.turn(2.0);
+        r.turn(3.5); // after the window
+        let run = r.finish("c".into(), 1, String::new(), String::new(), true, false);
+        assert_eq!(run.frame_submit_s, vec![1.0, 1.5, 3.0]);
+        assert_eq!(run.turn_received_s, vec![2.0]);
+        assert_eq!(run.frame_intervals_ms.len(), run.frame_submit_s.len() - 1);
+        assert_eq!(run.schema, "neuralcompose.phase-space.run.v2");
     }
 }
