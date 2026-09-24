@@ -52,31 +52,52 @@ actual="$(
 
 expected="$(python3 -c "import json;print('\n'.join(json.load(open('$RECORD'))['upstream']['evidenceClasses']))")"
 recorded_commit="$(jq_field commit)"
-recorded_digest="$(jq_field fileSha256)"
+field() { python3 -c "import json,sys;print(json.load(open('$RECORD'))[sys.argv[1]].get(sys.argv[2],''))" "$1" "$2"; }
+blob_sha() { git -C "$SERVER_DIR" show "$1:$2" | sha256sum | cut -d' ' -f1; }
 
-# The cheap check first: if the file the names were read from is byte-identical
-# at the recorded commit, the variant list cannot have moved. The parse below is
-# then a confirmation rather than the only mechanism.
-actual_digest="$(git -C "$SERVER_DIR" show "$recorded_commit:$(jq_field path)" 2>/dev/null | sha256sum | cut -d' ' -f1)"
-if [ -n "$actual_digest" ] && [ "$actual_digest" != "$recorded_digest" ]; then
-  echo "evidence-class drift: FAILED — $(jq_field path) at $recorded_commit digests to" >&2
-  echo "  $actual_digest, but the record pins $recorded_digest." >&2
-  echo "  Either the record is wrong or the commit is not what it was read from." >&2
+if ! git -C "$SERVER_DIR" cat-file -e "$recorded_commit^{commit}" 2>/dev/null; then
+  echo "evidence-class drift: FAILED — $recorded_commit is not in $SERVER_DIR" >&2
+  echo "  Fetch it, or re-pin upstream.commit to a pushed commit after re-reading." >&2
   exit 1
 fi
 
+# The pin is on CONTENT, not on the commit ID. Each pinned file is hashed twice:
+# at the recorded commit (is the record itself true?) and at HEAD (has the file
+# changed since?). A moved commit with identical bytes cannot have moved the enum
+# or the write clamp, so it passes with a note instead of asking for a re-pin.
 fail=0
+for section in upstream agentWritableClasses; do
+  path="$(field "$section" path)"
+  pinned="$(field "$section" fileSha256)"
+  if [ -z "$pinned" ]; then
+    echo "evidence-class drift: FAILED — $section.fileSha256 is missing in $RECORD" >&2
+    fail=1; continue
+  fi
+  at_record="$(blob_sha "$recorded_commit" "$path")"
+  if [ "$at_record" != "$pinned" ]; then
+    echo "evidence-class drift: FAILED — $path at $recorded_commit digests to" >&2
+    echo "  $at_record, but $section.fileSha256 pins $pinned." >&2
+    echo "  Either the record is wrong or the commit is not what it was read from." >&2
+    fail=1; continue
+  fi
+  at_head="$(blob_sha "$head_oid" "$path")"
+  if [ "$at_head" != "$pinned" ]; then
+    echo "evidence-class drift: FAILED — $path changed since $recorded_commit" >&2
+    echo "  Re-read $section from source, then update the record and the mapping together." >&2
+    fail=1
+  fi
+done
+
 if ! diff -u <(echo "$expected") <(echo "$actual") ; then
   echo "evidence-class drift: FAILED — the enum no longer matches $RECORD" >&2
   echo "  Update the mapping in crates/neuralcompose-mobile-core/src/provenance.rs" >&2
   echo "  AND the fixture, together. The mapping is the thing that must not drift." >&2
   fail=1
 fi
-if [ "$head_oid" != "$recorded_commit" ]; then
-  echo "evidence-class drift: FAILED — recorded against $recorded_commit, checkout is at $head_oid" >&2
-  echo "  Re-verify and update upstream.commit/upstream.readOn in $RECORD." >&2
-  fail=1
-fi
 [ "$fail" -eq 0 ] || exit 1
 
+if [ "$head_oid" != "$recorded_commit" ]; then
+  echo "evidence-class drift: NOTE — checkout is at $head_oid, record at $recorded_commit;" >&2
+  echo "  pinned files are byte-identical. Re-pinning upstream.commit is optional." >&2
+fi
 echo "evidence-class drift: clean (5 variants, $SERVER_DIR at $head_oid)"
