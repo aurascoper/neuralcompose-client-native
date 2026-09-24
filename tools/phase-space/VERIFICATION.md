@@ -100,7 +100,8 @@ On 2026-09-24 the guard stopped failing on a moved commit alone:
 
 - `c942e51` re-pinned `upstream.commit` to `127c10987ae9b0aef58f9e354dd040ab4432a358`,
   on `neural-memory-server` `main` and `origin/main`. This departs from the
-  "keep the original source pin" suggestion above, by the owner's decision.
+  "keep the original source pin" suggestion above. The agent proposed the
+  re-pin, and the owner approved it before the change.
   `5da4a5c` stays recorded as the first read in `provenance.rs`.
 - `81449c3` hashes each pinned file at the recorded commit and at HEAD.
   It adds `agentWritableClasses.fileSha256` for `write.rs`, which had no check.
