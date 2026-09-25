@@ -53,6 +53,12 @@ whitespace removed.
 - [Experiment report](artifacts/phase-space-experiment.docx) and [PDF preview](artifacts/phase-space-experiment.pdf).
 - [Machine-readable case summary and original template hashes](artifacts/summary.json).
 - [Synthetic scene preview](artifacts/phase-space-viewer.png); this separate screenshot run is non-quotable.
+
+On 2026-09-24 the dashboard, report, and their PDF previews were regenerated from
+the same 36 run files. The runs and `summary.json` are unchanged. The regeneration
+rewords Purpose to what frame timing can show, notes the worst values across all
+runs beside the selected-case tiles, puts the frame-interval histogram on a log
+count axis, and drops the template's unused strings.
 - [Pre-recording verification](../../../tools/phase-space/VERIFICATION.md) and [workspace test transcript](verification/workspace-tests.txt).
 - [Blocking-send mutation failure](verification/backpressure-mutation.txt) and [restored observer test](verification/observer-restored.txt).
 

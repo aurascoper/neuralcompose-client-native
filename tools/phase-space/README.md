@@ -35,8 +35,8 @@ python3 tools/phase-space/artifacts.py --runs /absolute/path/recorded-runs \
   --report-template /path/experiment-analysis/assets/reference.docx
 ```
 
-Template paths default to the installed OpenAI templates plugin location on the
-authoring host. Original files are not modified. The workbook retains the dashboard,
+Both template paths are required. `test_artifacts.py` reads the dashboard template
+from `PHASE_SPACE_DASHBOARD_TEMPLATE` and skips two tests without it. Original files are not modified. The workbook retains the dashboard,
 input sheet, hidden chart helpers, and four chart placements; it adds a Runs sheet.
 The report retains the cover, sections, and table roles. All example values and
 formula caches are replaced. No runs produces “Not measured,” never example results.

@@ -3,7 +3,6 @@
 import argparse, collections, copy, datetime, hashlib, itertools, json, math, pathlib, statistics, zipfile
 from xml.etree import ElementTree as E
 
-ROOT=pathlib.Path('/home/aurascoper/.codex/plugins/cache/openai-curated-remote/openai-templates/0.1.1/skills')
 S='http://schemas.openxmlformats.org/spreadsheetml/2006/main'; W='http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 R='http://schemas.openxmlformats.org/officeDocument/2006/relationships'; C='http://schemas.openxmlformats.org/drawingml/2006/chart'
 CASES=['-'.join(c) for c in itertools.product(['rhythmic','noise','impulse'],['channels','delay'],['trace','full'])]
@@ -100,7 +99,8 @@ def workbook(source,out,groups,runs,manifest):
     setcell(dash,'N3',len(runs),number_format='0');setcell(data,'B13','CASE SUMMARY — THREE FIXED REPEATS; NO POOLED P95')
     setcell(data,'B6','Dashboard p95 values are the worst of three run-level p95s. Runs holds every measured repetition. No extra or replacement runs.')
     setcell(data,'B7','Select a case in C9. A case needs three quotable runs: 3/3 accepted; 0/3 targets not met; mixed or incomplete unresolved.')
-    source_note=f"Build {manifest.get('commit','not measured')[:12]}; {len(runs)}/36 runs. Dirty runs are non-quotable. See Runs and report for provenance."
+    worst=lambda key:max((r[key] for r in runs if r.get(key) is not None),default=None)
+    source_note=f"Build {manifest.get('commit','not measured')[:12]}; {len(runs)}/36 runs. Tiles show the selected case; worst across all runs: frame p95 {fmt(worst('frame_p95_ms'))} ms, age p95 {fmt(worst('age_p95_ms'))} ms. Dirty runs are non-quotable."
     setcell(data,'C11',source_note);setcell(dash,'B4',source_note)
     cols=['Case','Frame p95 ms','Age p95 ms','Live fraction','Within 20ms','Median FPS','Accepted samples','Clipped fraction','Frame target','Age target','Live reference','Budget reference','FPS reference','Samples reference','Clip reference']
     for col,label in zip('BCDEFGHIJKLMNOP',cols):setcell(data,col+'15',label)
@@ -188,6 +188,7 @@ def workbook(source,out,groups,runs,manifest):
     ct='http://schemas.openxmlformats.org/package/2006/content-types';types=E.fromstring(parts['[Content_Types].xml']);E.SubElement(types,tag(ct,'Override'),PartName='/xl/worksheets/sheet4.xml',ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml')
     formats.set('count',str(len(formats)));xfs.set('count',str(len(xfs)))
     for i,root in enumerate(sheets+[run_sheet],1):parts[f'xl/worksheets/sheet{i}.xml']=xml_bytes(root)
+    if 'xl/sharedStrings.xml' in parts:parts['xl/sharedStrings.xml']=xml_bytes(E.Element(tag(S,'sst'),count='0',uniqueCount='0'))
     parts['xl/styles.xml']=xml_bytes(styles);parts['xl/workbook.xml']=xml_bytes(book);parts['xl/_rels/workbook.xml.rels']=xml_bytes(rels);parts['[Content_Types].xml']=xml_bytes(types)
     # Remove stale chart caches so renderers read the adapted helper cells.
     for name in list(parts):
@@ -212,7 +213,7 @@ def workbook(source,out,groups,runs,manifest):
             # Explicit current caches keep absent observations out of chart positions.
             series_values={'I':[summaries[c][0] for c in CASES],'J':[20]*12,
                            'M':[summaries[c][1] for c in CASES],'N':[100]*12,
-                           'Q':counts if runs else [None]*5,
+                           'Q':[v or None for v in counts] if runs else [None]*5,
                            'T':[statuses[label] for label in ['accepted','targets not met','unresolved','not measured']] if runs else [None]*4}
             for ref in chart.iter(tag(C,'numRef')):
                 formula=ref.find(tag(C,'f'))
@@ -224,6 +225,9 @@ def workbook(source,out,groups,runs,manifest):
                 for index,v in enumerate(values):
                     if v is not None:E.SubElement(E.SubElement(cache,tag(C,'pt'),idx=str(index)),tag(C,'v')).text=str(v)
             for node in chart.iter(tag(C,'dispBlanksAs')):node.set('val','gap')
+            if name.endswith('chart3.xml'):
+                for scaling in (ax.find(tag(C,'scaling')) for ax in chart.iter(tag(C,'valAx'))):
+                    if scaling.find(tag(C,'logBase')) is None:scaling.insert(0,E.Element(tag(C,'logBase'),val='10'))
             if name.endswith(('chart3.xml','chart4.xml')):
                 for parent in chart.iter():
                     for labels in list(parent.findall(tag(C,'dLbls'))):parent.remove(labels)
@@ -265,7 +269,7 @@ def document(source,out,groups,runs,manifest):
     table(0,[['Version','1.0'],['Prepared By','Automated local engineering validation'],['Reviewers','Not assigned'],['Date Prepared',date],['Reporting Window','Fixed benchmark schedule; see run manifest'],['Status','Measured engineering report' if runs else 'Not measured']])
     table(1,[['Field','Details'],['Experiment Name','Phase-space / live dialectic renderer'],['Experiment Key','phase-space-v1'],['Owner Team','NeuralCompose'],['Business Owner','Not specified'],['Product Surface','Linux native Rust GPU window'],['Primary Objective','Measure scene-submission timing and preserve signal/model semantics'],['Control (Variant A)','Trace-only rendering'],['Treatment (Variant B)','Trace, band atmosphere, chronological semantic graph, final text'],['Allocation','Three rounds; every case once per round'],['Unit of Randomization','Recorded seeded order within round'],['Audience','Engineering maintainers; no human participants'],['Exclusions','Dirty, incomplete or aborted runs are non-quotable; no replacements'],['Start Date',manifest.get('started_utc','Not measured')],['End Date',manifest.get('ended_utc','Not measured')],['Planned Runtime','36 × (5 s warmup + 60 s): 39 minutes, plus setup'],['Actual Runtime',wall_time]])
     table(2,[['Metric','Target/Rule'],['Primary Metric','Per-run nearest-rank frame-interval p95 ≤20 ms'],['Guardrail 1','Per-run sample-to-submit age p95 ≤100 ms'],['Guardrail 2','Bounded buffers; no rendering-induced ingestion loss'],['Guardrail 3','Observer parity under a full publisher channel; absence never becomes similarity zero'],['Decision Rule','Three quotable repeats: 3/3 accepted; 0/3 not met; mixed or missing unresolved. No extra runs.']])
-    table(3,[['Metric','Variant A (Control)','Variant B (Treatment)'],['Completed runs',str(len(a)),str(len(b))],['Rendered frames',str(sum(r['rendered_frames'] for r in a)),str(sum(r['rendered_frames'] for r in b))],['Accepted samples',str(sum(r['accepted_samples'] for r in a)),str(sum(r['accepted_samples'] for r in b))],['Cases × repeats','6 × 3 planned','6 × 3 planned'],['Sample Ratio Check','Not applicable; fixed engineering schedule','Not applicable; fixed engineering schedule']])
+    table(3,[['Metric','Variant A (Control)','Variant B (Treatment)'],['Completed runs',str(len(a)),str(len(b))],['Rendered frames',str(sum(r['rendered_frames'] for r in a)),str(sum(r['rendered_frames'] for r in b))],['Accepted samples',str(sum(r['accepted_samples'] for r in a)),str(sum(r['accepted_samples'] for r in b))],['Cases × repeats',f"{len({r['case'] for r in a})} × 3 planned; {len(a)} runs",f"{len({r['case'] for r in b})} × 3 planned; {len(b)} runs"],['Sample Ratio Check','Not applicable; fixed engineering schedule','Not applicable; fixed engineering schedule']])
     x,y=stat(a,'frame_p95_ms'),stat(b,'frame_p95_ms')
     table(4,[['Measure','Variant A','Variant B','Absolute Delta','Relative Delta'],['Worst run-level frame p95 (ms)',fmt(x),fmt(y),delta(x,y),'Not a pooled percentile'],['95% Confidence Interval','Not applicable','Not applicable','Descriptive repeats','Not applicable'],['Two-Sided p-value','Not applicable','Not applicable','No inferential test','Not applicable'],['Outcome Narrative','Trace-only','Full composition',summary,'This host/build only']])
     table(5,[['Guardrail Metric','Variant A','Variant B','Delta','Status'],['Worst sample-to-submit p95 ms',fmt(stat(a,'age_p95_ms')),fmt(stat(b,'age_p95_ms')),delta(stat(a,'age_p95_ms'),stat(b,'age_p95_ms')),'Per-run target ≤100 ms'],['Maximum clipped display fraction',fmt(stat(a,'clipped_fraction')),fmt(stat(b,'clipped_fraction')),'Descriptive','Impulse fixture intentionally exceeds scale'],['Observer / drift parity','Deterministic test suite','Full-channel barrier test','No model/log change permitted','See validation transcript'],['Signal gap / missing similarity','Deterministic tests','Deterministic tests','No invented continuity or edges','See validation transcript']])
@@ -277,7 +281,7 @@ def document(source,out,groups,runs,manifest):
     table(6,segment)
     table(7,[['Item','Decision'],['Final Decision',summary],['Decision Date',date],['Approvers','Not assigned; this report records measurements, not approval'],['Rollout Type','Separate opt-in visualization shell; no model-policy change'],['Rollback Trigger','Any observer parity, source freshness, or provenance violation'],['Follow Up','Unresolved cases remain unresolved. Any follow-up requires a new protocol.']])
     sections={
-        'Purpose':['Measure the rendering cost of the full composition against trace-only rendering on identical deterministic input.','Keep per-run evidence, build identity, and limits available to maintainers.'],
+        'Purpose':['Measure whether the full composition fits the frame budget, against trace-only rendering on identical deterministic input. Frame timing is limited by display refresh, so it cannot resolve rendering cost below one refresh interval.','Keep per-run evidence, build identity, and limits available to maintainers.'],
         'Business Context':['The scene combines four-channel EEG, frequency contributions, model candidates, and final text.','Semantic position encodes chronology and role only. Explicit edges carry cosine; absent embeddings do not produce invented coordinates or edges.'],
         'Design Notes':['Three complete rounds cover twelve cases. Each fresh process warms for five seconds and measures for sixty. Order is shuffled with a recorded fixed seed.','Both variants receive identical synthetic EEG and semantic events. This tests engineering behavior, not human perception or biological efficacy.'],
         'Hypothesis':['The full composition can satisfy the registered submission-cadence and receive-to-submit targets while preserving the core and dialectic contracts.'],
@@ -321,13 +325,13 @@ def document(source,out,groups,runs,manifest):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runs',type=pathlib.Path,required=True);p.add_argument('--output',type=pathlib.Path,required=True)
-    p.add_argument('--dashboard-template',type=pathlib.Path,default=ROOT/'artifact-template-analytics-dashboard/assets/reference.xlsx')
-    p.add_argument('--report-template',type=pathlib.Path,default=ROOT/'artifact-template-experiment-analysis/assets/reference.docx')
+    p.add_argument('--dashboard-template',type=pathlib.Path,required=True)
+    p.add_argument('--report-template',type=pathlib.Path,required=True)
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
     runs=[]
     for path in sorted(a.runs.glob('*.json')):
         obj=json.loads(path.read_text())
-        if isinstance(obj,dict) and obj.get('schema')=='neuralcompose.phase-space.run.v1':runs.append(obj)
+        if isinstance(obj,dict) and obj.get('schema') in ('neuralcompose.phase-space.run.v1','neuralcompose.phase-space.run.v2'):runs.append(obj)
     groups=collections.defaultdict(list)
     for r in runs:groups[r['case']].append(r)
     manifest=json.loads((a.runs/'manifest.json').read_text()) if (a.runs/'manifest.json').exists() else {}

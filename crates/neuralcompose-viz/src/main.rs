@@ -129,6 +129,9 @@ fn repo() -> PathBuf {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     path.canonicalize().unwrap_or(path)
 }
+/// Seconds after the measurement window before the watchdog ends a run that
+/// the render thread has not ended.
+const WATCHDOG_GRACE_S: f64 = 2.0;
 fn clean_tree() -> bool {
     std::process::Command::new("git")
         .args(["status", "--porcelain"])
@@ -177,17 +180,65 @@ struct App {
     session: String,
     sequence: u64,
     recorder: Arc<Mutex<recording::Recorder>>,
-    gpu: String,
-    sha: String,
-    clean: bool,
     yaw: f32,
     pitch: f32,
     zoom: f32,
     paused: bool,
     atmosphere: bool,
     semantics: bool,
-    finished: bool,
+    output: Arc<RunOutput>,
     screenshot_requested: bool,
+}
+/// Writes the run file exactly once, from whichever thread ends the run first.
+/// The render thread ends a run that completed; the watchdog ends one whose
+/// window stopped drawing, since a covered Wayland window can block that thread.
+struct RunOutput {
+    path: Option<PathBuf>,
+    case: String,
+    repeat: u32,
+    recorded: bool,
+    gpu: String,
+    sha: String,
+    clean: bool,
+    recorder: Arc<Mutex<recording::Recorder>>,
+    written: AtomicBool,
+}
+impl RunOutput {
+    fn write(&self, ended: &str) -> bool {
+        if self.written.swap(true, Ordering::SeqCst) {
+            return false;
+        }
+        let Some(path) = &self.path else {
+            return true;
+        };
+        let run = self.recorder.lock().unwrap().finish(
+            self.case.clone(),
+            self.repeat,
+            self.gpu.clone(),
+            self.sha.clone(),
+            self.clean && clean_tree(),
+            self.recorded,
+            ended,
+        );
+        use std::io::Write;
+        let result = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(path)
+            .and_then(|mut f| {
+                f.write_all(&serde_json::to_vec_pretty(&run).unwrap())?;
+                f.sync_all()
+            });
+        if let Err(e) = result {
+            eprintln!("cannot write measurements: {e}");
+        } else {
+            println!(
+                "{}",
+                serde_json::json!({"metrics":path,"quotable":run.quotable,"ended":run.ended,"frames":run.rendered_frames,"frame_p95_ms":run.frame_p95_ms,"age_p95_ms":run.age_p95_ms})
+            );
+        }
+        true
+    }
 }
 impl App {
     fn new(cc: &eframe::CreationContext<'_>, args: Args) -> Result<Self, String> {
@@ -308,6 +359,38 @@ impl App {
             args.seconds,
         )));
         let full = args.full;
+        let output = Arc::new(RunOutput {
+            path: args.metrics.clone(),
+            case: format!(
+                "{}-{}-{}",
+                args.fixture,
+                if args.config.mapping == Mapping::Channels {
+                    "channels"
+                } else {
+                    "delay"
+                },
+                if args.full { "full" } else { "trace" }
+            ),
+            repeat: args.repeat,
+            recorded: args.recorded,
+            gpu,
+            sha,
+            clean,
+            recorder: recorder.clone(),
+            written: AtomicBool::new(false),
+        });
+        if args.seconds > 0.0 {
+            let (output, stop) = (output.clone(), stop.clone());
+            let deadline = Duration::from_secs_f64(args.warmup + args.seconds + WATCHDOG_GRACE_S);
+            std::thread::spawn(move || {
+                std::thread::sleep(deadline.saturating_sub(epoch.elapsed()));
+                stop.store(true, Ordering::Relaxed);
+                if output.write("stopped drawing") {
+                    eprintln!("run ended by watchdog: the window stopped drawing");
+                    std::process::exit(3);
+                }
+            });
+        }
         Ok(Self {
             args,
             epoch,
@@ -321,62 +404,19 @@ impl App {
             session: String::new(),
             sequence: 0,
             recorder,
-            gpu,
-            sha,
-            clean,
             yaw: 0.6,
             pitch: 0.3,
             zoom: 3.2,
             paused: false,
             atmosphere: full,
             semantics: full,
-            finished: false,
+            output,
             screenshot_requested: false,
         })
     }
     fn finish(&mut self) {
-        if self.finished {
-            return;
-        }
-        self.finished = true;
         self.stop.store(true, Ordering::Relaxed);
-        if let Some(path) = &self.args.metrics {
-            let case = format!(
-                "{}-{}-{}",
-                self.args.fixture,
-                if self.args.config.mapping == Mapping::Channels {
-                    "channels"
-                } else {
-                    "delay"
-                },
-                if self.args.full { "full" } else { "trace" }
-            );
-            let run = self.recorder.lock().unwrap().finish(
-                case,
-                self.args.repeat,
-                self.gpu.clone(),
-                self.sha.clone(),
-                self.clean && clean_tree(),
-                self.args.recorded,
-            );
-            use std::io::Write;
-            let result = std::fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(path)
-                .and_then(|mut f| {
-                    f.write_all(&serde_json::to_vec_pretty(&run).unwrap())?;
-                    f.sync_all()
-                });
-            if let Err(e) = result {
-                eprintln!("cannot write measurements: {e}");
-            } else {
-                println!(
-                    "{}",
-                    serde_json::json!({"metrics":path,"quotable":run.quotable,"frames":run.rendered_frames,"frame_p95_ms":run.frame_p95_ms,"age_p95_ms":run.age_p95_ms})
-                );
-            }
-        }
+        self.output.write("completed");
     }
     fn ingest_semantics(&mut self) {
         let packet = if self.args.demo && self.args.socket.is_none() {
@@ -398,6 +438,10 @@ impl App {
             }
             if packet.sequence > self.sequence {
                 self.sequence = packet.sequence;
+                self.recorder
+                    .lock()
+                    .unwrap()
+                    .turn(self.epoch.elapsed().as_secs_f64());
                 if self
                     .history
                     .back()
@@ -835,5 +879,35 @@ fn main() {
     ) {
         eprintln!("{e}");
         std::process::exit(1);
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_run_file_is_written_once_with_the_first_reason() {
+        let dir = std::env::temp_dir().join(format!("nc-viz-runoutput-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("run.json");
+        let _ = std::fs::remove_file(&path);
+        let output = RunOutput {
+            path: Some(path.clone()),
+            case: "c".into(),
+            repeat: 1,
+            recorded: false,
+            gpu: String::new(),
+            sha: String::new(),
+            clean: false,
+            recorder: Arc::new(Mutex::new(recording::Recorder::new(0.0, 1.0))),
+            written: AtomicBool::new(false),
+        };
+        assert!(output.write("stopped drawing"));
+        assert!(!output.write("completed"));
+        let run: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(run["ended"], "stopped drawing");
+        assert_eq!(run["quotable"], false);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }
