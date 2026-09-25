@@ -126,6 +126,7 @@ fn repeated_run_verdicts_are_fixed_and_dirty_runs_cannot_pass() {
         skipped_notifications: 0,
         frame_submit_s: vec![],
         turn_received_s: vec![],
+        ended: "completed".into(),
     };
     let mut runs = vec![base; 3];
     runs[1].repeat = 2;

@@ -85,6 +85,7 @@ impl Recorder {
             self.turns.push(now);
         }
     }
+    #[allow(clippy::too_many_arguments)]
     pub fn finish(
         &self,
         case: String,
@@ -93,6 +94,7 @@ impl Recorder {
         sha: String,
         clean: bool,
         recorded: bool,
+        ended: &str,
     ) -> Run {
         let duration = self.last.unwrap_or(0.0) - self.first.unwrap_or(0.0);
         Run {
@@ -103,6 +105,7 @@ impl Recorder {
             executable_sha256: sha,
             clean_tree: clean,
             quotable: recorded
+                && ended == "completed"
                 && clean
                 && duration >= 59.9
                 && self.warmup == 5.0
@@ -135,6 +138,7 @@ impl Recorder {
             skipped_notifications: self.skipped,
             frame_submit_s: self.times.clone(),
             turn_received_s: self.turns.clone(),
+            ended: ended.into(),
         }
     }
 }
@@ -151,10 +155,41 @@ mod tests {
         }
         r.turn(2.0);
         r.turn(3.5); // after the window
-        let run = r.finish("c".into(), 1, String::new(), String::new(), true, false);
+        let run = r.finish(
+            "c".into(),
+            1,
+            String::new(),
+            String::new(),
+            true,
+            false,
+            "completed",
+        );
         assert_eq!(run.frame_submit_s, vec![1.0, 1.5, 3.0]);
         assert_eq!(run.turn_received_s, vec![2.0]);
         assert_eq!(run.frame_intervals_ms.len(), run.frame_submit_s.len() - 1);
         assert_eq!(run.schema, "neuralcompose.phase-space.run.v2");
+    }
+
+    #[test]
+    fn only_a_completed_run_is_quotable() {
+        let mut r = Recorder::new(5.0, 60.0);
+        for now in [5.0, 35.0, 65.0] {
+            r.submit(now, Some(1.0), 0, true, 0, 0, 0);
+        }
+        let run = |ended| {
+            r.finish(
+                "c".into(),
+                1,
+                String::new(),
+                String::new(),
+                true,
+                true,
+                ended,
+            )
+        };
+        assert!(run("completed").quotable);
+        let stopped = run("stopped drawing");
+        assert!(!stopped.quotable);
+        assert_eq!(stopped.ended, "stopped drawing");
     }
 }

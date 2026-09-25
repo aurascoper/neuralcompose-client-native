@@ -43,6 +43,10 @@ pub struct Run {
     /// Seconds since process start when the observer accepted a new turn.
     #[serde(default)]
     pub turn_received_s: Vec<f64>,
+    /// "completed", or "stopped drawing" when the watchdog ended the run.
+    /// Only a completed run is quotable.
+    #[serde(default)]
+    pub ended: String,
 }
 impl Run {
     pub fn meets_targets(&self) -> bool {
