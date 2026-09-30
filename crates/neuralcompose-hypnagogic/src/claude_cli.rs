@@ -43,7 +43,7 @@ pub fn generator_id(model: &str) -> String {
 
 /// The exact argument vector. Everything after the flags is the transcript.
 ///
-/// Three of these flags are load-bearing:
+/// Four of these flags are load-bearing:
 ///
 /// - `--system-prompt` **replaces** the CLI's own system prompt rather than
 ///   appending to it (`--append-system-prompt` is the other one). The role's
@@ -53,6 +53,12 @@ pub fn generator_id(model: &str) -> String {
 ///   Claude Code: it can read and write files and run shell commands in
 ///   whatever directory it was spawned in. A text-generation seam has no
 ///   business holding a shell, and the Swift port predates the flag existing.
+/// - `--setting-sources user` keeps the cwd's `.claude/settings.json` out of
+///   the run. `--tools ""` disables tools, not hooks: a `SessionStart` or
+///   `Stop` hook in the working directory's project settings runs as this
+///   user, under `-p`, with no tool call involved. Measured, not assumed. The
+///   binary's session directory is private now, and the flag holds if a
+///   future caller spawns from somewhere else.
 /// - `--output-format json` gets the envelope [`parse_result`] reads. The
 ///   default `text` format would work until the day the CLI prefixes a warning.
 ///
@@ -70,6 +76,8 @@ pub fn argv(model: &str, system: &str, prompt: &str) -> Vec<String> {
         system.into(),
         "--tools".into(),
         String::new(),
+        "--setting-sources".into(),
+        "user".into(),
         "--output-format".into(),
         "json".into(),
         prompt.into(),
@@ -129,6 +137,8 @@ mod tests {
                 "TEST-SYS-PROMPT",
                 "--tools",
                 "",
+                "--setting-sources",
+                "user",
                 "--output-format",
                 "json",
                 "user transcript text",
@@ -182,7 +192,7 @@ mod tests {
         let sys = "line one\nline two\n\nCONSTRAINTS:\n1. never ask questions";
         let args = argv("m", sys, "p");
         assert!(args.contains(&sys.to_string()));
-        assert_eq!(args.len(), 10, "no argument was split on its own newlines");
+        assert_eq!(args.len(), 12, "no argument was split on its own newlines");
     }
 
     #[test]

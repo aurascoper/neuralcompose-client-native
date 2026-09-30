@@ -1533,6 +1533,77 @@ fn preflight_claude(model: &str, workdir: &Path) -> Result<(), String> {
         .map_err(|e| format!("the claude CLI answered, but not in the expected shape: {e}"))
 }
 
+/// The per-session scratch directory: `turn.wav`, `reply.wav`, and the cwd of
+/// every `claude` subprocess.
+///
+/// Private and unguessable on purpose. It was `/tmp/nc-hypnagogic-<pid>` via
+/// `create_dir_all`, which returns `Ok` on a directory someone else made
+/// first: a second local user could pre-create the coming PID range, read
+/// every microphone capture, plant a symlink for `turn.wav` to follow, and
+/// drop a `.claude/settings.json` whose hooks run as this user (measured:
+/// `SessionStart` and `Stop` both fire under `-p --tools ""`). `$XDG_RUNTIME_DIR`
+/// is `/run/user/<uid>`, mode 0700 with root-owned ancestors, which closes all
+/// of that and one thing more: `claude -p` reads `CLAUDE.md` from every
+/// ancestor of its cwd, and `/tmp/CLAUDE.md` is world-writable.
+///
+/// The `temp_dir()` fallback keeps the 0700 non-recursive create, so a
+/// pre-made directory is refused rather than adopted, but it reopens the
+/// ancestor `CLAUDE.md` exposure. It says so when it runs.
+struct WorkDir {
+    path: PathBuf,
+}
+
+impl WorkDir {
+    fn create() -> Result<Self, String> {
+        let base = match std::env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from) {
+            Some(dir) if dir.is_dir() => dir,
+            _ => {
+                let tmp = std::env::temp_dir();
+                eprintln!(
+                    "⚠ XDG_RUNTIME_DIR unset: session dir under {}, whose ancestors \
+                     anyone can write a CLAUDE.md into",
+                    tmp.display()
+                );
+                tmp
+            }
+        };
+        let path = create_private_dir(&base, &format!("nc-hypnagogic-{}", random_suffix()?))?;
+        Ok(Self { path })
+    }
+}
+
+impl Drop for WorkDir {
+    fn drop(&mut self) {
+        // Best effort. The recordings are per-turn scratch, and a directory
+        // that outlives the session is the leak this type exists to close.
+        let _ = std::fs::remove_dir_all(&self.path);
+    }
+}
+
+/// `base/name` at mode 0700, and an error if anything is already there.
+/// Non-recursive on purpose: `create_dir_all` accepts an existing directory
+/// whoever made it, and that acceptance was the defect.
+fn create_private_dir(base: &Path, name: &str) -> Result<PathBuf, String> {
+    use std::os::unix::fs::DirBuilderExt;
+    let path = base.join(name);
+    std::fs::DirBuilder::new()
+        .recursive(false)
+        .mode(0o700)
+        .create(&path)
+        .map_err(|e| format!("workdir {}: {e}", path.display()))?;
+    Ok(path)
+}
+
+/// Sixteen hex digits from the kernel. Uniqueness is what matters (a crashed
+/// run leaves its directory behind, and PIDs recycle); secrecy is a bonus.
+fn random_suffix() -> Result<String, String> {
+    let mut bytes = [0u8; 8];
+    std::fs::File::open("/dev/urandom")
+        .and_then(|mut f| f.read_exact(&mut bytes))
+        .map_err(|e| format!("workdir suffix: {e}"))?;
+    Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
+}
+
 fn run(args: Args) -> Result<(), String> {
     let cloud = args.generator == "claude";
     if !cloud {
@@ -1545,8 +1616,7 @@ fn run(args: Args) -> Result<(), String> {
     // read it every turn, and produce no observable whatsoever — a run that
     // looks like it worked and cannot be distinguished from one without the
     // flag. The plan's own stage-3 check specified exactly that combination.
-    let workdir = std::env::temp_dir().join(format!("nc-hypnagogic-{}", std::process::id()));
-    std::fs::create_dir_all(&workdir).map_err(|e| format!("workdir: {e}"))?;
+    let workdir = WorkDir::create()?;
 
     eprintln!("● mode: {} ({})", args.mode.label(), args.mode.id());
     // The generator identity as recorded in every turn's method identity. Built
@@ -1557,7 +1627,7 @@ fn run(args: Args) -> Result<(), String> {
         "llama-server".to_string()
     };
     if cloud {
-        preflight_claude(&args.claude_model, &workdir)?;
+        preflight_claude(&args.claude_model, &workdir.path)?;
         // Said at this volume on purpose. Everything else in this binary talks
         // to 127.0.0.1 or to a subprocess; this is the one line where that
         // stops being true, and a user who did not mean to opt in should be
@@ -1693,14 +1763,14 @@ fn run(args: Args) -> Result<(), String> {
         Box::new(PushToTalkListener {
             whisper: args.whisper.clone(),
             model: args.whisper_model.clone(),
-            workdir: workdir.clone(),
+            workdir: workdir.path.clone(),
         })
     } else if args.mic {
         eprintln!("● input: microphone, hands-free (arecord + whisper-cli)");
         Box::new(VadListener {
             whisper: args.whisper.clone(),
             model: args.whisper_model.clone(),
-            workdir: workdir.clone(),
+            workdir: workdir.path.clone(),
             gate: None,
             cfg: vad::VadConfig::default(),
             forced_gate: args.mic_gate,
@@ -1729,13 +1799,13 @@ fn run(args: Args) -> Result<(), String> {
             Box::new(KokoroSpeaker {
                 script,
                 python,
-                workdir: workdir.clone(),
+                workdir: workdir.path.clone(),
             })
         }
         (true, _) => {
             eprintln!("● output: espeak-ng + pw-play (chunked micro-phrases)");
             Box::new(EspeakSpeaker {
-                workdir: workdir.clone(),
+                workdir: workdir.path.clone(),
             })
         }
         (false, _) => {
@@ -1751,7 +1821,7 @@ fn run(args: Args) -> Result<(), String> {
         if cloud {
             Box::new(ClaudeCliGenerator {
                 model: args.claude_model.clone(),
-                workdir: workdir.clone(),
+                workdir: workdir.path.clone(),
             })
         } else {
             Box::new(HttpGenerator {
@@ -2181,4 +2251,61 @@ fn write_log(
     .map_err(|e| format!("writing the manifest: {e}"))?;
     eprintln!("● log: {}", payload_path.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A base directory nothing else is using. Under `temp_dir()` on purpose:
+    /// the property under test is the create call, not the parent.
+    fn scratch_base(tag: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let base = std::env::temp_dir().join(format!(
+            "nc-hypnagogic-test-{tag}-{}-{nanos}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&base).expect("scratch base");
+        base
+    }
+
+    /// The defect was `create_dir_all` adopting a directory someone else made
+    /// first. The replacement must refuse it, whoever made it.
+    #[test]
+    fn a_pre_existing_directory_is_refused() {
+        let base = scratch_base("pre");
+        std::fs::create_dir(base.join("taken")).expect("the attacker's directory");
+        let err = create_private_dir(&base, "taken").expect_err("must not adopt it");
+        assert!(err.contains("exists"), "{err}");
+        std::fs::remove_dir_all(&base).expect("cleanup");
+    }
+
+    /// Mode 0700, so `turn.wav` is not world-readable the moment it lands.
+    #[test]
+    fn a_fresh_directory_is_private_to_this_user() {
+        use std::os::unix::fs::PermissionsExt;
+        let base = scratch_base("fresh");
+        let dir = create_private_dir(&base, "mine").expect("fresh create");
+        let mode = std::fs::metadata(&dir)
+            .expect("metadata")
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode, 0o700, "mode {mode:o}");
+        std::fs::remove_dir_all(&base).expect("cleanup");
+    }
+
+    /// Dropping the handle removes the directory and everything in it.
+    #[test]
+    fn dropping_the_handle_removes_the_directory() {
+        let base = scratch_base("drop");
+        let path = create_private_dir(&base, "session").expect("create");
+        std::fs::write(path.join("turn.wav"), b"RIFF").expect("a recording");
+        drop(WorkDir { path: path.clone() });
+        assert!(!path.exists(), "{} survived drop", path.display());
+        std::fs::remove_dir_all(&base).expect("cleanup");
+    }
 }
