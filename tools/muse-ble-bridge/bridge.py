@@ -128,17 +128,31 @@ async def main() -> None:
     board = BoardShim(BOARD_ID, params)
 
     print("searching for a Muse S over Bluetooth (headband must be ON)…", flush=True)
-    try:
-        board.prepare_session()
-    except BrainFlowError as exc:
-        print(f"could not connect to the Muse: {exc}", file=sys.stderr)
-        print(
-            "checks: headband powered on and not paired to another app "
-            "(Mind Monitor / phone), macOS Bluetooth permission granted to "
-            "this terminal, headband not already streaming elsewhere.",
-            file=sys.stderr,
-        )
-        raise SystemExit(2)
+    # One BrainFlow scan gives up after ~20s, which is a narrow window for a
+    # human to wake a dozing headband. Retry a few times so "press the button
+    # after launching" actually works; each attempt is its own full scan.
+    attempts = int(os.environ.get("MUSE_ATTEMPTS", "4"))
+    for attempt in range(1, attempts + 1):
+        try:
+            board.prepare_session()
+            break
+        except BrainFlowError as exc:
+            if attempt < attempts:
+                print(
+                    f"attempt {attempt}/{attempts} failed ({exc}); retrying — "
+                    "press the Muse button if it is dozing",
+                    flush=True,
+                )
+                time.sleep(2)
+                continue
+            print(f"could not connect to the Muse: {exc}", file=sys.stderr)
+            print(
+                "checks: headband powered on and not paired to another app "
+                "(Mind Monitor / phone), macOS Bluetooth permission granted to "
+                "this terminal, headband not already streaming elsewhere.",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
 
     board.start_stream()
     rate = BoardShim.get_sampling_rate(BOARD_ID)

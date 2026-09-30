@@ -1,0 +1,1 @@
+{"age_p95_ms":40.52849800000331,"frame_p95_ms":9.442678999995735,"frames":7180,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-channels-trace-r3.json","quotable":true}

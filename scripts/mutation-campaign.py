@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mutation run for ADR-003's provenance vocabulary.
+"""Mutation run for ADR-004's provenance vocabulary and ADR-005's EEG capture gate.
 
 Two rules this codebase learned the hard way and this script enforces:
 
@@ -13,15 +13,22 @@ Two rules this codebase learned the hard way and this script enforces:
 """
 import filecmp
 import shutil
-import tempfile
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from edit_guard import restore  # noqa: E402  the shared applied-check
 
 REPO = Path(__file__).resolve().parent.parent
 SNAP = Path(tempfile.mkdtemp(prefix="nc-mutation-"))
 PROV = REPO / "crates/neuralcompose-mobile-core/src/provenance.rs"
 EEG = REPO / "crates/neuralcompose-hypnagogic/src/eeg.rs"
+WM = REPO / "crates/neuralcompose-hypnagogic/src/worldmodel.rs"
+BP = REPO / "crates/neuralcompose-mobile-core/src/band_power.rs"
+TL = REPO / "crates/neuralcompose-hypnagogic/src/turn_log.rs"
+CC = REPO / "crates/neuralcompose-hypnagogic/src/claude_cli.rs"
 
 # (name, file, old, new, why it should die)
 MUTANTS = [
@@ -70,32 +77,117 @@ MUTANTS = [
      "    pub method: Option<MethodIdentity>,",
      "test 5"),
     ("stale samples reported as current", EEG,
-     "    if !matches!(phase, StreamPhase::Live) {\n        return None;\n    }",
-     "    if false {\n        return None;\n    }",
+     "    if !matches!(phase, StreamPhase::Live) {\n        return Err(EegRefusal::StreamNotLive);\n    }",
+     "    if false {\n        return Err(EegRefusal::StreamNotLive);\n    }",
      "a_stale_stream_reports_nothing / no_phase_but_live_reports_anything"),
     ("a partial montage reported short", EEG,
-     "    if channels.len() != CHANNEL_COUNT || channels.iter().any(|c| c.is_empty()) {",
+     "    if channels.len() != CHANNEL_COUNT {",
      "    if false {",
-     "a_partial_montage_is_refused / a_channel_with_no_samples_yet"),
+     "a_partial_montage_is_refused_rather_than_reported_short"),
+    ("an empty channel reported anyway", EEG,
+     "    if channels.iter().any(|c| c.is_empty()) {",
+     "    if false {",
+     "a_channel_with_no_samples_yet_refuses_the_whole_reading"),
     ("NaN allowed into a turn line", EEG,
-     "    if reports.iter().any(|r| !r.rms.is_finite()) {\n        return None;\n    }",
-     "    if false {\n        return None;\n    }",
+     "    if reports.iter().any(|r| !r.rms.is_finite()) {\n        return Err(EegRefusal::NonFiniteRms);\n    }",
+     "    if false {\n        return Err(EegRefusal::NonFiniteRms);\n    }",
      "a_non_finite_sample_never_reaches_a_turn_line"),
+
+    # ADR-005: the capture gate. Each of these is a way the gate could stop
+    # firing while every other test in the suite stayed green.
+    ("gate accepts an exactly-zero band", EEG,
+     # Was written against `Some(p) if p == 0.0 =>`, which the source has not
+     # said for some time — so this mutant matched nothing and was reported as
+     # stale rather than as a survivor. A stale pattern is a check that is not
+     # running; it is worth exactly as much as no check at all.
+     "                Some(0.0) => return Err(EegRefusal::BandExactlyZero),",
+     "                Some(f64::MIN) => return Err(EegRefusal::BandExactlyZero),",
+     "a_flat_channel_is_refused_as_exactly_zero_not_as_unmeasurable"),
+    ("the two refusal reasons collapsed into one", EEG,
+     "                None => return Err(EegRefusal::BandNotMeasurable),",
+     "                None => return Err(EegRefusal::BandExactlyZero),",
+     "a_non_finite_sample / a_window_shorter_than_the_lowest_band"),
+    ("lag precondition no longer binds", EEG,
+     "    if channels.iter().any(|c| c.len() < minimum) {",
+     "    if channels.iter().any(|c| c.len() < 1) {",
+     "a_window_shorter_than_the_lowest_band_can_resolve_is_refused"),
+    ("band_power reverts to the 0.0 refusal sentinel", BP,
+     "    if !fs.is_finite() || fs <= 0.0 || n < fs as usize {\n        return None;\n    }",
+     "    if !fs.is_finite() || fs <= 0.0 || n < fs as usize {\n        return Some(0.0);\n    }",
+     "a_refusal_is_not_a_zero_measurement + the whole EEG gate"),
+    ("a derivation typed as an observation", TL,
+     "        assertion_kind: AssertionKind::DerivedDeterministically,",
+     "        assertion_kind: AssertionKind::Observed,",
+     "the_measurement_and_the_interpretation_carry_different_assertion_kinds"),
+    ("an annotation promoted out of the heuristic class", TL,
+     "        assertion_kind: AssertionKind::HeuristicAnnotation,\n        method: Some(method),\n        inputs: vec![window],",
+     "        assertion_kind: AssertionKind::DerivedDeterministically,\n        method: Some(method),\n        inputs: vec![window],",
+     "the_measurement_and_the_interpretation_carry_different_assertion_kinds"),
+    ("verify_turn_log stops checking the tiers", TL,
+     "                    if envelope.assertion_kind != expected {",
+     "                    if false {",
+     "a_derived_envelope_claiming_to_be_an_observation_is_refused"),
+    ("the window digest ignores the samples", TL,
+     "    for s in samples {\n        bytes.extend_from_slice(&s.to_bits().to_be_bytes());\n    }",
+     "    for _s in samples.iter().take(0) {\n        bytes.extend_from_slice(&0f64.to_bits().to_be_bytes());\n    }",
+     "both_tiers_name_the_same_window_and_the_windows_differ_per_channel"),
+    ("env speed clamp removed", WM,
+     "    if speed > config.max_speed as f64 {",
+     "    if false {",
+     "env_conformance / the_speed_clamp_is_isotropic / never_leaves_the_arena"),
+    ("env restitution is perfectly elastic", WM,
+     "    restitution: 0.6,",
+     "    restitution: 1.0,",
+     "the_defaults_are_the_python_and_swift_values / a_wall_reverses_the_velocity"),
+    ("env wall clamp dropped so position escapes", WM,
+     "        if pos[i] > config.arena_half_extent {\n            pos[i] = config.arena_half_extent;",
+     "        if pos[i] > config.arena_half_extent {\n            pos[i] = pos[i];",
+     "env_conformance / the_particle_never_leaves_the_arena"),
+    ("env clamps speed AFTER integrating position", WM,
+     "    // Position integrates with the ALREADY-CLAMPED velocity (`env.py:63`).\n    for i in 0..2 {\n        pos[i] += vel[i] * config.dt;\n    }",
+     "    for i in 0..2 {\n        pos[i] += (vel[i] / 1.0000001) * config.dt;\n    }",
+     "env_conformance bit-exactness"),
+    ("env NaN guard removed", WM,
+     "    if !state.iter().all(|v| v.is_finite()) || !action.iter().all(|v| v.is_finite()) {\n        return None;\n    }",
+     "    if false {\n        return None;\n    }",
+     "a_non_finite_input_is_refused_rather_than_laundered"),
+    ("goal tolerance loosened tenfold", WM,
+     "pub const GOAL_TOLERANCE: f32 = 0.1;",
+     "pub const GOAL_TOLERANCE: f32 = 1.0;",
+     "an_episode_already_at_the_goal_takes_no_steps + the_mpc_defaults"),
+    # ---- ADR-006: the cloud-generation egress boundary ----
+    #
+    # The argv IS the boundary. Each of these is a one-token edit that would
+    # leave a working session behind — which is exactly the class of defect
+    # nobody notices from the outside.
+    ("built-in tools re-enabled on the cloud path", CC,
+     '        "--tools".into(),\n        String::new(),\n',
+     "",
+     "every_built_in_tool_is_disabled, the_argv_carries_exactly..."),
+    ("system prompt appended to Claude Code's own instead of replacing it", CC,
+     '        "--system-prompt".into(),',
+     '        "--append-system-prompt".into(),',
+     "the_argv_carries_exactly_the_system_prompt_and_the_transcript"),
+    ("an error envelope read as a reply", CC,
+     "    if env.is_error {",
+     "    if false {",
+     "an_error_envelope_is_never_mistaken_for_a_reply"),
+    ("the reply is not trimmed", CC,
+     "        .map(|r| r.trim().to_string())",
+     "        .map(|r| r.to_string())",
+     "the_result_is_read_from_the_envelope_and_trimmed"),
+    ("the generator is sealed but not readable", TL,
+     "        locator: Some(generator.to_string()),",
+     "        locator: None,",
+     "the_generator_is_readable_off_a_recorded_line_not_only_recomputable"),
+    ("the generator is named nowhere in the envelope", TL,
+     "        inputs: vec![generator_resource_ref(generator)],",
+     "        inputs: Vec::new(),",
+     "the_generator_is_readable_off_a_recorded_line_not_only_recomputable"),
 ]
 
 CMD = ["cargo", "+1.97.1", "test", "-j4",
        "-p", "neuralcompose-mobile-core", "-p", "neuralcompose-hypnagogic"]
-
-
-def restore(target, snapshot):
-    """Rewrite the file so its mtime is NOW.
-
-    `shutil.copy2` preserves the snapshot's timestamp, which is older than the
-    artifact cargo built from the mutant — cargo then skips the rebuild and the
-    next run tests the mutated binary against unmutated source. That produced a
-    phantom red baseline once already.
-    """
-    target.write_text(snapshot.read_text())
 
 
 def run_suite():

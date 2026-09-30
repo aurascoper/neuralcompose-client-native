@@ -1,0 +1,1 @@
+{"age_p95_ms":40.62357999999949,"frame_p95_ms":9.37986799999635,"frames":7167,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-delay-full-r1.json","quotable":true}

@@ -39,7 +39,11 @@ pub const PROVENANCE_ENVELOPE_SCHEMA: &str = "neuralcompose.provenance-envelope.
 ///
 /// Found by `every_required_field_is_rejected_when_missing`, which is the only
 /// reason it is not still here.
-fn present_option<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
+///
+/// Public because the rule is not local to this module: any record that has to
+/// tell "recorded as absent" from "not recorded" needs the same deserializer,
+/// and `neuralcompose-hypnagogic`'s EEG channel records do.
+pub fn present_option<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
 where
     D: serde::Deserializer<'de>,
     T: Deserialize<'de>,
@@ -51,8 +55,10 @@ where
 ///
 /// Five of the six are spelled exactly as `neural-memory-server`'s
 /// `EvidenceClass` serializes them (`crates/neural-memory-domain/src/terms.rs:49-63`
-/// at commit `5da4a5c`); [`evidence_mapping`] is where that correspondence is
-/// written down and `scripts/check-evidence-class-drift.sh` is what re-checks it.
+/// first read at commit `5da4a5c`; the current pin is `upstream.commit` in
+/// `contracts/provenance/fixtures/evidence-class-names.json`);
+/// [`evidence_mapping`] is where that correspondence is written down
+/// and `scripts/check-evidence-class-drift.sh` is what re-checks it.
 ///
 /// The sixth, [`AssertionKind::HeuristicAnnotation`], has **no** counterpart
 /// there, on purpose. A threshold that a source file itself calls unvalidated —

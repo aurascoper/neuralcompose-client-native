@@ -1,0 +1,361 @@
+{
+  "schemaId": "neuralcompose.hypnagogic.nonspeech-guard.v1",
+  "source": {
+    "path": "~/Documents/NeuralCompose/InteractionLogs/session-1788413094.turns.jsonl",
+    "fileSha256": "d40c6bc996b71d6e24ca8498e27d7797a4a334a74d11c37e76d319987507d7dc",
+    "mtime": "2026-09-03T06:10:55.170292+00:00",
+    "readOn": "2026-09-03",
+    "writerLive": false,
+    "writerNote": "The session (PID 103860, --mode reflective --turns 0 --mic) had ended and the file had stopped growing before this read. An earlier pin of this same path was taken at 55 turns while the writer was still appending; that is why a committed digest for this path moved once."
+  },
+  "note": "Every heard value from the session, labelled by the Python reference's own guard (converse.py:404). The speech cases matter as much as the non-speech ones: a guard that swallowed real utterances would pass a fixture holding only the noise.",
+  "labelledBy": "tools/spoken-loop/converse.py:404",
+  "coverage": {
+    "turns": 68,
+    "nonSpeech": 56,
+    "speech": 12,
+    "longestNonSpeechRun": 54
+  },
+  "cases": [
+    {
+      "index": 0,
+      "heard": "(tapping)",
+      "nonSpeech": true
+    },
+    {
+      "index": 1,
+      "heard": "What do you know about radiotropic biofilms?",
+      "nonSpeech": false
+    },
+    {
+      "index": 2,
+      "heard": "How do they change states?",
+      "nonSpeech": false
+    },
+    {
+      "index": 3,
+      "heard": "How do radio terrific biofilms change states?",
+      "nonSpeech": false
+    },
+    {
+      "index": 4,
+      "heard": "How do radio traffic biofilms change their state?",
+      "nonSpeech": false
+    },
+    {
+      "index": 5,
+      "heard": "How do radiotropic biofilms change their state?",
+      "nonSpeech": false
+    },
+    {
+      "index": 6,
+      "heard": "What are the unforeseen forces involved in radiocropic biofilm structure and morphologies?",
+      "nonSpeech": false
+    },
+    {
+      "index": 7,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 8,
+      "heard": "How do radio trophic vial films change their structure and function?",
+      "nonSpeech": false
+    },
+    {
+      "index": 9,
+      "heard": "\"Tropic\" biofilms change their structure and function.",
+      "nonSpeech": false
+    },
+    {
+      "index": 10,
+      "heard": "How do radio trophic bioforms change their structure and function?",
+      "nonSpeech": false
+    },
+    {
+      "index": 11,
+      "heard": "How can we test whether radio-traffic biofilms use radio signals that are not typical of biology?",
+      "nonSpeech": false
+    },
+    {
+      "index": 12,
+      "heard": "How do we test radio-perfect file files?",
+      "nonSpeech": false
+    },
+    {
+      "index": 13,
+      "heard": "I'm more interested in falsifying your trophy as a phenotype and demonstrating bottling of your tropism.",
+      "nonSpeech": false
+    },
+    {
+      "index": 14,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 15,
+      "heard": "(machinery whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 16,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 17,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 18,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 19,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 20,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 21,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 22,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 23,
+      "heard": "(engine revving)",
+      "nonSpeech": true
+    },
+    {
+      "index": 24,
+      "heard": "(machine whirring) (machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 25,
+      "heard": "(engine revving)",
+      "nonSpeech": true
+    },
+    {
+      "index": 26,
+      "heard": "(beep)",
+      "nonSpeech": true
+    },
+    {
+      "index": 27,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 28,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 29,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 30,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 31,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 32,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 33,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 34,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 35,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 36,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 37,
+      "heard": "(motor running)",
+      "nonSpeech": true
+    },
+    {
+      "index": 38,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 39,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 40,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 41,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 42,
+      "heard": "(buzzing) (buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 43,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 44,
+      "heard": "(engine revving)",
+      "nonSpeech": true
+    },
+    {
+      "index": 45,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 46,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 47,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 48,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 49,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 50,
+      "heard": "(machinery whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 51,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 52,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 53,
+      "heard": "(engine revving)",
+      "nonSpeech": true
+    },
+    {
+      "index": 54,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 55,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 56,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 57,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 58,
+      "heard": "(motor revving) (motor revving)",
+      "nonSpeech": true
+    },
+    {
+      "index": 59,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 60,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 61,
+      "heard": "[background noise] [background noise] [background noise]",
+      "nonSpeech": true
+    },
+    {
+      "index": 62,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 63,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 64,
+      "heard": "(clicking)",
+      "nonSpeech": true
+    },
+    {
+      "index": 65,
+      "heard": "(machine whirring)",
+      "nonSpeech": true
+    },
+    {
+      "index": 66,
+      "heard": "(buzzing) (buzzing) (buzzing)",
+      "nonSpeech": true
+    },
+    {
+      "index": 67,
+      "heard": "(buzzing) (buzzing)",
+      "nonSpeech": true
+    }
+  ]
+}

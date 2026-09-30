@@ -1,0 +1,35 @@
+{
+  "schemaId": "neuralcompose.eeg.eligibility.v1",
+  "registeredOn": "2026-08-14",
+  "registeredBefore": "the first conversational Muse S session on Linux",
+  "purpose": "Decide whether a recorded session may enter the corpus, as a query over annotations the session itself recorded, evaluated by a predicate written before any such session existed.",
+
+  "whatThisIsNotBasedOn": "The 0-of-4 prior comes from 83-second block-design validation runs (docs/acceptance/linux-headless-runtime.md), where the subject sat still with eyes open or closed on a timer. A hypnagogic dialectic session is multi-minute, conversational, and involves speech — which moves the jaw, the neck and the electrodes. NOTHING here is calibrated for that. These numbers are a pre-registered guess whose only virtue is that it was made before the data.",
+
+  "requiredChannels": ["TP10"],
+  "requiredChannelsRationale": "TP10 is the only channel with a replicated validated alpha contrast (3.21x-3.88x across four macOS sessions, 1.98x on Linux 2026-08-03). TP9 is a replicated null with healthy contact. AF7 has failed three sessions running. AF8 is amplitude-confounded. Requiring all four would fail every session for reasons already known; requiring TP10 alone states the real ceiling. A corpus from this montage is effectively ONE derivation and must never be described as multichannel.",
+
+  "thresholds": {
+    "minTurnsWithReading": 8,
+    "minTurnsWithReadingRationale": "Under eight turns there is not enough of a session to be worth analysing, whatever its quality. Chosen from the dialectic's own pacing (2-6 s between turns by profile), not from any signal property.",
+
+    "maxAbsentFraction": 0.25,
+    "maxAbsentFractionRationale": "Above a quarter of turns with no reading at all, the headband was not meaningfully attached for the session. This bounds dropout, not signal quality.",
+
+    "maxSaturatedFraction": 0.30,
+    "maxSaturatedFractionRationale": "Per required channel. Saturation during speech is expected and is not by itself disqualifying; a third of the session saturated means the electrode was moving more than the subject was thinking. The 200 uV bar behind `saturated` is an engineering heuristic from one subject, not a physiological cutoff.",
+
+    "maxMainsPickupFraction": 0.20,
+    "maxMainsPickupFractionRationale": "Per required channel. Mains pickup indicates contact, which does not recover on its own within a session — so unlike saturation it is expected to be near 0 or near 1, and a bar in between should rarely be what decides a verdict. If it routinely decides verdicts, that is itself a finding about the threshold."
+  },
+
+  "nonDiscriminatingOutcomes": [
+    "Every session passes, and no session comes within 50% of any bar. The predicate is then not measuring anything and its numbers are decoration.",
+    "Every session fails on the same single threshold. That threshold is then a restatement of a known hardware limitation rather than a quality filter.",
+    "maxMainsPickupFraction is the deciding threshold for more than one session in three. Per its rationale above, pickup should be bimodal; a bar that keeps deciding means the assumption behind it is wrong.",
+    "No session ever produces a reading on TP10 at all, so requiredChannels alone decides every verdict."
+  ],
+  "onNonDiscriminatingOutcome": "Record it and stop. Revising a threshold in response to observed sessions is selection, and this file must not be edited to accommodate data. Write contracts/eeg/eligibility-v2.json with its own seal and its own registration date, and say in it what v1 showed. Both files stay in the tree so the change is visible as a change.",
+
+  "seal": "The sha256 of this file's exact bytes is in eligibility-v1.json.sha256. Any tool reading this file must verify that digest and refuse to run on a mismatch — the same rule tools/spoken-loop/dialectic-relay applies to its own preregistration."
+}

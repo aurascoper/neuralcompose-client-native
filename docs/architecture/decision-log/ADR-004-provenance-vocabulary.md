@@ -216,5 +216,20 @@ by skipping.
   reproduce its own values is a provenance problem rather than a rounding one.
   The `float_roundtrip` feature is now enabled in both crates that persist
   records. No new dependency; a feature flag on one already present.
+- **The six kinds have no slot for "measured exactly by this software on a
+  synthetic task."** Found 2026-08-13 classifying the world-model demo's result.
+  Not `Observed` — that reserves itself for an artifact ingested through a
+  channel no agent tool can reach, and the binary emitting the result *is* such
+  a tool. Not `DerivedDeterministically` — that class's entire meaning is that
+  the evidence store re-executes the transform and rejects a mismatch, and no
+  store can re-execute a planner; claiming it would borrow a guarantee nobody
+  provides. Not `HeuristicAnnotation` — the measurement is exact, not a
+  threshold someone eyeballed. It is filed as `AgentInference`, which is honest
+  but under-describes it: an advisory-tier label on a bit-reproducible number.
+  Promotion to `Observed` is an operator ingesting the emitted document out of
+  band, which is the ladder working. **Recorded as a real gap rather than
+  resolved by stretching one of the six** — a seventh kind should be added only
+  when a second producer needs it, and it would have to be agreed upstream
+  first, since five of the six names are mirrored from there.
 - Promotes no support-matrix row. `attained_support_status()` returns exactly
   what it returned before; per ADR-002 there is no promotion by implication.

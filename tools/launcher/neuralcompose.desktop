@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=NeuralCompose Session
+GenericName=Hypnagogic dialectic
+Comment=Start a hypnagogic session: llama-server, EEG source, and the dialectic loop
+Exec=@SCRIPT@
+Icon=applications-science
+Terminal=true
+Categories=Science;
+Keywords=EEG;dialectic;hypnagogic;
+StartupNotify=false
