@@ -349,6 +349,9 @@ mod tests {
             },
             derived: ChannelDerived {
                 rms_microvolts: 40.0,
+                // Arbitrary. Eligibility counts `verdict == "mains-pickup"`;
+                // this number never reaches a comparison. The bar is
+                // `electrode_check.rs`, and its own tests bracket it.
                 mains_power: Some(5.0),
                 provenance: derived_envelope(method(), w.clone()),
             },

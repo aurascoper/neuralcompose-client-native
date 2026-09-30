@@ -952,6 +952,9 @@ mod tests {
             },
             derived: ChannelDerived {
                 rms_microvolts: rms,
+                // Arbitrary. Nothing here compares it; a tally reads the
+                // verdict string. The bar is `electrode_check.rs` (`mains.high`,
+                // `mains.watch`), and its own tests bracket it.
                 mains_power: Some(8.11),
                 provenance: derived_envelope(test_method(), window.clone()),
             },
