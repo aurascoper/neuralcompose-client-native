@@ -483,6 +483,24 @@ pub struct TurnLine {
     /// Whether the Witness RAN — true even if the call failed or produced
     /// nothing, so a broken witness is distinguishable from a disabled one.
     pub witness_attempted: Option<bool>,
+    /// Cosine distance of what was heard from the session's OPENING utterance.
+    /// `None` on the anchoring turn and on an incomparable pair — never `0.0`,
+    /// which would read as "measured, and no drift".
+    pub topic_drift: Option<f32>,
+    /// Whether the poles' prompts carried the opening utterance this turn.
+    pub reanchored: Option<bool>,
+    /// Near-repeats among the retained replies when the turn resolved.
+    pub repetition_hits: Option<usize>,
+    /// The competition chose to speak and the repetition guard overrode it.
+    /// `outcome` above still says what the competition decided, so the override
+    /// is visible rather than disguised as an ordinary silence.
+    pub repetition_forced_silence: Option<bool>,
+    /// A voice said it did not recognise the subject.
+    ///
+    /// **Nothing reads this yet.** It is retrospective — grepping past sessions
+    /// to ask whether a voice objected before the drift measure moved. Recorded
+    /// with that stated, rather than left to look like coverage.
+    pub clarification_requested: Option<bool>,
     #[serde(deserialize_with = "present_option")]
     pub channel_health: Option<Vec<ChannelRecord>>,
     /// Why `channel_health` is absent, when it is.
@@ -543,6 +561,11 @@ impl TurnLine {
             witness_finding: None,
             witness_distance: None,
             self_similarity: None,
+            topic_drift: None,
+            reanchored: None,
+            repetition_hits: None,
+            repetition_forced_silence: None,
+            clarification_requested: None,
             witness_attempted: None,
             channel_health: None,
             channel_health_absent_reason: None,
@@ -574,6 +597,11 @@ impl TurnLine {
             witness_finding: None,
             witness_distance: None,
             self_similarity: None,
+            topic_drift: None,
+            reanchored: None,
+            repetition_hits: None,
+            repetition_forced_silence: None,
+            clarification_requested: None,
             witness_attempted: None,
             channel_health: None,
             channel_health_absent_reason: None,
@@ -619,6 +647,27 @@ impl TurnLine {
 
     pub fn with_self_similarity(mut self, value: f32) -> Self {
         self.self_similarity = Some(value);
+        self
+    }
+
+    /// The drift and repetition record for a turn.
+    ///
+    /// Grouped into one builder because they are one story: how far the
+    /// exchange has moved from where it started, and whether it has stopped
+    /// moving at all.
+    pub fn with_drift(
+        mut self,
+        topic_drift: Option<f32>,
+        reanchored: bool,
+        repetition_hits: usize,
+        repetition_forced_silence: bool,
+        clarification_requested: bool,
+    ) -> Self {
+        self.topic_drift = topic_drift;
+        self.reanchored = Some(reanchored);
+        self.repetition_hits = Some(repetition_hits);
+        self.repetition_forced_silence = Some(repetition_forced_silence);
+        self.clarification_requested = Some(clarification_requested);
         self
     }
 

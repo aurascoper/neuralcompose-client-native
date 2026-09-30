@@ -94,6 +94,17 @@ pub struct StreamSnapshot {
     pub phase: StreamPhase,
 }
 
+/// Atomic native-only view. Samples belong exclusively to this connection.
+/// Cached traces are a shell concern and never become current-generation data.
+#[derive(Clone, Debug)]
+pub struct SignalSnapshot {
+    pub samples: Vec<crate::EEGSample>,
+    pub generation: u64,
+    pub received: u64,
+    pub received_at_ms: Option<u64>,
+    pub phase: StreamPhase,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SocketState {
     Connecting,
@@ -295,6 +306,37 @@ impl StreamMonitor {
 /// regenerate the Swift and Kotlin bindings — and trip
 /// `scripts/check-binding-drift.sh` — to add a method neither shell calls.
 impl StreamMonitor {
+    pub fn signal_snapshot(&self, now_ms: u64) -> SignalSnapshot {
+        let inner = self.inner.lock().unwrap();
+        let window = inner.buffer.window();
+        let count = window.len().min(inner.received_current as usize);
+        let phase = if inner.gave_up || inner.socket == SocketState::Errored {
+            StreamPhase::Error
+        } else {
+            match inner.socket {
+                SocketState::Connecting => StreamPhase::Connecting,
+                SocketState::Closed => StreamPhase::Closed,
+                SocketState::Errored => StreamPhase::Error,
+                SocketState::Open => match inner.last_received_at_current_ms {
+                    None => StreamPhase::OpenNoData,
+                    Some(last) if now_ms.saturating_sub(last) > self.config.stale_after_ms => {
+                        StreamPhase::Stale {
+                            age_ms: now_ms.saturating_sub(last),
+                        }
+                    }
+                    Some(_) => StreamPhase::Live,
+                },
+            }
+        };
+        SignalSnapshot {
+            samples: window[window.len() - count..].to_vec(),
+            generation: inner.generation,
+            received: inner.received_total,
+            received_at_ms: inner.last_received_at_current_ms,
+            phase,
+        }
+    }
+
     /// Source timestamp of the newest buffered sample: seconds since stream
     /// start, the wire axis, never wall clock. `None` when nothing is buffered.
     ///

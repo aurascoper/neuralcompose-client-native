@@ -1,0 +1,73 @@
+[1/36] noise-delay-full-r1
+{"age_p95_ms":40.62357999999949,"frame_p95_ms":9.37986799999635,"frames":7167,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-delay-full-r1.json","quotable":true}
+[2/36] rhythmic-channels-full-r1
+{"age_p95_ms":40.59611500000028,"frame_p95_ms":9.001346999998106,"frames":7170,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-channels-full-r1.json","quotable":true}
+[3/36] noise-channels-full-r1
+{"age_p95_ms":40.50964899999963,"frame_p95_ms":9.143137000002355,"frames":7176,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-channels-full-r1.json","quotable":true}
+[4/36] noise-channels-trace-r1
+{"age_p95_ms":40.546753000002354,"frame_p95_ms":9.425285000000727,"frames":7181,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-channels-trace-r1.json","quotable":true}
+[5/36] impulse-channels-full-r1
+{"age_p95_ms":40.58349499999895,"frame_p95_ms":9.11167799999646,"frames":7176,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-channels-full-r1.json","quotable":true}
+[6/36] rhythmic-delay-full-r1
+{"age_p95_ms":40.66582400000152,"frame_p95_ms":9.070358000002443,"frames":7175,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-delay-full-r1.json","quotable":true}
+[7/36] noise-delay-trace-r1
+{"age_p95_ms":40.44188600000052,"frame_p95_ms":9.20915300000047,"frames":7174,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-delay-trace-r1.json","quotable":true}
+[8/36] impulse-delay-full-r1
+{"age_p95_ms":40.59560800000327,"frame_p95_ms":9.653440000001012,"frames":7141,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-delay-full-r1.json","quotable":true}
+[9/36] rhythmic-delay-trace-r1
+{"age_p95_ms":40.26747199999954,"frame_p95_ms":9.086729999999932,"frames":7178,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-delay-trace-r1.json","quotable":true}
+[10/36] impulse-channels-trace-r1
+{"age_p95_ms":40.55729199999769,"frame_p95_ms":9.511491999999677,"frames":7159,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-channels-trace-r1.json","quotable":true}
+[11/36] impulse-delay-trace-r1
+{"age_p95_ms":40.473581999998714,"frame_p95_ms":9.155173999999988,"frames":7179,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-delay-trace-r1.json","quotable":true}
+[12/36] rhythmic-channels-trace-r1
+{"age_p95_ms":40.53923699999723,"frame_p95_ms":9.303726999995376,"frames":7178,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-channels-trace-r1.json","quotable":true}
+[13/36] rhythmic-channels-trace-r2
+{"age_p95_ms":40.27803800000038,"frame_p95_ms":9.357198000003564,"frames":7177,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-channels-trace-r2.json","quotable":true}
+[14/36] rhythmic-delay-full-r2
+{"age_p95_ms":40.48168900000019,"frame_p95_ms":9.30968800000187,"frames":7169,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-delay-full-r2.json","quotable":true}
+[15/36] impulse-delay-trace-r2
+{"age_p95_ms":40.47607200000493,"frame_p95_ms":9.13551600000062,"frames":7166,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-delay-trace-r2.json","quotable":true}
+[16/36] impulse-channels-full-r2
+{"age_p95_ms":40.44585300000108,"frame_p95_ms":9.171053999999401,"frames":7177,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-channels-full-r2.json","quotable":true}
+[17/36] noise-delay-full-r2
+{"age_p95_ms":40.363777999999,"frame_p95_ms":9.091062000003092,"frames":7180,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-delay-full-r2.json","quotable":true}
+[18/36] impulse-delay-full-r2
+{"age_p95_ms":40.596542999999656,"frame_p95_ms":9.556607999996913,"frames":7168,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-delay-full-r2.json","quotable":true}
+[19/36] noise-channels-trace-r2
+{"age_p95_ms":40.61235000000306,"frame_p95_ms":9.858533999999253,"frames":7173,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-channels-trace-r2.json","quotable":true}
+[20/36] noise-delay-trace-r2
+{"age_p95_ms":40.973307000000204,"frame_p95_ms":10.434391000000431,"frames":7157,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-delay-trace-r2.json","quotable":true}
+[21/36] rhythmic-channels-full-r2
+{"age_p95_ms":40.6071669999983,"frame_p95_ms":9.673922000001056,"frames":7167,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-channels-full-r2.json","quotable":true}
+[22/36] impulse-channels-trace-r2
+{"age_p95_ms":40.473195000005944,"frame_p95_ms":9.359142000000986,"frames":7175,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-channels-trace-r2.json","quotable":true}
+[23/36] rhythmic-delay-trace-r2
+{"age_p95_ms":40.43812500000058,"frame_p95_ms":9.326940999997646,"frames":7176,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-delay-trace-r2.json","quotable":true}
+[24/36] noise-channels-full-r2
+{"age_p95_ms":40.81647299999895,"frame_p95_ms":9.8979589999999,"frames":7161,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-channels-full-r2.json","quotable":true}
+[25/36] impulse-channels-trace-r3
+{"age_p95_ms":40.52849800000331,"frame_p95_ms":9.442678999995735,"frames":7180,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-channels-trace-r3.json","quotable":true}
+[26/36] noise-channels-trace-r3
+{"age_p95_ms":40.58129000000008,"frame_p95_ms":9.489227999999628,"frames":7176,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-channels-trace-r3.json","quotable":true}
+[27/36] impulse-delay-full-r3
+{"age_p95_ms":40.6436920000051,"frame_p95_ms":9.39386600000347,"frames":7178,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-delay-full-r3.json","quotable":true}
+[28/36] noise-delay-full-r3
+{"age_p95_ms":40.66573300000164,"frame_p95_ms":9.34757800000341,"frames":7181,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-delay-full-r3.json","quotable":true}
+[29/36] noise-delay-trace-r3
+{"age_p95_ms":40.26230200000282,"frame_p95_ms":9.663239999998297,"frames":7169,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-delay-trace-r3.json","quotable":true}
+[30/36] impulse-channels-full-r3
+{"age_p95_ms":40.72931900000003,"frame_p95_ms":9.613575000003038,"frames":7166,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-channels-full-r3.json","quotable":true}
+[31/36] noise-channels-full-r3
+{"age_p95_ms":40.5068820000015,"frame_p95_ms":9.171714000004272,"frames":7160,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/noise-channels-full-r3.json","quotable":true}
+[32/36] rhythmic-delay-trace-r3
+{"age_p95_ms":40.464389000000665,"frame_p95_ms":9.25125399999871,"frames":7179,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-delay-trace-r3.json","quotable":true}
+[33/36] rhythmic-delay-full-r3
+{"age_p95_ms":40.57528199999797,"frame_p95_ms":9.632240000001957,"frames":7169,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-delay-full-r3.json","quotable":true}
+[34/36] impulse-delay-trace-r3
+{"age_p95_ms":40.52105599999777,"frame_p95_ms":9.810649999991483,"frames":7164,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/impulse-delay-trace-r3.json","quotable":true}
+[35/36] rhythmic-channels-trace-r3
+{"age_p95_ms":40.70787000000564,"frame_p95_ms":10.091424999998821,"frames":7170,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-channels-trace-r3.json","quotable":true}
+[36/36] rhythmic-channels-full-r3
+{"age_p95_ms":40.64384099999734,"frame_p95_ms":10.030900000000287,"frames":7178,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-channels-full-r3.json","quotable":true}
+Finished registered schedule; 0 failed runs retained.

@@ -1,0 +1,246 @@
+{
+  "schema": "neuralcompose.phase-space.benchmark.v1",
+  "commit": "3745369692fdd9908588316bac212f6e3b171183",
+  "executable_sha256": "fcbd203c249400fbffb203ae99bbe5b384666732f91b4d24c21f16e715cbe029",
+  "started_utc": "2026-09-23T08:03:13.485444+00:00",
+  "machine": [
+    "Linux",
+    "ok-cyberdeck",
+    "7.0.0-31-generic",
+    "#31-Ubuntu SMP PREEMPT_DYNAMIC Sat Aug  1 04:26:38 UTC 2026",
+    "x86_64"
+  ],
+  "protocol": "12 cases x 3 runs; 5s warmup + 60s measurement; no replacement or extension runs",
+  "verdict": "3/3 both targets: accepted; 0/3: targets not met; 1/3 or 2/3: unresolved",
+  "targets": {
+    "frame_p95_ms": 20,
+    "sample_to_submit_p95_ms": 100
+  },
+  "schedule": [
+    {
+      "fixture": "noise",
+      "mapping": "delay",
+      "layers": "full",
+      "repeat": 1
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "channels",
+      "layers": "full",
+      "repeat": 1
+    },
+    {
+      "fixture": "noise",
+      "mapping": "channels",
+      "layers": "full",
+      "repeat": 1
+    },
+    {
+      "fixture": "noise",
+      "mapping": "channels",
+      "layers": "trace",
+      "repeat": 1
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "channels",
+      "layers": "full",
+      "repeat": 1
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "delay",
+      "layers": "full",
+      "repeat": 1
+    },
+    {
+      "fixture": "noise",
+      "mapping": "delay",
+      "layers": "trace",
+      "repeat": 1
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "delay",
+      "layers": "full",
+      "repeat": 1
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "delay",
+      "layers": "trace",
+      "repeat": 1
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "channels",
+      "layers": "trace",
+      "repeat": 1
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "delay",
+      "layers": "trace",
+      "repeat": 1
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "channels",
+      "layers": "trace",
+      "repeat": 1
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "channels",
+      "layers": "trace",
+      "repeat": 2
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "delay",
+      "layers": "full",
+      "repeat": 2
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "delay",
+      "layers": "trace",
+      "repeat": 2
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "channels",
+      "layers": "full",
+      "repeat": 2
+    },
+    {
+      "fixture": "noise",
+      "mapping": "delay",
+      "layers": "full",
+      "repeat": 2
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "delay",
+      "layers": "full",
+      "repeat": 2
+    },
+    {
+      "fixture": "noise",
+      "mapping": "channels",
+      "layers": "trace",
+      "repeat": 2
+    },
+    {
+      "fixture": "noise",
+      "mapping": "delay",
+      "layers": "trace",
+      "repeat": 2
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "channels",
+      "layers": "full",
+      "repeat": 2
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "channels",
+      "layers": "trace",
+      "repeat": 2
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "delay",
+      "layers": "trace",
+      "repeat": 2
+    },
+    {
+      "fixture": "noise",
+      "mapping": "channels",
+      "layers": "full",
+      "repeat": 2
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "channels",
+      "layers": "trace",
+      "repeat": 3
+    },
+    {
+      "fixture": "noise",
+      "mapping": "channels",
+      "layers": "trace",
+      "repeat": 3
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "delay",
+      "layers": "full",
+      "repeat": 3
+    },
+    {
+      "fixture": "noise",
+      "mapping": "delay",
+      "layers": "full",
+      "repeat": 3
+    },
+    {
+      "fixture": "noise",
+      "mapping": "delay",
+      "layers": "trace",
+      "repeat": 3
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "channels",
+      "layers": "full",
+      "repeat": 3
+    },
+    {
+      "fixture": "noise",
+      "mapping": "channels",
+      "layers": "full",
+      "repeat": 3
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "delay",
+      "layers": "trace",
+      "repeat": 3
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "delay",
+      "layers": "full",
+      "repeat": 3
+    },
+    {
+      "fixture": "impulse",
+      "mapping": "delay",
+      "layers": "trace",
+      "repeat": 3
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "channels",
+      "layers": "trace",
+      "repeat": 3
+    },
+    {
+      "fixture": "rhythmic",
+      "mapping": "channels",
+      "layers": "full",
+      "repeat": 3
+    }
+  ],
+  "graphics_environment": {
+    "DISPLAY": ":0",
+    "WAYLAND_DISPLAY": null,
+    "WINIT_UNIX_BACKEND": "x11",
+    "WGPU_BACKEND": null,
+    "VK_DRIVER_FILES": null
+  },
+  "ended_utc": "2026-09-23T08:42:29.413207+00:00",
+  "failures": []
+}

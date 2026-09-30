@@ -12,6 +12,8 @@
 //!
 //! Verification for this file is the end-to-end run, not the test suite.
 
+mod visual_socket;
+
 use neuralcompose_hypnagogic::claude_cli;
 use neuralcompose_hypnagogic::command;
 use neuralcompose_hypnagogic::dialectic::{DialecticConfig, DialecticLoop};
@@ -22,7 +24,7 @@ use neuralcompose_hypnagogic::eligibility::{evaluate, tally, Registration};
 use neuralcompose_hypnagogic::embedding::Embedding;
 use neuralcompose_hypnagogic::http;
 use neuralcompose_hypnagogic::loops::{
-    is_stop_phrase, strip_for_speech, MirrorConfig, MirrorLoop, STOP_PHRASES,
+    is_non_speech, is_stop_phrase, strip_for_speech, MirrorConfig, MirrorLoop, STOP_PHRASES,
 };
 use neuralcompose_hypnagogic::profile::HypnagogicMode;
 use neuralcompose_hypnagogic::role::waking_roles;
@@ -58,6 +60,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 // ─────────────────────────────────────────────────────────────────── args ──
 
 struct Args {
+    visualization_socket: Option<PathBuf>,
     mode: HypnagogicMode,
     turns: u32,
     server: String,
@@ -71,6 +74,10 @@ struct Args {
     push_to_talk: bool,
     voice_both: bool,
     mic_gate: Option<f64>,
+    /// Override `DialecticConfig::drift_ceiling`. `0.0` disables re-anchoring.
+    drift_ceiling: Option<f32>,
+    /// Override `DialecticConfig::repetition_floor`. `0.0` disables the guard.
+    repetition_floor: Option<f32>,
     speak: bool,
     tts: String,
     eeg_url: Option<String>,
@@ -108,6 +115,13 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
   --voice-both                    speak BOTH poles each turn, in their own
                                   voices, so the dialectic is audible
   --mic-gate <n>                  skip calibration and use this speech gate
+  --drift-ceiling <n>             re-anchor the poles' prompts past this
+                                  distance from the opening utterance; 0
+                                  disables. EMBEDDER-SPECIFIC: the default is
+                                  measured against bge-small, so change it if
+                                  you change NC_EMBED_MODEL
+  --repetition-floor <n>          force a silent turn when the replies stop
+                                  moving; 0 disables
   --speak                         synthesize audio instead of printing
   --tts <kokoro|espeak>           voice engine for --speak (default kokoro)
   --eeg-url <ws://…>              attach an EEG source (dialectical modes only)
@@ -116,6 +130,7 @@ neuralcompose-hypnagogic — the four hypnagogic loop modes on Linux
                                   (both are recorded as YOUR claim, not a reading)
   --world-model-demo              run the planner comparison and exit
   --heldout                       with it: the §8 held-out set and seeds
+  --visualization-socket <path>   ephemeral local live-dialectic snapshots
   --json                          --verify-log <path>
   --eligibility <turns.jsonl>     query a recorded session against the sealed
                                   pre-registration in contracts/eeg/
@@ -129,6 +144,7 @@ None of them needs llama-server, a model, a microphone or a headband.
 fn parse_args() -> Result<Args, String> {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
     let mut a = Args {
+        visualization_socket: None,
         mode: HypnagogicMode::Mirror,
         turns: 1,
         server: "http://127.0.0.1:8080".into(),
@@ -142,6 +158,8 @@ fn parse_args() -> Result<Args, String> {
         push_to_talk: false,
         voice_both: false,
         mic_gate: None,
+        drift_ceiling: None,
+        repetition_floor: None,
         speak: false,
         tts: "kokoro".into(),
         eeg_url: None,
@@ -195,6 +213,10 @@ fn parse_args() -> Result<Args, String> {
                 a.verify_log = Some(PathBuf::from(need(i)?));
                 i += 1;
             }
+            "--visualization-socket" => {
+                a.visualization_socket = Some(PathBuf::from(need(i)?));
+                i += 1;
+            }
             "--eeg-url" => {
                 a.eeg_url = Some(need(i)?);
                 i += 1;
@@ -217,6 +239,26 @@ fn parse_args() -> Result<Args, String> {
             }
             "--world-model-demo" => a.world_model_demo = true,
             "--heldout" => a.heldout = true,
+            // The ceiling is a property of the EMBEDDER, not of the loop — the
+            // default is measured against bge-small and is wrong for any other
+            // model, and nothing here can derive one from the other. An
+            // operator who changes NC_EMBED_MODEL has to change this with it.
+            "--drift-ceiling" => {
+                a.drift_ceiling = Some(
+                    need(i)?
+                        .parse()
+                        .map_err(|_| "--drift-ceiling needs a number".to_string())?,
+                );
+                i += 1;
+            }
+            "--repetition-floor" => {
+                a.repetition_floor = Some(
+                    need(i)?
+                        .parse()
+                        .map_err(|_| "--repetition-floor needs a number".to_string())?,
+                );
+                i += 1;
+            }
             "--mic" => a.mic = true,
             "--voice-both" => a.voice_both = true,
             "--push-to-talk" => {
@@ -463,7 +505,15 @@ fn transcribe(whisper: &Path, model: &Path, wav: &Path) -> SeamResult<Option<Str
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ");
-    Ok(if text.is_empty() { None } else { Some(text) })
+    // Both listeners route through here, so the non-speech guard sits here too
+    // rather than in each of them. `Ok(None)` is already the "only silence was
+    // heard" contract, and both loops answer it with a silence cue and no model
+    // call — which is exactly the right response to a fan.
+    Ok(if text.is_empty() || is_non_speech(&text) {
+        None
+    } else {
+        Some(text)
+    })
 }
 
 /// Spawns `pw-record`, waits for Enter, then transcribes with whisper-cli.
@@ -1830,6 +1880,15 @@ fn run(args: Args) -> Result<(), String> {
         }
     };
 
+    if args.visualization_socket.is_some() && args.mode.profile().is_none() {
+        return Err("--visualization-socket requires a dialectical mode".into());
+    }
+    let visual_publisher = args
+        .visualization_socket
+        .as_ref()
+        .map(|path| visual_socket::start(path, session_id.clone()))
+        .transpose()
+        .map_err(|e| format!("visualization socket: {e}"))?;
     match args.mode.profile() {
         None => {
             let mut l = MirrorLoop::new(
@@ -1874,6 +1933,12 @@ fn run(args: Args) -> Result<(), String> {
                 DialecticConfig {
                     chunk_replies,
                     voice_both: args.voice_both,
+                    drift_ceiling: args
+                        .drift_ceiling
+                        .unwrap_or(DialecticConfig::default().drift_ceiling),
+                    repetition_floor: args
+                        .repetition_floor
+                        .unwrap_or(DialecticConfig::default().repetition_floor),
                     // `None` whenever the tree was dirty at build time — see
                     // build.rs. An unpinned build says so rather than naming a
                     // commit that does not describe it.
@@ -1897,7 +1962,12 @@ fn run(args: Args) -> Result<(), String> {
             let mut turn_number = 0u32;
             let mut stopped = false;
             while !stopped && (open_ended || turn_number < args.turns) {
-                match l.turn() {
+                let result = l.turn_with_observer(&mut |state| {
+                    if let Some(publisher) = &visual_publisher {
+                        publisher.publish(state);
+                    }
+                });
+                match result {
                     Ok(Some(t)) => {
                         // Checked before the record is written, so the turn that
                         // ends the session is still logged. It was a real turn.
@@ -1951,6 +2021,32 @@ fn run(args: Args) -> Result<(), String> {
                         }
                         if let Some(err) = &t.witness_error {
                             eprintln!("witness failed on turn {}: {err}", t.index);
+                        }
+                        // The loop's own drift and repetition state, on stderr
+                        // beside the witness line. Before this, every one of
+                        // these numbers was computed each turn and written only
+                        // to the jsonl, where nobody looked until after a
+                        // session had already gone wrong — `self_similarity`
+                        // still is, and is printed here for exactly that
+                        // reason.
+                        if t.reanchored {
+                            eprintln!(
+                                "turn {}: drift {:.3} past the ceiling — prompts re-anchored \
+                                 to the opening utterance (self-similarity {})",
+                                t.index,
+                                t.topic_drift.unwrap_or(f32::NAN),
+                                t.self_similarity
+                                    .map(|s| format!("{s:.3}"))
+                                    .unwrap_or_else(|| "n/a".into()),
+                            );
+                        }
+                        if t.repetition_forced_silence {
+                            eprintln!(
+                                "turn {}: {} of the last replies were near-repeats — turn \
+                                 forced silent (the competition chose to speak; the log \
+                                 keeps both)",
+                                t.index, t.repetition_hits,
+                            );
                         }
                     }
                     Ok(None) => eprintln!("turn {turn_number} skipped (nothing heard)"),

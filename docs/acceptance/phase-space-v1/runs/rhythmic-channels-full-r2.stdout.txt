@@ -1,0 +1,1 @@
+{"age_p95_ms":40.6071669999983,"frame_p95_ms":9.673922000001056,"frames":7167,"metrics":"/home/aurascoper/phase-space-validation/recorded-v1/rhythmic-channels-full-r2.json","quotable":true}
