@@ -43,7 +43,7 @@ pub fn generator_id(model: &str) -> String {
 
 /// The exact argument vector. Everything after the flags is the transcript.
 ///
-/// Four of these flags are load-bearing:
+/// Five of these flags are load-bearing:
 ///
 /// - `--system-prompt` **replaces** the CLI's own system prompt rather than
 ///   appending to it (`--append-system-prompt` is the other one). The role's
@@ -59,6 +59,10 @@ pub fn generator_id(model: &str) -> String {
 ///   user, under `-p`, with no tool call involved. Measured, not assumed. The
 ///   binary's session directory is private now, and the flag holds if a
 ///   future caller spawns from somewhere else.
+/// - `--strict-mcp-config` starts no MCP server. Without it the CLI launches
+///   every server in the user's own config on each call (seen live: an npm
+///   `exec` and a node child, twice a turn, from the session directory), and
+///   a `.mcp.json` in the cwd would add its own. Measured, not assumed.
 /// - `--output-format json` gets the envelope [`parse_result`] reads. The
 ///   default `text` format would work until the day the CLI prefixes a warning.
 ///
@@ -78,6 +82,7 @@ pub fn argv(model: &str, system: &str, prompt: &str) -> Vec<String> {
         String::new(),
         "--setting-sources".into(),
         "user".into(),
+        "--strict-mcp-config".into(),
         "--output-format".into(),
         "json".into(),
         prompt.into(),
@@ -139,6 +144,7 @@ mod tests {
                 "",
                 "--setting-sources",
                 "user",
+                "--strict-mcp-config",
                 "--output-format",
                 "json",
                 "user transcript text",
@@ -192,7 +198,7 @@ mod tests {
         let sys = "line one\nline two\n\nCONSTRAINTS:\n1. never ask questions";
         let args = argv("m", sys, "p");
         assert!(args.contains(&sys.to_string()));
-        assert_eq!(args.len(), 12, "no argument was split on its own newlines");
+        assert_eq!(args.len(), 13, "no argument was split on its own newlines");
     }
 
     #[test]
